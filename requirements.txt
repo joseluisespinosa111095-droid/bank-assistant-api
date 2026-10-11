@@ -5,3 +5,4 @@ google-generativeai
 sqlalchemy
 passlib
 bcrypt
+email-validator
