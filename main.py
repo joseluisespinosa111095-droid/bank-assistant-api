@@ -4,7 +4,7 @@ import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import google.generativeai as genai
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
@@ -78,14 +78,14 @@ def get_db():
 
 app = FastAPI(
     title="Bank Assistant - Secure Fintech Platform (Hardened)",
-    version="6.2.0"
+    version="6.2.1"
 )
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-# --- ESQUEMAS PYDANTIC ---
+# --- ESQUEMAS PYDANTIC (CORREGIDOS A STR) ---
 class UserRegister(BaseModel):
     email: str
     password: str
