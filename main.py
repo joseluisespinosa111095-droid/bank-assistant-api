@@ -7,7 +7,7 @@ import google.generativeai as genai
 
 app = FastAPI(
     title="Bank Assistant - Compliance & AI Executive Platform",
-    version="3.5.0"
+    version="4.0.0"
 )
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -23,7 +23,7 @@ class TransaccionInput(BaseModel):
     usuario_id: str = "cliente_principal"
 
 class ChatMessage(BaseModel):
-    sender: str  # "user" o "executive"
+    sender: str
     text: str
 
 class ChatRequest(BaseModel):
@@ -37,8 +37,8 @@ def home():
     <html lang="es">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>Bank Assistant | Credit, Loans & AI Executive</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+        <title>Bank Assistant | Premium Fintech Experience</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
@@ -47,6 +47,7 @@ def home():
                 background-color: #F8FAFC;
                 color: #0F172A;
                 -webkit-font-smoothing: antialiased;
+                padding-bottom: env(safe-area-inset-bottom);
             }
             .fintech-card {
                 background: #FFFFFF;
@@ -103,7 +104,7 @@ def home():
             .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         </style>
     </head>
-    <body class="min-h-screen pb-28 pt-4 px-4 flex flex-col items-center">
+    <body class="min-h-screen pb-32 pt-4 px-4 flex flex-col items-center">
         <div class="w-full max-w-[390px] relative">
             
             <!-- ENCABEZADO GLOBAL -->
@@ -130,8 +131,8 @@ def home():
                 </div>
             </header>
 
-            <!-- BOTÓN FLOTANTE: HABLA CON TU EJECUTIVO -->
-            <div id="floating-executive-btn" class="fixed bottom-20 right-4 z-40 max-w-[390px]">
+            <!-- BOTÓN FLOTANTE ADAPTATIVO -->
+            <div id="floating-executive-btn" class="fixed bottom-24 right-4 z-40 max-w-[390px] transition-all duration-300">
                 <button onclick="switchTab('ia')" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3.5 shadow-xl border border-blue-400/30 flex items-center gap-2 transition-all transform active:scale-95">
                     <span class="text-base">✦</span>
                     <span id="floating-btn-text" class="text-xs font-semibold pr-1">Habla con tu ejecutivo</span>
@@ -338,9 +339,8 @@ def home():
                     </details>
                 </section>
 
-                <!-- 3. TAB CRÉDITO (MARKETPLACE DE TARJETAS Y PERFIL) -->
+                <!-- 3. TAB CRÉDITO -->
                 <section id="tab-credito" class="tab-content space-y-4">
-                    <!-- Resumen Crediticio Experian Style -->
                     <div class="fintech-card p-5 bg-gradient-to-br from-slate-900 to-blue-950 text-white shadow-sm">
                         <div class="flex justify-between items-start mb-3">
                             <div>
@@ -363,13 +363,12 @@ def home():
                         </div>
                     </div>
 
-                    <!-- Factores de Mejora -->
                     <div class="fintech-card p-4 bg-slate-50 border border-slate-200">
                         <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Factores Clave</h3>
                         <div class="space-y-2 text-xs">
                             <div class="flex items-center justify-between">
                                 <span class="text-slate-600">Utilización de Crédito</span>
-                                <span class="text-emerald-600 font-bold">Excelente (<30%)</span>
+                                <span class="text-emerald-600 font-bold">Excelente (&lt;30%)</span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-slate-600">Antigüedad Promedio</span>
@@ -378,11 +377,9 @@ def home():
                         </div>
                     </div>
 
-                    <!-- Marketplace de Tarjetas de Crédito -->
                     <div class="space-y-3">
                         <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider px-1">Marketplace de Tarjetas</h3>
                         
-                        <!-- Tarjeta 1 -->
                         <div class="fintech-card p-4 bg-white border border-slate-200 shadow-sm">
                             <div class="flex justify-between items-start mb-2">
                                 <div>
@@ -400,31 +397,11 @@ def home():
                                 Solicitar Oferta Personalizada
                             </button>
                         </div>
-
-                        <!-- Tarjeta 2 -->
-                        <div class="fintech-card p-4 bg-white border border-slate-200 shadow-sm">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <span class="text-[9px] uppercase font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">92% Compatibilidad</span>
-                                    <h4 class="text-xs font-bold text-slate-900 mt-1">Chase Sapphire Preferred</h4>
-                                </div>
-                                <span class="text-xs font-bold text-slate-700">21.24% APR</span>
-                            </div>
-                            <p class="text-[11px] text-slate-600 mb-3">Ideal para viajes y bonificación de bienvenida en puntos transferibles.</p>
-                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-[10px] text-slate-500 mb-3">
-                                <span>Cuota Anual: $95</span>
-                                <span>Recompensa: 3X Viajes</span>
-                            </div>
-                            <button onclick="enviarSugerencia('Quiero comparar Chase Sapphire Preferred')" class="w-full btn-secondary py-2 rounded-xl text-xs">
-                                Ver Detalles y Requisitos
-                            </button>
-                        </div>
                     </div>
                 </section>
 
-                <!-- 4. TAB PRÉSTAMOS (CATÁLOGO Y SIMULADOR INTERACTIVO) -->
+                <!-- 4. TAB PRÉSTAMOS -->
                 <section id="tab-prestamos" class="tab-content space-y-4">
-                    <!-- Simulador Interactivo de Préstamos -->
                     <div class="fintech-card p-5 bg-white border border-slate-200 shadow-sm">
                         <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Simulador de Préstamo Personal</h2>
                         
@@ -462,11 +439,8 @@ def home():
                         </div>
                     </div>
 
-                    <!-- Marketplace de Préstamos -->
                     <div class="space-y-3">
                         <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider px-1">Ofertas Multibanco</h3>
-                        
-                        <!-- Préstamo 1 -->
                         <div class="fintech-card p-4 bg-white border border-slate-200 shadow-sm">
                             <div class="flex justify-between items-start mb-2">
                                 <div>
@@ -476,10 +450,6 @@ def home():
                                 <span class="text-xs font-bold text-emerald-600">Desde 6.99% APR</span>
                             </div>
                             <p class="text-[11px] text-slate-600 mb-3">Sin penalización por pago anticipado. Fondos depositados en 24 horas.</p>
-                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-[10px] text-slate-500 mb-3">
-                                <span>Monto: Hasta $50,000</span>
-                                <span>Plazos: 12 a 60 meses</span>
-                            </div>
                             <button onclick="enviarSugerencia('Consultar detalles de Citibank Liquidity Personal')" class="w-full btn-primary py-2 rounded-xl text-xs">
                                 Consultar Oferta
                             </button>
@@ -495,6 +465,10 @@ def home():
                             <div class="p-3.5 bg-slate-50 rounded-xl flex justify-between items-center">
                                 <span class="font-medium text-slate-700">Institución Vinculada</span>
                                 <span class="font-bold text-slate-900">Citibank N.A.</span>
+                            </div>
+                            <div class="p-3.5 bg-slate-50 rounded-xl flex justify-between items-center">
+                                <span class="font-medium text-slate-700">Protección Legal</span>
+                                <span class="font-bold text-blue-600">Regulación E (12 CFR § 1005.11)</span>
                             </div>
                         </div>
                     </div>
@@ -543,7 +517,7 @@ def home():
             function calcularPrestamo() {
                 const monto = parseFloat(document.getElementById('loan-amount').value) || 15000;
                 const meses = parseInt(document.getElementById('loan-term').value) || 36;
-                const apr = 0.0699; // 6.99% APR
+                const apr = 0.0699;
                 const tasaMensual = apr / 12;
                 const pagoMensual = (monto * tasaMensual * Math.pow(1 + tasaMensual, meses)) / (Math.pow(1 + tasaMensual, meses) - 1);
                 const costoTotal = pagoMensual * meses;
@@ -561,11 +535,17 @@ def home():
                 document.getElementById('tab-' + tabId).classList.add('active');
                 document.getElementById('btn-' + tabId).classList.add('active');
 
-                const floatingText = document.getElementById('floating-btn-text');
+                const floatingBtn = document.getElementById('floating-executive-btn');
                 if (tabId === 'ia') {
-                    floatingText.classList.add('hidden');
+                    floatingBtn.style.transform = 'translateY(100px)';
+                    floatingBtn.style.opacity = '0';
+                    setTimeout(() => floatingBtn.classList.add('hidden'), 300);
                 } else {
-                    floatingText.classList.remove('hidden');
+                    floatingBtn.classList.remove('hidden');
+                    setTimeout(() => {
+                        floatingBtn.style.transform = 'translateY(0)';
+                        floatingBtn.style.opacity = '1';
+                    }, 10);
                 }
 
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -682,7 +662,6 @@ def home():
 def chat_ejecutivo(req: ChatRequest):
     try:
         model = genai.GenerativeModel("gemini-3.8-flash")
-        
         contexto_financiero = """
         Eres el ejecutivo financiero personal del usuario (Luis Espinosa) en la plataforma Bank Assistant.
         Perfil del usuario:
@@ -690,14 +669,7 @@ def chat_ejecutivo(req: ChatRequest):
         - Flujo mensual promedio: +$4,250.00 USD.
         - Tarjeta de crédito vinculada: Citibank Visa Signature (Utilización 14%).
         - Ley aplicable para reclamos de fraude: Regulación E (12 CFR § 1005.11).
-
-        Directrices de comportamiento:
-        - Tu tono es ejecutivo, altamente profesional, empático y orientado a la protección financiera.
-        - Da respuestas claras, estructuradas y con próximos pasos concretos.
-        - No inventes saldos adicionales ni afirmes que ejecutaste transferencias reales si no existen.
-        - Cuando el usuario pregunte por tarjetas, préstamos o finanzas, oriéntalo con base en su perfil excelente de 745 puntos.
         """
-
         prompt = f"{contexto_financiero}\n\nMensaje del usuario: {req.mensaje}"
         response = model.generate_content(prompt)
         return {"respuesta": response.text}
@@ -710,17 +682,12 @@ def analizar_fraude(data: TransaccionInput):
         model = genai.GenerativeModel("gemini-3.8-flash")
         prompt = f"""
         Actúa como un oficial senior de ciberseguridad bancaria y experto en la Regulación E (12 CFR § 1005.11).
-        Analiza esta transacción sospechosa y entrega un diagnóstico estructurado:
-        - Comercio / Destino: {data.comercio}
+        Analiza esta transacción sospechosa:
+        - Comercio: {data.comercio}
         - Monto: ${data.monto}
         - Ubicación: {data.ubicacion}
         - Categoría: {data.categoria}
         - Hora: {data.hora}
-
-        Indica de forma clara y ejecutiva:
-        1. Nivel de Riesgo (Bajo, Moderado, Crítico).
-        2. Tipo de fraude probable (ej. Zelle Account Takeover, Skimmer en gasolinera, Suscripción trampa).
-        3. Probabilidad de éxito en recuperación de fondos bajo ley federal.
         """
         response = model.generate_content(prompt)
         return {"analisis_centinela": response.text}
@@ -732,18 +699,11 @@ def generar_disputa(data: TransaccionInput):
     try:
         model = genai.GenerativeModel("gemini-3.8-flash")
         prompt = f"""
-        Redacta un documento formal de disputa y notificación de cargo no autorizado dirigido al departamento 
-        de fraudes de una institución financiera en EE. UU., invocando los derechos del consumidor bajo 
-        la Regulación E (12 CFR § 1005.11).
-        
-        Detalles del incidente:
-        - Comercio afectado: {data.comercio}
-        - Monto disputado: ${data.monto}
-        - Fecha y Hora: {data.hora}
-        - Contexto de ubicación: {data.ubicacion}
-
-        El documento debe ser formal, exigir el reembolso provisional dentro del plazo legal de 10 días hábiles, 
-        y mantener un tono legal estricto y profesional.
+        Redacta un documento formal de disputa y notificación de cargo no autorizado bajo Regulación E (12 CFR § 1005.11).
+        - Comercio: {data.comercio}
+        - Monto: ${data.monto}
+        - Hora: {data.hora}
+        - Ubicación: {data.ubicacion}
         """
         response = model.generate_content(prompt)
         return {"carta_formal_regulacion_e": response.text}
