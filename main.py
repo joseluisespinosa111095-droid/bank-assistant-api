@@ -491,4 +491,230 @@ def home():
                     <span class="text-[10px] font-semibold">Crédito</span>
                 </button>
                 <button onclick="switchTab('prestamos')" id="btn-prestamos" class="nav-item flex flex-col items-center gap-1">
-                    <span class="text-
+                    <span class="text-lg">📊</span>
+                    <span class="text-[10px] font-semibold">Préstamos</span>
+                </button>
+                <button onclick="switchTab('perfil')" id="btn-perfil" class="nav-item flex flex-col items-center gap-1">
+                    <span class="text-lg">⚙️</span>
+                    <span class="text-[10px] font-semibold">Perfil</span>
+                </button>
+            </nav>
+
+        </div>
+
+        <script>
+            let historialChat = [];
+            let saldosOcultos = false;
+
+            function togglePrivacy() {
+                saldosOcultos = !saldosOcultos;
+                document.getElementById('saldo-val').innerText = saldosOcultos ? '••••••••' : '$12,480.50';
+                document.getElementById('ingresos-val').innerText = saldosOcultos ? '••••••' : '+$4,250.00';
+                document.getElementById('gastos-val').innerText = saldosOcultos ? '••••••' : '-$1,820.30';
+                document.getElementById('privacy-label').innerText = saldosOcultos ? 'Mostrar' : 'Ocultar';
+            }
+
+            function calcularPrestamo() {
+                const monto = parseFloat(document.getElementById('loan-amount').value) || 15000;
+                const meses = parseInt(document.getElementById('loan-term').value) || 36;
+                const apr = 0.0699;
+                const tasaMensual = apr / 12;
+                const pagoMensual = (monto * tasaMensual * Math.pow(1 + tasaMensual, meses)) / (Math.pow(1 + tasaMensual, meses) - 1);
+                const costoTotal = pagoMensual * meses;
+
+                document.getElementById('label-monto').innerText = '$' + monto.toLocaleString();
+                document.getElementById('label-plazo').innerText = meses + ' meses';
+                document.getElementById('display-pago').innerText = '$' + pagoMensual.toFixed(2);
+                document.getElementById('display-total').innerText = '$' + costoTotal.toFixed(2);
+            }
+
+            function switchTab(tabId) {
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+                document.getElementById('tab-' + tabId).classList.add('active');
+                document.getElementById('btn-' + tabId).classList.add('active');
+
+                const floatingBtn = document.getElementById('floating-executive-btn');
+                if (tabId === 'ia') {
+                    floatingBtn.style.transform = 'translateY(100px)';
+                    floatingBtn.style.opacity = '0';
+                    setTimeout(() => floatingBtn.classList.add('hidden'), 300);
+                } else {
+                    floatingBtn.classList.remove('hidden');
+                    setTimeout(() => {
+                        floatingBtn.style.transform = 'translateY(0)';
+                        floatingBtn.style.opacity = '1';
+                    }, 10);
+                }
+
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function handleKeyPress(e) {
+                if (e.key === 'Enter') enviarMensajeChat();
+            }
+
+            function enviarSugerencia(texto) {
+                switchTab('ia');
+                document.getElementById('chat-input').value = texto;
+                enviarMensajeChat();
+            }
+
+            async function enviarMensajeChat() {
+                const input = document.getElementById('chat-input');
+                const texto = input.value.trim();
+                if (!texto) return;
+
+                appendMessage('user', texto);
+                input.value = '';
+
+                const loadingId = appendMessage('executive', 'Pensando...', true);
+
+                try {
+                    const res = await fetch('/chat-ejecutivo', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mensaje: texto, historial: historialChat })
+                    });
+                    
+                    if (!res.ok) {
+                        throw new Error(`Servidor ocupado o despertando (Código ${res.status}). Intenta de nuevo en unos segundos.`);
+                    }
+
+                    const data = await res.json();
+                    document.getElementById(loadingId)?.remove();
+                    appendMessage('executive', data.respuesta);
+                } catch (err) {
+                    document.getElementById(loadingId)?.remove();
+                    appendMessage('executive', "Error al conectar con el servidor: " + err.message);
+                }
+            }
+
+            function appendMessage(sender, text, isLoading = false) {
+                const container = document.getElementById('chat-messages');
+                const msgDiv = document.createElement('div');
+                const id = 'msg-' + Date.now();
+                msgDiv.id = id;
+
+                if (sender === 'user') {
+                    msgDiv.className = 'chat-msg-user p-3 ml-8 text-xs leading-relaxed self-end';
+                    msgDiv.innerText = text;
+                    historialChat.push({ sender: "user", text: text });
+                } else {
+                    msgDiv.className = 'chat-msg-executive p-3 mr-8 text-xs leading-relaxed whitespace-pre-wrap';
+                    if (isLoading) msgDiv.classList.add('animate-pulse', 'text-slate-400');
+                    msgDiv.innerText = text;
+                    if (!isLoading) historialChat.push({ sender: "executive", text: text });
+                }
+
+                container.appendChild(msgDiv);
+                container.scrollTop = container.scrollHeight;
+                return id;
+            }
+
+            function reiniciarChat() {
+                historialChat = [];
+                const container = document.getElementById('chat-messages');
+                container.innerHTML = `
+                    <div class="chat-msg-executive p-3.5">
+                        <p class="font-medium text-slate-800">Conversación reiniciada.</p>
+                        <p class="mt-1 text-slate-600">¿En qué puedo orientarte ahora respecto a tus finanzas o disputas?</p>
+                    </div>
+                `;
+            }
+
+            async function ejecutarAuditoria(endpoint) {
+                switchTab('ia');
+                const payload = {
+                    comercio: document.getElementById('comercio').value,
+                    monto: parseFloat(document.getElementById('monto').value),
+                    ubicacion: document.getElementById('ubicacion').value,
+                    categoria: document.getElementById('categoria').value,
+                    hora: document.getElementById('hora').value
+                };
+
+                appendMessage('user', "Auditar mediante endpoint: " + endpoint);
+                const loadingId = appendMessage('executive', "Analizando con modelo Gemini...", true);
+
+                try {
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) {
+                        throw new Error(`Error en servidor (${res.status})`);
+                    }
+
+                    const data = await res.json();
+                    document.getElementById(loadingId)?.remove();
+
+                    if (data.analisis_centinela) {
+                        appendMessage('executive', data.analisis_centinela);
+                    } else if (data.carta_formal_regulacion_e) {
+                        appendMessage('executive', data.carta_formal_regulacion_e);
+                    }
+                } catch (err) {
+                    document.getElementById(loadingId)?.remove();
+                    appendMessage('executive', "Error en auditoría: " + err.message);
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
+@app.post("/chat-ejecutivo")
+def chat_ejecutivo(req: ChatRequest):
+    try:
+        model = genai.GenerativeModel("gemini-3.8-flash")
+        contexto_financiero = """
+        Eres el ejecutivo financiero personal del usuario (Luis Espinosa) en la plataforma Bank Assistant.
+        Perfil del usuario:
+        - Score Crediticio: 745 (Modelo Experian, Excelente).
+        - Flujo mensual promedio: +$4,250.00 USD.
+        - Tarjeta de crédito vinculada: Citibank Visa Signature (Utilización 14%).
+        - Ley aplicable para reclamos de fraude: Regulación E (12 CFR § 1005.11).
+        """
+        prompt = f"{contexto_financiero}\n\nMensaje del usuario: {req.mensaje}"
+        response = model.generate_content(prompt)
+        return {"respuesta": response.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en chat ejecutivo: {str(e)}")
+
+@app.post("/analizar-fraude")
+def analizar_fraude(data: TransaccionInput):
+    try:
+        model = genai.GenerativeModel("gemini-3.8-flash")
+        prompt = f"""
+        Actúa como un oficial senior de ciberseguridad bancaria y experto en la Regulación E (12 CFR § 1005.11).
+        Analiza esta transacción sospechosa:
+        - Comercio: {data.comercio}
+        - Monto: ${data.monto}
+        - Ubicación: {data.ubicacion}
+        - Categoría: {data.categoria}
+        - Hora: {data.hora}
+        """
+        response = model.generate_content(prompt)
+        return {"analisis_centinela": response.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en motor de IA: {str(e)}")
+
+@app.post("/generar-disputa-reg-e")
+def generar_disputa(data: TransaccionInput):
+    try:
+        model = genai.GenerativeModel("gemini-3.8-flash")
+        prompt = f"""
+        Redacta un documento formal de disputa y notificación de cargo no autorizado bajo Regulación E (12 CFR § 1005.11).
+        - Comercio: {data.comercio}
+        - Monto: ${data.monto}
+        - Hora: {data.hora}
+        - Ubicación: {data.ubicacion}
+        """
+        response = model.generate_content(prompt)
+        return {"carta_formal_regulacion_e": response.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al redactar documento: {str(e)}")
