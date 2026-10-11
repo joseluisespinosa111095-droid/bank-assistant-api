@@ -2,9 +2,9 @@ import os
 import hashlib
 import secrets
 from datetime import datetime, timezone, timedelta
-from typing import List, Optional
+from typing import Optional
 from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 import google.generativeai as genai
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
@@ -40,7 +40,7 @@ class UserModel(Base):
 
 class SessionModel(Base):
     __tablename__ = "sessions"
-    token = Column(String, primary_key=True, index=True) # Almacena el HASH SHA-256 del token
+    token = Column(String, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     expires_at = Column(DateTime, nullable=False)
 
@@ -78,7 +78,7 @@ def get_db():
 
 app = FastAPI(
     title="Bank Assistant - Secure Fintech Platform (Hardened)",
-    version="6.1.1"
+    version="6.2.0"
 )
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -105,7 +105,7 @@ class ChatRequest(BaseModel):
     mensaje: str
     conversation_id: Optional[int] = None
 
-# --- DEFENSA CSRF (VALIDACIÓN DE ORIGEN / REFERER) ---
+# --- DEFENSA CSRF ---
 def verify_csrf(request: Request):
     if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
         origin = request.headers.get("origin")
@@ -117,16 +117,14 @@ def verify_csrf(request: Request):
         
         if host and ("localhost" in host or "127.0.0.1" in host):
             return
-
         if host and ((origin and host in origin) or (referer and host in referer)):
             return
-
         if allowed_origins and ((origin and any(ao in origin for ao in allowed_origins)) or (referer and any(ao in referer for ao in allowed_origins))):
             return
 
         raise HTTPException(status_code=403, detail="Protección CSRF: Solicitud rechazada por origen no autorizado.")
 
-# --- DEPENDENCIA DE AUTENTICACIÓN SEGURA ---
+# --- AUTENTICACIÓN ---
 def get_current_user(session_token: Optional[str] = Cookie(None, alias="session_token"), db: Session = Depends(get_db)) -> UserModel:
     if not session_token:
         raise HTTPException(status_code=401, detail="No autenticado")
@@ -145,7 +143,6 @@ def get_current_user(session_token: Optional[str] = Cookie(None, alias="session_
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
     return user
 
-# --- ENDPOINTS DE AUTENTICACIÓN ---
 @app.post("/api/auth/register")
 def register(payload: UserRegister, db: Session = Depends(get_db)):
     email_clean = payload.email.strip().lower()
@@ -201,7 +198,7 @@ def logout(response: Response, session_token: Optional[str] = Cookie(None, alias
 def get_me(current_user: UserModel = Depends(get_current_user)):
     return {"email": current_user.email, "id": current_user.id}
 
-# --- ENDPOINTS DE CONVERSACIONES (PROTEGIDOS + CSRF) ---
+# --- ENDPOINTS DE CONVERSACIONES ---
 @app.get("/api/conversations")
 def listar_conversaciones(current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
     convs = db.query(ConversationModel).filter(ConversationModel.user_id == current_user.id).order_by(ConversationModel.updated_at.desc()).all()
@@ -233,7 +230,7 @@ def eliminar_conversacion(conv_id: int, current_user: UserModel = Depends(get_cu
     db.commit()
     return {"message": "Conversación eliminada correctamente"}
 
-# --- ENDPOINT DE CHAT CON GEMINI ---
+# --- CHAT GEMINI ---
 @app.post("/chat-ejecutivo", dependencies=[Depends(verify_csrf)])
 def chat_ejecutivo(req: ChatRequest, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
     try:
@@ -287,118 +284,7 @@ def chat_ejecutivo(req: ChatRequest, current_user: UserModel = Depends(get_curre
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error en chat ejecutivo: {str(e)}")
 
-@app.post("/analizar-fraude", dependencies=[Depends(verify_csrf)])
-def analizar_fraude(data: TransaccionInput, current_user: UserModel = Depends(get_current_user)):
-    try:
-        model = genai.GenerativeModel("gemini-3.8-flash")
-        prompt = f"""
-        Actúa como oficial senior de ciberseguridad bancaria y experto en Regulación E (12 CFR § 1005.11).
-        Analiza esta transacción sospechosa para el usuario ID {current_user.id}:
-        - Comercio: {data.comercio}
-        - Monto: ${data.monto}
-        - Ubicación: {data.ubicacion}
-        - Categoría: {data.categoria}
-        - Hora: {data.hora}
-        """
-        response = model.generate_content(prompt)
-        return {"analisis_centinela": response.text}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en motor de IA: {str(e)}")
-
-@app.post("/generar-disputa-reg-e", dependencies=[Depends(verify_csrf)])
-def generar_disputa(data: TransaccionInput, current_user: UserModel = Depends(get_current_user)):
-    try:
-        model = genai.GenerativeModel("gemini-3.8-flash")
-        prompt = f"""
-        Redacta un documento formal de disputa bajo Regulación E (12 CFR § 1005.11).
-        - Usuario ID: {current_user.id}
-        - Comercio: {data.comercio}
-        - Monto: ${data.monto}
-        - Hora: {data.hora}
-        - Ubicación: {data.ubicacion}
-        """
-        response = model.generate_content(prompt)
-        return {"carta_formal_regulacion_e": response.text}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al redactar documento: {str(e)}")
-
-# --- INTERFAZ FRONTEND SPA ---
-@app.get("/", response_class=HTMLResponse)
+# --- SERVIR INTERFAZ HTML ---
+@app.get("/", response_class=FileResponse)
 def home():
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-        <title>Bank Assistant | Secure Multi-User Fintech</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-        <style>
-            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: #F8FAFC; color: #0F172A; -webkit-font-smoothing: antialiased; padding-bottom: env(safe-area-inset-bottom); }
-            .fintech-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; box-shadow: 0 2px 12px rgba(15, 23, 42, 0.03); }
-            .fintech-input { background: #F1F5F9; border: 1px solid #CBD5E1; color: #0F172A; transition: all 0.2s ease; }
-            .fintech-input:focus { border-color: #0066CC; box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.12); outline: none; background: #FFFFFF; }
-            .btn-primary { background: #0066CC; color: #FFFFFF; font-weight: 600; transition: background 0.2s ease, transform 0.1s ease; }
-            .btn-primary:active { transform: scale(0.98); }
-            .btn-primary:hover { background: #0052A3; }
-            .btn-secondary { background: #F1F5F9; color: #334155; font-weight: 600; border: 1px solid #E2E8F0; transition: background 0.2s ease; }
-            .btn-secondary:hover { background: #E2E8F0; }
-            .nav-item.active { color: #0066CC; }
-            .nav-item { color: #94A3B8; transition: color 0.2s ease; }
-            .tab-content { display: none; }
-            .tab-content.active { display: block; }
-            .chat-msg-user { background-color: #0066CC; color: #FFFFFF; border-radius: 18px 18px 4px 18px; }
-            .chat-msg-executive { background-color: #FFFFFF; color: #1E293B; border: 1px solid #E2E8F0; border-radius: 18px 18px 18px 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
-            .no-scrollbar::-webkit-scrollbar { display: none; }
-            .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        </style>
-    </head>
-    <body class="min-h-screen pb-32 pt-4 px-4 flex flex-col items-center">
-        
-        <!-- VISTA DE AUTENTICACIÓN -->
-        <div id="auth-view" class="w-full max-w-[390px] flex flex-col justify-center min-h-[85vh]">
-            <div class="fintech-card p-6 space-y-5 bg-white">
-                <div class="text-center">
-                    <div class="h-12 w-12 rounded-2xl bg-blue-600 text-white font-bold text-xl flex items-center justify-center mx-auto mb-3 shadow-md">BA</div>
-                    <h1 class="text-lg font-bold text-slate-900">Bank Assistant</h1>
-                    <p class="text-xs text-slate-500 mt-1">Plataforma Fintech Segura & IA</p>
-                </div>
-                <div id="auth-error" class="hidden p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl"></div>
-                <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3 text-xs">
-                    <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Correo Electrónico</label>
-                        <input type="text" id="auth-email" required class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="nombre@correo.com">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Contraseña</label>
-                        <input type="password" id="auth-password" required class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="••••••••">
-                    </div>
-                    <button type="submit" id="auth-submit-btn" class="w-full btn-primary py-3 rounded-xl text-xs mt-2">Iniciar Sesión</button>
-                </form>
-                <div class="text-center pt-2 border-t border-slate-100">
-                    <button onclick="toggleAuthMode()" id="auth-toggle-btn" class="text-xs text-blue-600 hover:text-blue-700 font-semibold">¿No tienes cuenta? Regístrate aquí</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- VISTA PRINCIPAL -->
-        <div id="app-view" class="w-full max-w-[390px] relative hidden">
-            <header class="flex items-center justify-between mb-5 px-1">
-                <div class="flex items-center gap-3">
-                    <div class="relative">
-                        <div class="h-10 w-10 rounded-full bg-slate-900 flex items-center justify-center text-white font-bold text-sm shadow-sm border border-slate-700" id="user-initials">US</div>
-                        <div class="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-emerald-500 rounded-full border-2 border-white" title="Sesión Segura"></div>
-                    </div>
-                    <div>
-                        <p class="text-[11px] text-slate-500 font-medium">Conectado como,</p>
-                        <h1 id="user-email-display" class="text-xs font-bold text-slate-900 tracking-tight truncate max-w-[160px]">usuario@banco.com</h1>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="cerrarSesion()" class="p-2 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition shadow-sm text-xs font-semibold px-3 flex items-center gap-1">🚪 Salir</button>
-                </div>
-            </header>
-
-            <div id="floating-executive-btn" class="fixed bottom-24 right-4 z-40 max-w-[390px] transition-all duration-300">
-                <button onclick="switchTab('ia')" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3.5 shadow-xl border border-blue-400/30 flex items-center gap-2 transition-all transform active:scale-
+    return "index.html"
