@@ -7,7 +7,7 @@ import google.generativeai as genai
 
 app = FastAPI(
     title="Bank Assistant - Compliance & AI Executive Platform",
-    version="4.0.0"
+    version="4.2.0"
 )
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -577,8 +577,12 @@ def home():
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ mensaje: texto, historial: historialChat })
                     });
-                    const data = await res.json();
                     
+                    if (!res.ok) {
+                        throw new Error(`Servidor ocupado o despertando (Código ${res.status}). Intenta de nuevo en unos segundos.`);
+                    }
+
+                    const data = await res.json();
                     document.getElementById(loadingId)?.remove();
                     appendMessage('executive', data.respuesta);
                 } catch (err) {
@@ -639,6 +643,11 @@ def home():
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
+
+                    if (!res.ok) {
+                        throw new Error(`Error en servidor (${res.status})`);
+                    }
+
                     const data = await res.json();
                     document.getElementById(loadingId)?.remove();
 
