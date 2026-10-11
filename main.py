@@ -31,85 +31,143 @@ def home():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Bank Assistant | Sentinel AI & Reg E</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
-            body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0d0f12; color: #e2e8f0; }
-            .japandi-card { background: #161a22; border: 1px solid #2a313d; border-radius: 16px; }
-            .accent-btn { background-color: #d4af37; color: #0d0f12; font-weight: 600; }
-            .accent-btn:hover { background-color: #c59b27; }
+            body {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background-color: #000000;
+                color: #f5f5f7;
+                -webkit-font-smoothing: antialiased;
+            }
+            .apple-glass {
+                background: rgba(28, 28, 30, 0.75);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 20px;
+            }
+            .apple-input {
+                background: rgba(44, 44, 46, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                color: #ffffff;
+                transition: all 0.2s ease;
+            }
+            .apple-input:focus {
+                border-color: #0a84ff;
+                box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.25);
+                outline: none;
+            }
+            .apple-btn-primary {
+                background: #0a84ff;
+                color: #ffffff;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            }
+            .apple-btn-primary:hover {
+                background: #0077ed;
+            }
+            .apple-btn-secondary {
+                background: rgba(255, 255, 255, 0.08);
+                color: #f5f5f7;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                font-weight: 500;
+                transition: all 0.2s ease;
+            }
+            .apple-btn-secondary:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
+            .apple-output {
+                background: rgba(18, 18, 20, 0.85);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 14px;
+            }
         </style>
     </head>
-    <body class="min-h-screen p-4 md:p-8 flex flex-col items-center justify-start">
+    <body class="min-h-screen p-5 md:p-12 flex flex-col items-center justify-start">
         <div class="max-w-4xl w-full">
-            <!-- Header -->
-            <header class="flex items-center justify-between py-6 border-b border-gray-800 mb-8">
+            <!-- Header minimalista estilo Apple -->
+            <header class="flex items-center justify-between pb-6 mb-8 border-b border-white/10">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-white">Bank Assistant <span class="text-xs px-2 py-1 bg-amber-500/20 text-amber-400 rounded-full border border-amber-500/30">Reg E Core</span></h1>
-                    <p class="text-xs text-gray-400 mt-1">Plataforma Inteligente de Prevención de Fraude y Disputas Legales (12 CFR § 1005.11)</p>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white">Bank Assistant</h1>
+                        <span class="text-[11px] font-semibold px-2.5 py-0.5 bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">Reg E Pro</span>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1 font-normal">Prevención inteligente de fraude financiero y cumplimiento legal 12 CFR § 1005.11</p>
                 </div>
-                <div class="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" title="Sistema en Línea"></div>
+                <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
+                    <div class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span class="text-[11px] font-medium text-emerald-400">Sistema Activo</span>
+                </div>
             </header>
 
             <!-- Grid principal -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Formulario -->
-                <div class="japandi-card p-6 shadow-xl">
-                    <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                        <span>🔍</span> Analizar Transacción Sospechosa
-                    </h2>
-                    <form id="fraudForm" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-400 mb-1">Comercio / Destino</label>
-                            <input type="text" id="comercio" value="Zelle Transfer / Electronics Store" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:border-amber-500 focus:outline-none" required>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
+                <!-- Tarjeta de Formulario -->
+                <div class="apple-glass p-6 md:p-8 shadow-2xl flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-base font-semibold text-white mb-5 flex items-center gap-2">
+                            <span class="text-blue-400">✦</span> Analizar Transacción
+                        </h2>
+                        <form class="space-y-4">
                             <div>
-                                <label class="block text-xs font-medium text-gray-400 mb-1">Monto ($ USD)</label>
-                                <input type="number" step="0.01" id="monto" value="485.50" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:border-amber-500 focus:outline-none" required>
+                                <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Comercio / Destino</label>
+                                <input type="text" id="comercio" value="Zelle Transfer / Electronics Store" class="w-full apple-input rounded-xl p-3 text-sm" required>
                             </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-400 mb-1">Categoría</label>
-                                <input type="text" id="categoria" value="Transferencia / Compra Web" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:border-amber-500 focus:outline-none" required>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Monto ($ USD)</label>
+                                    <input type="number" step="0.01" id="monto" value="485.50" class="w-full apple-input rounded-xl p-3 text-sm" required>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Categoría</label>
+                                    <input type="text" id="categoria" value="Transferencia / Compra Web" class="w-full apple-input rounded-xl p-3 text-sm" required>
+                                </div>
                             </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-400 mb-1">Ubicación / IP</label>
-                                <input type="text" id="ubicacion" value="Miami, FL (Ubicación inusual)" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:border-amber-500 focus:outline-none" required>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Ubicación / IP</label>
+                                    <input type="text" id="ubicacion" value="Miami, FL (Ubicación inusual)" class="w-full apple-input rounded-xl p-3 text-sm" required>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">Hora del Reporte</label>
+                                    <input type="text" id="hora" value="23:15 PST" class="w-full apple-input rounded-xl p-3 text-sm" required>
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-400 mb-1">Hora del Reporte</label>
-                                <input type="text" id="hora" value="23:15 PST" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:border-amber-500 focus:outline-none" required>
-                            </div>
-                        </div>
-                        <div class="pt-2 grid grid-cols-2 gap-3">
-                            <button type="button" onclick="ejecutarAccion('/analizar-fraude')" class="accent-btn py-3 px-4 rounded-lg text-xs font-bold transition-all shadow-md">
-                                Evaluate Risk
-                            </button>
-                            <button type="button" onclick="ejecutarAccion('/generar-disputa-reg-e')" class="bg-gray-800 hover:bg-gray-700 text-amber-400 border border-amber-500/30 py-3 px-4 rounded-lg text-xs font-bold transition-all">
-                                Legal Dispute
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
+
+                    <div class="pt-6 grid grid-cols-2 gap-3 mt-6 border-t border-white/5">
+                        <button type="button" onclick="ejecutarAccion('/analizar-fraude')" class="apple-btn-primary py-3 px-4 rounded-xl text-xs shadow-lg">
+                            Evaluate Risk
+                        </button>
+                        <button type="button" onclick="ejecutarAccion('/generar-disputa-reg-e')" class="apple-btn-secondary py-3 px-4 rounded-xl text-xs">
+                            Legal Dispute
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Panel de Resultados -->
-                <div class="japandi-card p-6 shadow-xl flex flex-col justify-between">
+                <!-- Panel de Resultados Estilo Terminal Refinada -->
+                <div class="apple-glass p-6 md:p-8 shadow-2xl flex flex-col justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-white mb-2 flex items-center justify-between">
-                            <span>📋 Diagnóstico & Respuesta</span>
-                            <span id="loader" class="hidden text-xs text-amber-400 animate-pulse">Procesando con Gemini AI...</span>
-                        </h2>
-                        <div id="resultBox" class="bg-gray-900/80 border border-gray-800 rounded-lg p-4 text-xs text-gray-300 leading-relaxed h-[320px] overflow-y-auto font-mono whitespace-pre-wrap">
-Selecciona una acción a la izquierda para evaluar la transacción o redactar la carta de reclamo oficial bajo la Regulación E.
+                        <div class="flex items-center justify-between mb-5">
+                            <h2 class="text-base font-semibold text-white flex items-center gap-2">
+                                <span class="text-blue-400">⌘</span> Diagnóstico & Respuesta
+                            </h2>
+                            <span id="loader" class="hidden text-xs text-blue-400 font-medium animate-pulse">Generando con IA...</span>
                         </div>
+                        <div id="resultBox" class="apple-output p-4 text-xs text-gray-300 leading-relaxed h-[360px] overflow-y-auto font-mono whitespace-pre-wrap select-text">
+Selecciona una acción a la izquierda para evaluar el nivel de riesgo o redactar el reclamo formal bajo la Regulación E.
+                        </div>
+                    </div>
+                    <div class="pt-4 text-[11px] text-gray-500 text-right">
+                        Protección al Consumidor Financiero • 12 CFR § 1005.11
                     </div>
                 </div>
             </div>
 
             <!-- Footer -->
-            <footer class="mt-12 text-center text-xs text-gray-600">
-                Bank Assistant Core Engine v1.0 • Impulsado por Google Gemini AI & FastAPI
+            <footer class="mt-12 text-center text-xs text-gray-500 font-light">
+                Bank Assistant Core Engine • Impulsado por Google Gemini & FastAPI
             </footer>
         </div>
 
@@ -118,7 +176,7 @@ Selecciona una acción a la izquierda para evaluar la transacción o redactar la
                 const loader = document.getElementById('loader');
                 const resultBox = document.getElementById('resultBox');
                 loader.classList.remove('hidden');
-                resultBox.innerText = "Consultando motor de inteligencia artificial...";
+                resultBox.innerText = "Procesando solicitud de seguridad...";
 
                 const payload = {
                     comercio: document.getElementById('comercio').value,
@@ -146,7 +204,7 @@ Selecciona una acción a la izquierda para evaluar la transacción o redactar la
                     }
                 } catch (err) {
                     loader.classList.add('hidden');
-                    resultBox.innerText = "Error de conexión o configuración en el servidor: " + err.message;
+                    resultBox.innerText = "Error de conexión con el servidor: " + err.message;
                 }
             }
         </script>
@@ -158,7 +216,7 @@ Selecciona una acción a la izquierda para evaluar la transacción o redactar la
 @app.post("/analizar-fraude")
 def analizar_fraude(data: TransaccionInput):
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-3.8-flash")
         prompt = f"""
         Actúa como un oficial senior de ciberseguridad bancaria y experto en la Regulación E (12 CFR § 1005.11).
         Analiza esta transacción sospechosa y entrega un diagnóstico estructurado:
@@ -181,7 +239,7 @@ def analizar_fraude(data: TransaccionInput):
 @app.post("/generar-disputa-reg-e")
 def generar_disputa(data: TransaccionInput):
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-3.8-flash")
         prompt = f"""
         Redacta un documento formal de disputa y notificación de cargo no autorizado dirigido al departamento 
         de fraudes de una institución financiera en EE. UU., invocando los derechos del consumidor bajo 
