@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 import google.generativeai as genai
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
@@ -78,7 +78,7 @@ def get_db():
 
 app = FastAPI(
     title="Bank Assistant - Secure Fintech Platform (Hardened)",
-    version="6.1.0"
+    version="6.1.1"
 )
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -87,11 +87,11 @@ if GEMINI_API_KEY:
 
 # --- ESQUEMAS PYDANTIC ---
 class UserRegister(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 class TransaccionInput(BaseModel):
@@ -115,11 +115,9 @@ def verify_csrf(request: Request):
         allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
         allowed_origins = [o.strip() for o in allowed_origins if o.strip()]
         
-        # Permitir desarrollo local
         if host and ("localhost" in host or "127.0.0.1" in host):
             return
 
-        # Validar coincidencia de host o orígenes permitidos
         if host and ((origin and host in origin) or (referer and host in referer)):
             return
 
@@ -150,12 +148,13 @@ def get_current_user(session_token: Optional[str] = Cookie(None, alias="session_
 # --- ENDPOINTS DE AUTENTICACIÓN ---
 @app.post("/api/auth/register")
 def register(payload: UserRegister, db: Session = Depends(get_db)):
-    existing = db.query(UserModel).filter(UserModel.email == payload.email).first()
+    email_clean = payload.email.strip().lower()
+    existing = db.query(UserModel).filter(UserModel.email == email_clean).first()
     if existing:
         raise HTTPException(status_code=400, detail="No se pudo procesar el registro con los datos proporcionados.")
     
     hashed_password = pwd_context.hash(payload.password)
-    new_user = UserModel(email=payload.email, password_hash=hashed_password)
+    new_user = UserModel(email=email_clean, password_hash=hashed_password)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -163,11 +162,11 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
 
 @app.post("/api/auth/login")
 def login(payload: UserLogin, response: Response, db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.email == payload.email).first()
+    email_clean = payload.email.strip().lower()
+    user = db.query(UserModel).filter(UserModel.email == email_clean).first()
     if not user or not pwd_context.verify(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Credenciales inválidas.")
     
-    # Generar token aleatorio y almacenar únicamente su HASH SHA-256
     token = secrets.token_hex(32)
     token_hash = hash_token(token)
     expires = datetime.now(timezone.utc) + timedelta(days=7)
@@ -176,7 +175,6 @@ def login(payload: UserLogin, response: Response, db: Session = Depends(get_db))
     db.add(db_session)
     db.commit()
 
-    # Configuración de Cookie Segura por Entorno
     is_production = os.getenv("RENDER", "false").lower() == "true" or os.getenv("ENVIRONMENT", "development").lower() == "production"
     cookie_secure = os.getenv("COOKIE_SECURE", str(is_production)).lower() == "true"
 
@@ -324,7 +322,7 @@ def generar_disputa(data: TransaccionInput, current_user: UserModel = Depends(ge
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al redactar documento: {str(e)}")
 
-# --- INTERFAZ FRONTEND SPA (CONSERVADA ÍNTEGRA) ---
+# --- INTERFAZ FRONTEND SPA ---
 @app.get("/", response_class=HTMLResponse)
 def home():
     html_content = """
@@ -370,7 +368,7 @@ def home():
                 <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3 text-xs">
                     <div>
                         <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Correo Electrónico</label>
-                        <input type="email" id="auth-email" required class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="nombre@correo.com">
+                        <input type="text" id="auth-email" required class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="nombre@correo.com">
                     </div>
                     <div>
                         <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Contraseña</label>
@@ -403,258 +401,4 @@ def home():
             </header>
 
             <div id="floating-executive-btn" class="fixed bottom-24 right-4 z-40 max-w-[390px] transition-all duration-300">
-                <button onclick="switchTab('ia')" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3.5 shadow-xl border border-blue-400/30 flex items-center gap-2 transition-all transform active:scale-95">
-                    <span class="text-base">✦</span>
-                    <span class="text-xs font-semibold pr-1">Habla con tu ejecutivo</span>
-                </button>
-            </div>
-
-            <main class="w-full">
-                <!-- TAB HOME -->
-                <section id="tab-home" class="tab-content active space-y-4">
-                    <div class="fintech-card p-5 bg-white border border-slate-200 shadow-sm relative overflow-hidden">
-                        <div class="flex justify-between items-center mb-3">
-                            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Dinero Disponible</span>
-                            <button onclick="togglePrivacy()" id="privacy-btn" class="text-slate-400 hover:text-slate-600 text-xs flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full">
-                                <span>👁️</span> <span id="privacy-label" class="text-[10px]">Ocultar</span>
-                            </button>
-                        </div>
-                        <div class="mb-4">
-                            <h2 id="saldo-val" class="text-3xl font-extrabold text-slate-900 tracking-tight">$12,480.50</h2>
-                            <p class="text-[11px] text-emerald-600 font-medium mt-1"><span>↑ +8.4%</span> vs. mes anterior</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- TAB IA -->
-                <section id="tab-ia" class="tab-content space-y-4">
-                    <div class="fintech-card p-5 flex flex-col h-[520px]">
-                        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-                            <div class="flex items-center gap-3">
-                                <div class="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">✦</div>
-                                <div>
-                                    <h2 class="text-xs font-bold text-slate-900">Ejecutivo Financiero</h2>
-                                    <div class="flex items-center gap-1.5 mt-0.5">
-                                        <div class="h-1.5 w-1.5 rounded-full bg-emerald-500"></div>
-                                        <span class="text-[10px] text-slate-500 font-medium">Seguro (SHA-256 / CSRF Protected)</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="eliminarConversacionActual()" class="text-xs text-red-500 hover:text-red-700 font-semibold bg-red-50 px-2.5 py-1 rounded-lg">🗑️ Borrar</button>
-                                <button onclick="nuevaConversacion()" class="text-xs text-blue-600 hover:text-blue-700 font-semibold bg-blue-50 px-2.5 py-1 rounded-lg">+ Nueva</button>
-                            </div>
-                        </div>
-
-                        <div id="conversations-bar" class="pb-2 overflow-x-auto flex gap-1.5 no-scrollbar border-b border-slate-100 text-[11px]"></div>
-
-                        <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 pr-1 text-xs mt-2">
-                            <div class="chat-msg-executive p-3.5">
-                                <p class="font-medium text-slate-800">Hola. Sesión asegurada correctamente.</p>
-                                <p class="mt-1 text-slate-600">Tus datos están protegidos bajo aislamiento y hashing de tokens. ¿Qué deseas consultar hoy?</p>
-                            </div>
-                        </div>
-
-                        <div class="py-2 overflow-x-auto flex gap-2 no-scrollbar border-t border-slate-100 mt-2">
-                            <button onclick="enviarSugerencia('Analizar mis gastos')" class="whitespace-nowrap px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-full transition">📊 Analizar mis gastos</button>
-                            <button onclick="enviarSugerencia('¿Cómo puedo mejorar mi crédito?')" class="whitespace-nowrap px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-full transition">💳 Mejorar crédito</button>
-                        </div>
-
-                        <div class="pt-2 flex gap-2">
-                            <input type="text" id="chat-input" placeholder="Escribe a tu ejecutivo..." onkeypress="handleKeyPress(event)" class="flex-1 fintech-input rounded-xl px-3.5 py-2.5 text-xs">
-                            <button onclick="enviarMensajeChat()" id="send-chat-btn" class="btn-primary px-4 rounded-xl text-xs flex items-center justify-center">Enviar</button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- TAB PERFIL -->
-                <section id="tab-perfil" class="tab-content space-y-4">
-                    <div class="fintech-card p-6">
-                        <h2 class="text-base font-bold text-slate-900 mb-2">Configuración y Seguridad</h2>
-                        <div class="space-y-2 text-xs">
-                            <div class="p-3.5 bg-slate-50 rounded-xl flex justify-between items-center">
-                                <span class="font-medium text-slate-700">Estado de Hardening</span>
-                                <span class="font-bold text-emerald-600">Tokens Hasheados & CSRF Activo</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </main>
-
-            <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 flex justify-between items-center z-50 shadow-lg max-w-[390px] mx-auto">
-                <button onclick="switchTab('home')" id="btn-home" class="nav-item active flex flex-col items-center gap-1"><span class="text-lg">🏠</span><span class="text-[10px] font-semibold">Home</span></button>
-                <button onclick="switchTab('ia')" id="btn-ia" class="nav-item flex flex-col items-center gap-1"><span class="text-lg">✦</span><span class="text-[10px] font-semibold">Ejecutivo IA</span></button>
-                <button onclick="switchTab('perfil')" id="btn-perfil" class="nav-item flex flex-col items-center gap-1"><span class="text-lg">⚙️</span><span class="text-[10px] font-semibold">Perfil</span></button>
-            </nav>
-        </div>
-
-        <script>
-            let isLoginMode = true;
-            let currentConversationId = null;
-            let currentUser = null;
-
-            window.addEventListener('DOMContentLoaded', async () => { await checkAuthStatus(); });
-
-            async function checkAuthStatus() {
-                try {
-                    const res = await fetch('/api/auth/me');
-                    if (res.ok) {
-                        const data = await res.json();
-                        currentUser = data;
-                        document.getElementById('user-email-display').innerText = data.email;
-                        document.getElementById('user-initials').innerText = data.email.substring(0, 2).toUpperCase();
-                        document.getElementById('auth-view').classList.add('hidden');
-                        document.getElementById('app-view').classList.remove('hidden');
-                        await cargarConversaciones();
-                    } else { mostrarAuthView(); }
-                } catch (e) { mostrarAuthView(); }
-            }
-
-            function mostrarAuthView() {
-                document.getElementById('app-view').classList.add('hidden');
-                document.getElementById('auth-view').classList.remove('hidden');
-                currentConversationId = null;
-            }
-
-            function toggleAuthMode() {
-                isLoginMode = !isLoginMode;
-                const titleBtn = document.getElementById('auth-submit-btn');
-                const toggleBtn = document.getElementById('auth-toggle-btn');
-                titleBtn.innerText = isLoginMode ? "Iniciar Sesión" : "Registrarse";
-                toggleBtn.innerText = isLoginMode ? "¿No tienes cuenta? Regístrate aquí" : "¿Ya tienes cuenta? Inicia sesión";
-                document.getElementById('auth-error').classList.add('hidden');
-            }
-
-            async function handleAuthSubmit(e) {
-                e.preventDefault();
-                const email = document.getElementById('auth-email').value;
-                const password = document.getElementById('auth-password').value;
-                const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
-                const errBox = document.getElementById('auth-error');
-                errBox.classList.add('hidden');
-
-                try {
-                    const res = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password })
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.detail || "Error en la autenticación");
-                    if (isLoginMode) { await checkAuthStatus(); } else { alert("¡Cuenta creada con éxito!"); toggleAuthMode(); }
-                } catch (err) {
-                    errBox.innerText = err.message;
-                    errBox.classList.remove('hidden');
-                }
-            }
-
-            async function cerrarSesion() {
-                try {
-                    await fetch('/api/auth/logout', { method: 'POST' });
-                    currentUser = null;
-                    mostrarAuthView();
-                } catch (e) { console.error("Error al cerrar sesión", e); }
-            }
-
-            async function cargarConversaciones() {
-                try {
-                    const res = await fetch('/api/conversations');
-                    if (res.ok) {
-                        const convs = await res.json();
-                        const bar = document.getElementById('conversations-bar');
-                        bar.innerHTML = '';
-                        if (convs.length > 0) {
-                            convs.forEach(c => {
-                                const btn = document.createElement('button');
-                                btn.className = `whitespace-nowrap px-3 py-1 rounded-lg font-medium transition ${c.id === currentConversationId ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`;
-                                btn.innerText = c.title;
-                                btn.onclick = () => seleccionarConversacion(c.id);
-                                bar.appendChild(btn);
-                            });
-                            if (!currentConversationId) currentConversationId = convs[0].id;
-                            await cargarMensajes(currentConversationId);
-                        } else { await nuevaConversacion(); }
-                    }
-                } catch (e) { console.error("Error cargando conversaciones", e); }
-            }
-
-            async function seleccionarConversacion(id) { currentConversationId = id; await cargarConversaciones(); await cargarMensajes(id); }
-
-            async function nuevaConversacion() {
-                try {
-                    const res = await fetch('/api/conversations', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ title: 'Nueva Asesoría' })
-                    });
-                    if (res.ok) {
-                        const conv = await res.json();
-                        currentConversationId = conv.id;
-                        await cargarConversaciones();
-                    }
-                } catch (e) { console.error("Error creando conversación", e); }
-            }
-
-            async function eliminarConversacionActual() {
-                if (!currentConversationId || !confirm("¿Eliminar esta conversación?")) return;
-                try {
-                    const res = await fetch(`/api/conversations/${currentConversationId}`, { method: 'DELETE' });
-                    if (res.ok) { currentConversationId = null; await cargarConversaciones(); }
-                } catch (e) { console.error("Error al eliminar", e); }
-            }
-
-            async function cargarMensajes(convId) {
-                try {
-                    const res = await fetch(`/api/conversations/${convId}/messages`);
-                    if (res.ok) {
-                        const messages = await res.json();
-                        const container = document.getElementById('chat-messages');
-                        container.innerHTML = '';
-                        messages.forEach(msg => {
-                            const div = document.createElement('div');
-                            div.className = msg.role === 'user' ? 'chat-msg-user p-3 ml-8 text-xs leading-relaxed self-end' : 'chat-msg-executive p-3 mr-8 text-xs leading-relaxed whitespace-pre-wrap';
-                            div.innerText = msg.content;
-                            container.appendChild(div);
-                        });
-                        container.scrollTop = container.scrollHeight;
-                    }
-                } catch (e) { console.error("Error cargando mensajes", e); }
-            }
-
-            function switchTab(tabId) {
-                document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-                document.getElementById('tab-' + tabId).classList.add('active');
-                document.getElementById('btn-' + tabId).classList.add('active');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-
-            function handleKeyPress(e) { if (e.key === 'Enter') enviarMensajeChat(); }
-            function enviarSugerencia(texto) { switchTab('ia'); document.getElementById('chat-input').value = texto; enviarMensajeChat(); }
-
-            async function enviarMensajeChat() {
-                const input = document.getElementById('chat-input');
-                const texto = input.value.trim();
-                if (!texto) return;
-                input.value = '';
-                const sendBtn = document.getElementById('send-chat-btn');
-                sendBtn.disabled = true;
-
-                try {
-                    const res = await fetch('/chat-ejecutivo', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ mensaje: texto, conversation_id: currentConversationId })
-                    });
-                    if (!res.ok) throw new Error(`Error (${res.status})`);
-                    const data = await res.json();
-                    currentConversationId = data.conversation_id;
-                    await cargarConversaciones();
-                } catch (err) { alert("Error de conexión: " + err.message); }
-                finally { sendBtn.disabled = false; }
-            }
-        </script>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
+                <button onclick="switchTab('ia')" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3.5 shadow-xl border border-blue-400/30 flex items-center gap-2 transition-all transform active:scale-
