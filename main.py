@@ -7,7 +7,7 @@ import google.generativeai as genai
 
 app = FastAPI(
     title="Bank Assistant - Compliance & AI Executive Platform",
-    version="3.0.0"
+    version="3.5.0"
 )
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -38,7 +38,7 @@ def home():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>Bank Assistant | Experian Home Standard</title>
+        <title>Bank Assistant | Credit, Loans & AI Executive</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
@@ -106,6 +106,7 @@ def home():
     <body class="min-h-screen pb-28 pt-4 px-4 flex flex-col items-center">
         <div class="w-full max-w-[390px] relative">
             
+            <!-- ENCABEZADO GLOBAL -->
             <header class="flex items-center justify-between mb-5 px-1">
                 <div class="flex items-center gap-3">
                     <div class="relative">
@@ -129,6 +130,7 @@ def home():
                 </div>
             </header>
 
+            <!-- BOTÓN FLOTANTE: HABLA CON TU EJECUTIVO -->
             <div id="floating-executive-btn" class="fixed bottom-20 right-4 z-40 max-w-[390px]">
                 <button onclick="switchTab('ia')" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3.5 shadow-xl border border-blue-400/30 flex items-center gap-2 transition-all transform active:scale-95">
                     <span class="text-base">✦</span>
@@ -136,9 +138,11 @@ def home():
                 </button>
             </div>
 
+            <!-- CONTENEDOR DE PANTALLAS (TABS) -->
             <main class="w-full">
+
+                <!-- 1. TAB HOME -->
                 <section id="tab-home" class="tab-content active space-y-4">
-                    
                     <div class="fintech-card p-5 bg-white border border-slate-200 shadow-sm relative overflow-hidden">
                         <div class="flex justify-between items-center mb-3">
                             <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Dinero Disponible</span>
@@ -229,7 +233,6 @@ def home():
 
                     <div class="fintech-card p-5">
                         <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Próximas Obligaciones</h3>
-                        
                         <div class="space-y-2 text-xs">
                             <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex justify-between items-center">
                                 <div>
@@ -241,33 +244,11 @@ def home():
                                 </div>
                                 <span class="font-bold text-slate-900">$240.00</span>
                             </div>
-
-                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex justify-between items-center">
-                                <div>
-                                    <div class="flex items-center gap-1.5">
-                                        <h4 class="font-bold text-slate-900">Servicio de Electricidad</h4>
-                                        <span class="text-[9px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.5 rounded">Programado</span>
-                                    </div>
-                                    <p class="text-[10px] text-slate-500 mt-0.5">Pago automático 20 Oct</p>
-                                </div>
-                                <span class="font-bold text-slate-900">$115.20</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="fintech-card p-5">
-                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Oportunidades Destacadas</h3>
-                        <div class="p-4 bg-gradient-to-r from-slate-900 to-blue-950 text-white rounded-xl shadow-sm mb-2">
-                            <div class="flex justify-between items-start">
-                                <span class="text-[9px] uppercase font-bold bg-white/20 text-blue-200 px-2 py-0.5 rounded">Recomendado</span>
-                                <span class="text-[10px] text-slate-300">0% Tarifa Anual</span>
-                            </div>
-                            <h4 class="text-xs font-bold mt-2">Tarjeta Citibusiness Cashback</h4>
-                            <p class="text-[10px] text-slate-300 mt-0.5">Obtén hasta 3% de reembolso en categorías de alta frecuencia.</p>
                         </div>
                     </div>
                 </section>
 
+                <!-- 2. TAB EJECUTIVO IA -->
                 <section id="tab-ia" class="tab-content space-y-4">
                     <div class="fintech-card p-5 flex flex-col h-[520px]">
                         <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
@@ -291,7 +272,7 @@ def home():
                         <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 pr-1 text-xs">
                             <div class="chat-msg-executive p-3.5">
                                 <p class="font-medium text-slate-800">Hola Luis. Soy tu ejecutivo financiero personal.</p>
-                                <p class="mt-1 text-slate-600">Puedo ayudarte a entender tus gastos, organizar tus pagos, mejorar tu perfil crediticio y resolver disputas por fraudes bajo la Regulación E. ¿Qué te gustaría revisar hoy?</p>
+                                <p class="mt-1 text-slate-600">Puedo ayudarte a entender tus gastos, comparar tarjetas, planificar préstamos y resolver disputas por fraudes bajo la Regulación E. ¿Qué te gustaría revisar hoy?</p>
                             </div>
                         </div>
 
@@ -357,31 +338,156 @@ def home():
                     </details>
                 </section>
 
+                <!-- 3. TAB CRÉDITO (MARKETPLACE DE TARJETAS Y PERFIL) -->
                 <section id="tab-credito" class="tab-content space-y-4">
-                    <div class="fintech-card p-6">
-                        <h2 class="text-base font-bold text-slate-900 mb-2">Perfil Crediticio</h2>
-                        <p class="text-xs text-slate-500 mb-4">Monitoreo en tiempo real de tus líneas de crédito y tarjetas activas.</p>
-                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center text-xs">
+                    <!-- Resumen Crediticio Experian Style -->
+                    <div class="fintech-card p-5 bg-gradient-to-br from-slate-900 to-blue-950 text-white shadow-sm">
+                        <div class="flex justify-between items-start mb-3">
                             <div>
-                                <h4 class="font-bold text-slate-900">Citibank Visa Signature</h4>
-                                <p class="text-slate-500">Utilización: 14% ($1,450 / $10,000)</p>
+                                <span class="text-[10px] uppercase tracking-wider text-blue-300 font-semibold">Perfil Crediticio</span>
+                                <h2 class="text-3xl font-extrabold mt-1">745 <span class="text-xs font-normal text-emerald-400">● Excelente</span></h2>
                             </div>
-                            <span class="font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">Al corriente</span>
+                            <span class="text-[10px] bg-white/10 px-2 py-0.5 rounded-md backdrop-blur-md">Modelo Experian</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300 mb-3">Tu utilización de crédito actual es del 14%, excelente para mantener tu puntuación al alza.</p>
+                        
+                        <div class="grid grid-cols-2 gap-2 pt-3 border-t border-white/10 text-xs">
+                            <div>
+                                <span class="text-slate-400 text-[10px] block">Historial Puntual</span>
+                                <span class="font-bold text-emerald-400">100% (24 meses)</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 text-[10px] block">Límite Total</span>
+                                <span class="font-bold text-white">$35,000.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Factores de Mejora -->
+                    <div class="fintech-card p-4 bg-slate-50 border border-slate-200">
+                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Factores Clave</h3>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-600">Utilización de Crédito</span>
+                                <span class="text-emerald-600 font-bold">Excelente (<30%)</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-600">Antigüedad Promedio</span>
+                                <span class="text-blue-600 font-bold">4 años 2 meses</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Marketplace de Tarjetas de Crédito -->
+                    <div class="space-y-3">
+                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider px-1">Marketplace de Tarjetas</h3>
+                        
+                        <!-- Tarjeta 1 -->
+                        <div class="fintech-card p-4 bg-white border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <span class="text-[9px] uppercase font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">98% Compatibilidad</span>
+                                    <h4 class="text-xs font-bold text-slate-900 mt-1">Citibank Rewards+ Signature</h4>
+                                </div>
+                                <span class="text-xs font-bold text-blue-600">0% APR (12m)</span>
+                            </div>
+                            <p class="text-[11px] text-slate-600 mb-3">Gana 2X puntos en supermercados y gasolineras sin cuota anual.</p>
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-[10px] text-slate-500 mb-3">
+                                <span>Cuota Anual: $0</span>
+                                <span>Recompensa: 2% Cashback</span>
+                            </div>
+                            <button onclick="enviarSugerencia('Quiero solicitar información sobre Citibank Rewards+ Signature')" class="w-full btn-primary py-2 rounded-xl text-xs">
+                                Solicitar Oferta Personalizada
+                            </button>
+                        </div>
+
+                        <!-- Tarjeta 2 -->
+                        <div class="fintech-card p-4 bg-white border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <span class="text-[9px] uppercase font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">92% Compatibilidad</span>
+                                    <h4 class="text-xs font-bold text-slate-900 mt-1">Chase Sapphire Preferred</h4>
+                                </div>
+                                <span class="text-xs font-bold text-slate-700">21.24% APR</span>
+                            </div>
+                            <p class="text-[11px] text-slate-600 mb-3">Ideal para viajes y bonificación de bienvenida en puntos transferibles.</p>
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-[10px] text-slate-500 mb-3">
+                                <span>Cuota Anual: $95</span>
+                                <span>Recompensa: 3X Viajes</span>
+                            </div>
+                            <button onclick="enviarSugerencia('Quiero comparar Chase Sapphire Preferred')" class="w-full btn-secondary py-2 rounded-xl text-xs">
+                                Ver Detalles y Requisitos
+                            </button>
                         </div>
                     </div>
                 </section>
 
+                <!-- 4. TAB PRÉSTAMOS (CATÁLOGO Y SIMULADOR INTERACTIVO) -->
                 <section id="tab-prestamos" class="tab-content space-y-4">
-                    <div class="fintech-card p-6">
-                        <h2 class="text-base font-bold text-slate-900 mb-2">Préstamos y Ofertas</h2>
-                        <div class="p-5 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl shadow-md">
-                            <span class="text-[10px] uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-md font-semibold">Pre-aprobado</span>
-                            <h3 class="text-lg font-bold mt-3">Préstamo Personal de Liquidez</h3>
-                            <p class="text-2xl font-extrabold mt-1">$35,000.00 <span class="text-xs font-normal text-blue-200">al 6.99% APR</span></p>
+                    <!-- Simulador Interactivo de Préstamos -->
+                    <div class="fintech-card p-5 bg-white border border-slate-200 shadow-sm">
+                        <h2 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Simulador de Préstamo Personal</h2>
+                        
+                        <div class="space-y-3 text-xs">
+                            <div>
+                                <div class="flex justify-between font-medium text-slate-700 mb-1">
+                                    <span>Monto Solicitado:</span>
+                                    <span id="label-monto" class="font-bold text-blue-600">$15,000</span>
+                                </div>
+                                <input type="range" id="loan-amount" min="5000" max="50000" step="1000" value="15000" oninput="calcularPrestamo()" class="w-full accent-blue-600 cursor-pointer">
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between font-medium text-slate-700 mb-1">
+                                    <span>Plazo (Meses):</span>
+                                    <span id="label-plazo" class="font-bold text-blue-600">36 meses</span>
+                                </div>
+                                <input type="range" id="loan-term" min="12" max="60" step="6" value="36" oninput="calcularPrestamo()" class="w-full accent-blue-600 cursor-pointer">
+                            </div>
+
+                            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex justify-between items-center mt-3">
+                                <div>
+                                    <span class="text-[10px] text-slate-500 block uppercase font-semibold">Pago Estimado Mensual</span>
+                                    <span id="display-pago" class="text-base font-extrabold text-slate-900">$463.20</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-[10px] text-slate-500 block uppercase font-semibold">Costo Total (APR 6.99%)</span>
+                                    <span id="display-total" class="text-xs font-bold text-blue-700">$16,675.20</span>
+                                </div>
+                            </div>
+
+                            <button onclick="enviarSugerencia('Quiero aplicar para un préstamo simulado de $15,000 a 36 meses')" class="w-full btn-primary py-2.5 rounded-xl text-xs mt-2">
+                                Iniciar Solicitud Oficial
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Marketplace de Préstamos -->
+                    <div class="space-y-3">
+                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider px-1">Ofertas Multibanco</h3>
+                        
+                        <!-- Préstamo 1 -->
+                        <div class="fintech-card p-4 bg-white border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <span class="text-[9px] uppercase font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Pre-Aprobado</span>
+                                    <h4 class="text-xs font-bold text-slate-900 mt-1">Citibank Liquidity Personal</h4>
+                                </div>
+                                <span class="text-xs font-bold text-emerald-600">Desde 6.99% APR</span>
+                            </div>
+                            <p class="text-[11px] text-slate-600 mb-3">Sin penalización por pago anticipado. Fondos depositados en 24 horas.</p>
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-[10px] text-slate-500 mb-3">
+                                <span>Monto: Hasta $50,000</span>
+                                <span>Plazos: 12 a 60 meses</span>
+                            </div>
+                            <button onclick="enviarSugerencia('Consultar detalles de Citibank Liquidity Personal')" class="w-full btn-primary py-2 rounded-xl text-xs">
+                                Consultar Oferta
+                            </button>
                         </div>
                     </div>
                 </section>
 
+                <!-- 5. TAB PERFIL -->
                 <section id="tab-perfil" class="tab-content space-y-4">
                     <div class="fintech-card p-6">
                         <h2 class="text-base font-bold text-slate-900 mb-2">Configuración y Seguridad</h2>
@@ -396,6 +502,7 @@ def home():
 
             </main>
 
+            <!-- BARRA DE NAVEGACIÓN INFERIOR (BOTTOM NAV) -->
             <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 flex justify-between items-center z-50 shadow-lg max-w-[390px] mx-auto">
                 <button onclick="switchTab('home')" id="btn-home" class="nav-item active flex flex-col items-center gap-1">
                     <span class="text-lg">🏠</span>
@@ -431,6 +538,20 @@ def home():
                 document.getElementById('ingresos-val').innerText = saldosOcultos ? '••••••' : '+$4,250.00';
                 document.getElementById('gastos-val').innerText = saldosOcultos ? '••••••' : '-$1,820.30';
                 document.getElementById('privacy-label').innerText = saldosOcultos ? 'Mostrar' : 'Ocultar';
+            }
+
+            function calcularPrestamo() {
+                const monto = parseFloat(document.getElementById('loan-amount').value) || 15000;
+                const meses = parseInt(document.getElementById('loan-term').value) || 36;
+                const apr = 0.0699; // 6.99% APR
+                const tasaMensual = apr / 12;
+                const pagoMensual = (monto * tasaMensual * Math.pow(1 + tasaMensual, meses)) / (Math.pow(1 + tasaMensual, meses) - 1);
+                const costoTotal = pagoMensual * meses;
+
+                document.getElementById('label-monto').innerText = '$' + monto.toLocaleString();
+                document.getElementById('label-plazo').innerText = meses + ' meses';
+                document.getElementById('display-pago').innerText = '$' + pagoMensual.toFixed(2);
+                document.getElementById('display-total').innerText = '$' + costoTotal.toFixed(2);
             }
 
             function switchTab(tabId) {
@@ -574,7 +695,7 @@ def chat_ejecutivo(req: ChatRequest):
         - Tu tono es ejecutivo, altamente profesional, empático y orientado a la protección financiera.
         - Da respuestas claras, estructuradas y con próximos pasos concretos.
         - No inventes saldos adicionales ni afirmes que ejecutaste transferencias reales si no existen.
-        - Cuando el usuario pregunte por fraudes o cobros raros, recuérdale sus derechos de reembolso bajo Regulación E.
+        - Cuando el usuario pregunte por tarjetas, préstamos o finanzas, oriéntalo con base en su perfil excelente de 745 puntos.
         """
 
         prompt = f"{contexto_financiero}\n\nMensaje del usuario: {req.mensaje}"
