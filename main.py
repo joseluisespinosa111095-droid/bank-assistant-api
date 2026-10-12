@@ -3,6 +3,7 @@ import hashlib
 import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -11,18 +12,26 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, F
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from passlib.context import CryptContext
 
-# --- CONFIGURACIÓN SEGURA ---
+# --- CONFIGURACIÓN SEGURA DE BASE DE DATOS ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./bank_assistant.db")
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+
+IS_PRODUCTION = os.getenv("RENDER", "false").lower() == "true" or os.getenv("ENVIRONMENT", "development").lower() == "production"
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if IS_PRODUCTION and not DATABASE_URL:
+    raise RuntimeError("CRÍTICO: Faltan credenciales de PostgreSQL. DATABASE_URL es obligatoria en producción.")
+
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./bank_assistant.db"
+elif DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def hash_token(token: str) -> str:
-    """Aplica SHA-256 para evitar almacenamiento de tokens en texto plano."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 # --- MODELOS ---
@@ -37,7 +46,7 @@ class UserModel(Base):
 
 class SessionModel(Base):
     __tablename__ = "sessions"
-    token = Column(String, primary_key=True, index=True) # Almacena HASH SHA-256
+    token = Column(String, primary_key=True, index=True) 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     user = relationship("UserModel", back_populates="sessions")
@@ -61,7 +70,18 @@ class ChatMessageModel(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     conversation = relationship("ConversationModel", back_populates="messages")
 
-Base.metadata.create_all(bind=engine)
+
+# --- AISLAMIENTO DE CREACIÓN DE TABLAS (LIFESPAN) ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # La BD será creada por Alembic de ahora en adelante, ya no por SQLAlchemy
+    # Base.metadata.create_all(bind=engine)
+    yield
+
+app = FastAPI(title="Bank Assistant - Secure Fintech", version="6.4.0", lifespan=lifespan)
+
+if os.getenv("GEMINI_API_KEY"):
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def get_db():
     db = SessionLocal()
@@ -69,11 +89,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-app = FastAPI(title="Bank Assistant - Secure Fintech", version="6.3.0")
-
-if os.getenv("GEMINI_API_KEY"):
-    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # --- ESQUEMAS ---
 class UserRegister(BaseModel):
@@ -91,24 +106,31 @@ class ChatRequest(BaseModel):
     mensaje: str
     conversation_id: Optional[int] = None
 
-# --- MITIGACIÓN CSRF (DOUBLE SUBMIT COOKIE + ORIGIN) ---
+# --- MITIGACIÓN CSRF SEGURA ---
 def verify_csrf(request: Request):
     if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
-        # 1. Validación de Origen / Referer
         origin = request.headers.get("origin")
         referer = request.headers.get("referer")
-        host = request.headers.get("host")
-        allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
         
-        valid_origin = False
-        if host and ("localhost" in host or "127.0.0.1" in host): valid_origin = True
-        elif host and ((origin and host in origin) or (referer and host in referer)): valid_origin = True
-        elif allowed_origins and ((origin and any(ao in origin for ao in allowed_origins)) or (referer and any(ao in referer for ao in allowed_origins))): valid_origin = True
-        
-        if not valid_origin:
+        allowed_origins = [o.strip().rstrip('/') for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+        is_dev = os.getenv("ENVIRONMENT", "development").lower() != "production" and os.getenv("RENDER", "false").lower() != "true"
+        if is_dev:
+            allowed_origins.extend(["http://localhost", "http://127.0.0.1", "http://localhost:8000", "http://127.0.0.1:8000"])
+            
+        valid = False
+        if origin:
+            if origin in allowed_origins: # Cambio de "in" a coincidencia exacta
+                valid = True
+        elif referer:
+            from urllib.parse import urlparse
+            parsed = urlparse(referer)
+            base_referer = f"{parsed.scheme}://{parsed.netloc}"
+            if base_referer in allowed_origins:
+                valid = True
+                
+        if not valid:
             raise HTTPException(status_code=403, detail="CSRF: Origen no autorizado.")
             
-        # 2. Validación de Token CSRF
         csrf_cookie = request.cookies.get("csrf_token")
         csrf_header = request.headers.get("X-CSRF-Token")
         if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
@@ -149,7 +171,6 @@ def login(payload: UserLogin, response: Response, db: Session = Depends(get_db))
     if not user or not pwd_context.verify(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Credenciales inválidas.")
     
-    # Generar Token de Sesión y CSRF
     token = secrets.token_hex(32)
     csrf_token = secrets.token_urlsafe(32)
     expires = datetime.now(timezone.utc) + timedelta(days=7)
@@ -157,15 +178,12 @@ def login(payload: UserLogin, response: Response, db: Session = Depends(get_db))
     db.add(SessionModel(token=hash_token(token), user_id=user.id, expires_at=expires))
     db.commit()
 
-    # Cookies Restrictivas
-    is_prod = os.getenv("RENDER", "false").lower() == "true" or os.getenv("ENVIRONMENT", "development").lower() == "production"
-    cookie_secure = os.getenv("COOKIE_SECURE", str(is_prod)).lower() == "true"
-
+    cookie_secure = os.getenv("COOKIE_SECURE", str(IS_PRODUCTION)).lower() == "true"
     response.set_cookie(key="session_token", value=token, httponly=True, secure=cookie_secure, samesite="lax", max_age=604800, path="/")
     response.set_cookie(key="csrf_token", value=csrf_token, httponly=False, secure=cookie_secure, samesite="lax", max_age=604800, path="/")
     return {"message": "Inicio de sesión exitoso", "email": user.email}
 
-@app.post("/api/auth/logout")
+@app.post("/api/auth/logout", dependencies=[Depends(verify_csrf)])
 def logout(response: Response, session_token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
     if session_token:
         db.query(SessionModel).filter(SessionModel.token == hash_token(session_token)).delete()
@@ -178,7 +196,7 @@ def logout(response: Response, session_token: Optional[str] = Cookie(None), db: 
 def get_me(current_user: UserModel = Depends(get_current_user)):
     return {"email": current_user.email, "id": current_user.id}
 
-# --- ENDPOINTS (PROTEGIDOS POR SESIÓN Y CSRF) ---
+# --- ENDPOINTS ---
 @app.get("/api/conversations")
 def listar_conversaciones(current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
     convs = db.query(ConversationModel).filter(ConversationModel.user_id == current_user.id).order_by(ConversationModel.updated_at.desc()).all()
