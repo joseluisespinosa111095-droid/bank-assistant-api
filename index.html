@@ -18,8 +18,17 @@
         .nav-item { color: #94A3B8; transition: color 0.2s ease; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .chat-msg-user { background-color: #0066CC; color: #FFFFFF; border-radius: 18px 18px 4px 18px; }
-        .chat-msg-executive { background-color: #FFFFFF; color: #1E293B; border: 1px solid #E2E8F0; border-radius: 18px 18px 18px 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        
+        /* Estilos mejorados para el Chat */
+        .chat-msg-user { background-color: #0066CC; color: #FFFFFF; border-radius: 18px 18px 4px 18px; box-shadow: 0 2px 6px rgba(0,102,204,0.15); }
+        .chat-msg-executive { background-color: #FFFFFF; color: #1E293B; border: 1px solid #E2E8F0; border-radius: 18px 18px 18px 4px; box-shadow: 0 2px 8px rgba(15,23,42,0.04); }
+        
+        /* Animación de "Escribiendo..." */
+        .typing-indicator span { display: inline-block; width: 5px; height: 5px; background-color: #94A3B8; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .credit-card-bg { background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); }
@@ -67,7 +76,10 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="cerrarSesion()" class="p-2 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition shadow-sm text-xs font-semibold px-3 flex items-center gap-1">🚪 Salir</button>
+                <button onclick="cerrarSesion()" class="p-2 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition shadow-sm text-xs font-semibold px-3 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                    <span>Salir</span>
+                </button>
             </div>
         </header>
 
@@ -129,12 +141,12 @@
                 <!-- MOVIMIENTOS RECIENTES -->
                 <div class="mb-4 flex justify-between items-end px-1 mt-6">
                     <h3 class="text-sm font-bold text-slate-900">Movimientos Recientes</h3>
-                    <button class="text-[10px] text-blue-600 font-semibold">Ver todos</button>
+                    <button class="text-[10px] text-blue-600 font-semibold hover:underline">Ver todos</button>
                 </div>
-                <div class="fintech-card bg-white p-2 divide-y divide-slate-100">
-                    <div class="flex justify-between items-center p-3">
+                <div class="fintech-card bg-white overflow-hidden divide-y divide-slate-100">
+                    <div class="flex justify-between items-center p-4 hover:bg-slate-50 transition">
                         <div class="flex items-center gap-3">
-                            <div class="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-lg">🛒</div>
+                            <div class="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
                             <div>
                                 <p class="text-xs font-bold text-slate-900">Amazon Web Services</p>
                                 <p class="text-[10px] text-slate-500">Ayer, 14:30 • Tarjeta **1234</p>
@@ -142,9 +154,9 @@
                         </div>
                         <span class="text-xs font-bold text-slate-900">-$45.00</span>
                     </div>
-                    <div class="flex justify-between items-center p-3">
+                    <div class="flex justify-between items-center p-4 hover:bg-slate-50 transition">
                         <div class="flex items-center gap-3">
-                            <div class="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center text-lg">🏢</div>
+                            <div class="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M9 16V8"/><path d="M15 16V8"/><path d="M4 12h16"/></svg></div>
                             <div>
                                 <p class="text-xs font-bold text-slate-900">Depósito Nómina</p>
                                 <p class="text-[10px] text-slate-500">15 Oct, 09:00 • Cuenta Principal</p>
@@ -152,9 +164,9 @@
                         </div>
                         <span class="text-xs font-bold text-emerald-600">+$4,250.00</span>
                     </div>
-                    <div class="flex justify-between items-center p-3">
+                    <div class="flex justify-between items-center p-4 hover:bg-slate-50 transition">
                         <div class="flex items-center gap-3">
-                            <div class="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-lg">☕</div>
+                            <div class="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg></div>
                             <div>
                                 <p class="text-xs font-bold text-slate-900">Starbucks Coffee</p>
                                 <p class="text-[10px] text-slate-500">14 Oct, 08:15 • Tarjeta **1234</p>
@@ -167,13 +179,13 @@
 
             <!-- TAB TARJETAS -->
             <section id="tab-tarjetas" class="tab-content space-y-4">
-                <h2 class="text-base font-bold text-slate-900 mb-2 px-1">Mis Tarjetas</h2>
+                <h2 class="text-xl font-bold text-slate-900 mb-4 px-1">Mis Tarjetas</h2>
                 
-                <div class="credit-card-bg rounded-2xl p-5 text-white shadow-lg relative overflow-hidden mb-4">
+                <div class="credit-card-bg rounded-2xl p-5 text-white shadow-[0_10px_20px_-10px_rgba(15,23,42,0.5)] relative overflow-hidden mb-5">
                     <div class="absolute top-0 right-0 p-4 opacity-20"><svg width="60" height="60" viewBox="0 0 24 24" fill="currentColor"><path d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V19C22 20.1046 21.1046 21 20 21H4C2.89543 21 2 20.1046 2 19V5ZM4 5V19H20V5H4Z"/></svg></div>
                     <div class="flex justify-between items-start mb-8 relative z-10">
                         <span class="text-xs font-semibold tracking-widest text-slate-300">CITIBANK SIGNATURE</span>
-                        <span class="text-lg">💳</span>
+                        <svg class="w-6 h-6 opacity-80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     </div>
                     <div class="mb-4 relative z-10">
                         <p class="text-2xl font-bold tracking-widest" style="font-family: monospace;">**** **** **** 1234</p>
@@ -190,16 +202,16 @@
                     </div>
                 </div>
 
-                <div class="fintech-card p-4 bg-white">
-                    <div class="flex justify-between items-center mb-3">
+                <div class="fintech-card p-5 bg-white">
+                    <div class="flex justify-between items-center mb-4">
                         <span class="text-xs font-bold text-slate-800">Límite de Crédito</span>
                         <span class="text-xs font-bold text-slate-800">$10,000.00</span>
                     </div>
-                    <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1">
-                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: 14%"></div>
+                    <div class="w-full bg-slate-100 rounded-full h-3 mb-2">
+                        <div class="bg-blue-600 h-3 rounded-full shadow-sm" style="width: 14%"></div>
                     </div>
-                    <div class="flex justify-between text-[10px] text-slate-500 mt-2">
-                        <span>Utilizado: $1,400.00 (14%)</span>
+                    <div class="flex justify-between text-[10px] text-slate-500 mt-3 font-medium">
+                        <span>Utilizado: $1,400.00</span>
                         <span>Disponible: $8,600.00</span>
                     </div>
                 </div>
@@ -207,30 +219,36 @@
 
             <!-- TAB IA -->
             <section id="tab-ia" class="tab-content space-y-4">
-                <div class="fintech-card p-5 flex flex-col h-[520px]">
+                <div class="fintech-card p-4 flex flex-col h-[520px]">
                     <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
                         <div class="flex items-center gap-3">
-                            <div class="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">✦</div>
+                            <div class="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-sm">
+                                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+                            </div>
                             <div>
-                                <h2 class="text-xs font-bold text-slate-900">Ejecutivo Financiero</h2>
+                                <h2 class="text-[13px] font-bold text-slate-900">Ejecutivo Financiero</h2>
                                 <div class="flex items-center gap-1.5 mt-0.5">
                                     <div class="h-1.5 w-1.5 rounded-full bg-emerald-500"></div>
-                                    <span class="text-[10px] text-slate-500 font-medium">Seguro (SHA-256 / CSRF Protected)</span>
+                                    <span class="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">Línea Segura</span>
                                 </div>
                             </div>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="eliminarConversacionActual()" class="text-xs text-red-500 hover:text-red-700 font-semibold bg-red-50 px-2.5 py-1 rounded-lg">🗑️ Borrar</button>
-                            <button onclick="nuevaConversacion()" class="text-xs text-blue-600 hover:text-blue-700 font-semibold bg-blue-50 px-2.5 py-1 rounded-lg">+ Nueva</button>
+                            <button onclick="eliminarConversacionActual()" class="text-[11px] text-red-500 hover:text-red-700 font-semibold bg-red-50 hover:bg-red-100 transition px-2.5 py-1.5 rounded-lg flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            </button>
+                            <button onclick="nuevaConversacion()" class="text-[11px] text-blue-600 hover:text-blue-700 font-semibold bg-blue-50 hover:bg-blue-100 transition px-3 py-1.5 rounded-lg flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Nueva
+                            </button>
                         </div>
                     </div>
 
                     <div id="conversations-bar" class="pb-2 overflow-x-auto flex gap-1.5 no-scrollbar border-b border-slate-100 text-[11px]"></div>
 
-                    <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 pr-1 text-xs mt-2">
-                        <div class="chat-msg-executive p-3.5">
-                            <p class="font-medium text-slate-800">Hola. Sesión asegurada correctamente.</p>
-                            <p class="mt-1 text-slate-600">Tus datos están protegidos bajo aislamiento y hashing de tokens. ¿Qué deseas consultar hoy?</p>
+                    <div id="chat-messages" class="flex-1 overflow-y-auto space-y-4 pr-1 mt-2 flex flex-col">
+                        <div class="chat-msg-executive p-3.5 mr-12 text-[13px] leading-relaxed self-start max-w-[85%]">
+                            <p class="font-bold text-slate-900 mb-1">Hola. Sesión asegurada correctamente.</p>
+                            <p class="text-slate-600 text-xs">Tus datos están protegidos bajo aislamiento y hashing de tokens. ¿Qué deseas consultar hoy?</p>
                         </div>
                     </div>
 
@@ -240,31 +258,66 @@
                     </div>
 
                     <div class="pt-2 flex gap-2">
-                        <input type="text" id="chat-input" placeholder="Escribe a tu ejecutivo..." onkeypress="handleKeyPress(event)" class="flex-1 fintech-input rounded-xl px-3.5 py-2.5 text-xs">
-                        <button onclick="enviarMensajeChat()" id="send-chat-btn" class="btn-primary px-4 rounded-xl text-xs flex items-center justify-center">Enviar</button>
+                        <input type="text" id="chat-input" placeholder="Escribe a tu ejecutivo..." onkeypress="handleKeyPress(event)" class="flex-1 fintech-input rounded-xl px-4 py-2.5 text-[13px]">
+                        <button onclick="enviarMensajeChat()" id="send-chat-btn" class="btn-primary px-4 rounded-xl text-[13px] flex items-center justify-center">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        </button>
                     </div>
                 </div>
             </section>
 
             <!-- TAB PERFIL -->
-            <section id="tab-perfil" class="tab-content space-y-4">
-                <div class="fintech-card p-6">
-                    <h2 class="text-base font-bold text-slate-900 mb-2">Configuración y Seguridad</h2>
-                    <div class="space-y-2 text-xs mt-4">
-                        <div class="p-3.5 bg-slate-50 rounded-xl flex justify-between items-center border border-slate-100">
-                            <span class="font-medium text-slate-700">Estado de Hardening</span>
-                            <span class="font-bold text-emerald-600">Tokens Hasheados</span>
+            <section id="tab-perfil" class="tab-content space-y-5 pb-4">
+                <h2 class="text-xl font-bold text-slate-900 mb-4 px-1">Mi Perfil</h2>
+                
+                <!-- SECCIÓN: SEGURIDAD -->
+                <div class="fintech-card bg-white overflow-hidden">
+                    <div class="bg-slate-50 px-4 py-2 border-b border-slate-100">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Infraestructura y Seguridad</span>
+                    </div>
+                    <div class="divide-y divide-slate-100">
+                        <div class="p-4 flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <div class="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                                <div><p class="text-xs font-bold text-slate-900">Estado de Hardening</p><p class="text-[10px] text-slate-500">Tokens Hasheados SHA-256</p></div>
+                            </div>
+                            <span class="bg-emerald-100 text-emerald-700 text-[9px] font-bold px-2 py-0.5 rounded-full">Activo</span>
                         </div>
-                        <div class="p-3.5 bg-slate-50 rounded-xl flex justify-between items-center border border-slate-100">
-                            <span class="font-medium text-slate-700">Protección Mutante</span>
-                            <span class="font-bold text-emerald-600">Double Submit CSRF Activo</span>
+                        <div class="p-4 flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <div class="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
+                                <div><p class="text-xs font-bold text-slate-900">Protección Mutante</p><p class="text-[10px] text-slate-500">Double Submit CSRF</p></div>
+                            </div>
+                            <span class="bg-blue-100 text-blue-700 text-[9px] font-bold px-2 py-0.5 rounded-full">Protegido</span>
                         </div>
-                        <div class="p-3.5 bg-slate-50 rounded-xl flex justify-between items-center border border-slate-100">
-                            <span class="font-medium text-slate-700">Base de Datos</span>
-                            <span class="font-bold text-blue-600">Alembic Configurado</span>
+                        <div class="p-4 flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <div class="h-8 w-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+                                <div><p class="text-xs font-bold text-slate-900">Persistencia y Datos</p><p class="text-[10px] text-slate-500">PostgreSQL + Alembic</p></div>
+                            </div>
+                            <span class="bg-purple-100 text-purple-700 text-[9px] font-bold px-2 py-0.5 rounded-full">Online</span>
                         </div>
                     </div>
                 </div>
+
+                <!-- SECCIÓN: CUENTA -->
+                <div class="fintech-card bg-white overflow-hidden">
+                    <div class="bg-slate-50 px-4 py-2 border-b border-slate-100">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Opciones de Cuenta</span>
+                    </div>
+                    <div class="divide-y divide-slate-100">
+                        <button onclick="mostrarModalProximamente('Preferencias')" class="w-full p-4 flex justify-between items-center hover:bg-slate-50 transition text-left">
+                            <span class="text-xs font-medium text-slate-700">Preferencias de la aplicación</span>
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
+                        <button onclick="mostrarModalProximamente('Centro de Ayuda')" class="w-full p-4 flex justify-between items-center hover:bg-slate-50 transition text-left">
+                            <span class="text-xs font-medium text-slate-700">Centro de ayuda y soporte</span>
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <button onclick="cerrarSesion()" class="w-full py-4 text-center text-xs font-bold text-red-500 hover:text-red-700 transition">Cerrar Sesión Segura</button>
             </section>
         </main>
 
@@ -283,7 +336,7 @@
         <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-3 px-6 flex justify-between items-center z-50 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] max-w-[390px] mx-auto pb-[calc(12px+env(safe-area-inset-bottom))]">
             <button onclick="switchTab('home')" id="btn-home" class="nav-item active flex flex-col items-center gap-1.5 w-12 group">
                 <svg class="w-6 h-6 transition-transform group-active:scale-95" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                <span class="text-[10px] font-semibold">Home</span>
+                <span class="text-[10px] font-semibold">Inicio</span>
             </button>
             <button onclick="switchTab('tarjetas')" id="btn-tarjetas" class="nav-item flex flex-col items-center gap-1.5 w-12 group">
                 <svg class="w-6 h-6 transition-transform group-active:scale-95" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"></rect><line x1="2" x2="22" y1="10" y2="10"></line></svg>
@@ -444,7 +497,7 @@
         }
 
         async function eliminarConversacionActual() {
-            if (!currentConversationId || !confirm("¿Eliminar esta conversación?")) return;
+            if (!currentConversationId || !confirm("¿Estás seguro de que deseas eliminar el historial de esta conversación?")) return;
             try {
                 const res = await fetch(`/api/conversations/${currentConversationId}`, { 
                     method: 'DELETE',
@@ -463,7 +516,7 @@
                     container.innerHTML = '';
                     messages.forEach(msg => {
                         const div = document.createElement('div');
-                        div.className = msg.role === 'user' ? 'chat-msg-user p-3 ml-8 text-xs leading-relaxed self-end' : 'chat-msg-executive p-3 mr-8 text-xs leading-relaxed whitespace-pre-wrap';
+                        div.className = msg.role === 'user' ? 'chat-msg-user p-3.5 ml-12 text-[13px] leading-relaxed self-end max-w-[85%]' : 'chat-msg-executive p-3.5 mr-12 text-[13px] leading-relaxed whitespace-pre-wrap self-start max-w-[85%]';
                         div.innerText = msg.content;
                         container.appendChild(div);
                     });
@@ -487,9 +540,26 @@
             const input = document.getElementById('chat-input');
             const texto = input.value.trim();
             if (!texto) return;
+            
+            // UI Optimista (Muestra el mensaje del usuario inmediatamente)
             input.value = '';
             const sendBtn = document.getElementById('send-chat-btn');
             sendBtn.disabled = true;
+
+            const container = document.getElementById('chat-messages');
+            const userDiv = document.createElement('div');
+            userDiv.className = 'chat-msg-user p-3.5 ml-12 text-[13px] leading-relaxed self-end max-w-[85%]';
+            userDiv.innerText = texto;
+            container.appendChild(userDiv);
+            
+            // Muestra indicador "Escribiendo..."
+            const typingId = 'typing-' + Date.now();
+            const typingDiv = document.createElement('div');
+            typingDiv.id = typingId;
+            typingDiv.className = 'chat-msg-executive p-3.5 mr-12 self-start max-w-[85%] flex items-center h-[46px] mt-2';
+            typingDiv.innerHTML = '<div class="typing-indicator flex items-center h-full"><span></span><span></span><span></span></div>';
+            container.appendChild(typingDiv);
+            container.scrollTop = container.scrollHeight;
 
             try {
                 const res = await fetch('/chat-ejecutivo', {
@@ -503,8 +573,11 @@
                 if (!res.ok) throw new Error(`Error (${res.status})`);
                 const data = await res.json();
                 currentConversationId = data.conversation_id;
-                await cargarConversaciones();
-            } catch (err) { alert("Error de conexión: " + err.message); }
+                await cargarConversaciones(); // Recarga y elimina el "escribiendo"
+            } catch (err) { 
+                document.getElementById(typingId)?.remove();
+                alert("Error de conexión: " + err.message); 
+            }
             finally { sendBtn.disabled = false; }
         }
 
