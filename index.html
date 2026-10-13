@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bank Assistant | Secure Multi-User Fintech</title>
+    <title>NURA | Smart Finance</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -39,26 +39,33 @@
     <!-- VISTA DE AUTENTICACIÓN -->
     <div id="auth-view" class="w-full max-w-[390px] flex flex-col justify-center min-h-[85vh]">
         <div class="fintech-card p-6 space-y-5 bg-white">
-            <div class="text-center">
-                <div class="h-12 w-12 rounded-2xl bg-blue-600 text-white font-bold text-xl flex items-center justify-center mx-auto mb-3 shadow-md">BA</div>
-                <h1 class="text-lg font-bold text-slate-900">Bank Assistant</h1>
-                <p class="text-xs text-slate-500 mt-1">Plataforma Fintech Segura & IA</p>
+                        <div class="text-center flex flex-col items-center mb-2">
+                <div class="h-14 w-14 rounded-2xl bg-slate-900 flex items-center justify-center shadow-[0_8px_20px_rgba(15,23,42,0.2)] mb-4 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-emerald-500/10"></div>
+                    <svg class="w-7 h-7 relative z-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 19V5L18 19V5" stroke="url(#nura_grad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <defs><linearGradient id="nura_grad" x1="6" y1="5" x2="18" y2="19" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#10B981"/></linearGradient></defs>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Nura</h1>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Smart Finance</p>
             </div>
             <div id="auth-error" class="hidden p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl"></div>
             <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3 text-xs">
                 <div>
-                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Correo Electrónico</label>
-                    <input type="email" id="auth-email" required class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="nombre@correo.com">
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Email Address</label>
+                    <input type="email" id="auth-email" required class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="name@email.com">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Contraseña</label>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Password</label>
                     <input type="password" id="auth-password" required class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="••••••••">
                 </div>
-                <button type="submit" id="auth-submit-btn" class="w-full btn-primary py-3 rounded-xl text-xs mt-2">Iniciar Sesión</button>
+                <button type="submit" id="auth-submit-btn" class="w-full btn-primary py-3 rounded-xl text-xs mt-2">Sign In</button>
             </form>
             <div class="text-center pt-2 border-t border-slate-100">
-                <button type="button" onclick="toggleAuthMode()" id="auth-toggle-btn" class="text-xs text-blue-600 hover:text-blue-700 font-semibold cursor-pointer">¿No tienes cuenta? Regístrate aquí</button>
+                <button type="button" onclick="toggleAuthMode()" id="auth-toggle-btn" class="text-xs text-blue-600 hover:text-blue-700 font-semibold cursor-pointer">Don't have an account? Sign up here</button>
             </div>
+
         </div>
     </div>
 
@@ -246,19 +253,20 @@
                     <div id="conversations-bar" class="pb-2 overflow-x-auto flex gap-1.5 no-scrollbar border-b border-slate-100 text-[11px]"></div>
 
                     <div id="chat-messages" class="flex-1 overflow-y-auto space-y-4 pr-1 mt-2 flex flex-col">
-                        <div class="chat-msg-executive p-3.5 mr-12 text-[13px] leading-relaxed self-start max-w-[85%]">
-                            <p class="font-bold text-slate-900 mb-1">Hola. Sesión asegurada correctamente.</p>
-                            <p class="text-slate-600 text-xs">Tus datos están protegidos bajo aislamiento y hashing de tokens. ¿Qué deseas consultar hoy?</p>
+                                                <div class="chat-msg-executive p-3.5 mr-12 text-[13px] leading-relaxed self-start max-w-[85%]">
+                            <p class="font-bold text-slate-900 mb-1">Hello, I'm Nura. How can I help you today?</p>
                         </div>
+
                     </div>
 
-                    <div class="py-2 overflow-x-auto flex gap-2 no-scrollbar border-t border-slate-100 mt-2">
-                        <button onclick="enviarSugerencia('Analizar mis gastos')" class="whitespace-nowrap px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-full transition">📊 Analizar mis gastos</button>
-                        <button onclick="enviarSugerencia('¿Cómo puedo mejorar mi crédito?')" class="whitespace-nowrap px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-full transition">💳 Mejorar crédito</button>
+                                        <div class="py-2 overflow-x-auto flex gap-2 no-scrollbar border-t border-slate-100 mt-2">
+                        <button onclick="enviarSugerencia('Analyze my expenses')" class="whitespace-nowrap px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-full transition">📊 Analyze expenses</button>
+                        <button onclick="enviarSugerencia('How can I improve my credit?')" class="whitespace-nowrap px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-full transition">💳 Improve credit</button>
                     </div>
+
 
                     <div class="pt-2 flex gap-2">
-                        <input type="text" id="chat-input" placeholder="Escribe a tu ejecutivo..." onkeypress="handleKeyPress(event)" class="flex-1 fintech-input rounded-xl px-4 py-2.5 text-[13px]">
+                        <input type="text" id="chat-input" placeholder="Message Nura..." onkeypress="handleKeyPress(event)" class="flex-1 fintech-input rounded-xl px-4 py-2.5 text-[13px]">
                         <button onclick="enviarMensajeChat()" id="send-chat-btn" class="btn-primary px-4 rounded-xl text-[13px] flex items-center justify-center">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                         </button>
