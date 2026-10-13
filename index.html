@@ -72,9 +72,9 @@
         </header>
 
         <div id="floating-executive-btn" class="fixed bottom-24 right-4 z-40 max-w-[390px] transition-all duration-300">
-            <button onclick="switchTab('ia')" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3.5 shadow-xl border border-blue-400/30 flex items-center gap-2 transition-all transform active:scale-95">
-                <span class="text-base">✦</span>
-                <span class="text-xs font-semibold pr-1">Habla con tu ejecutivo</span>
+            <button onclick="switchTab('ia')" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full py-3 px-4 shadow-[0_8px_16px_rgba(0,102,204,0.3)] border border-blue-500 flex items-center gap-2 transition-transform transform active:scale-95">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+                <span class="text-xs font-semibold">Asesor Virtual</span>
             </button>
         </div>
 
@@ -83,9 +83,13 @@
             <section id="tab-home" class="tab-content active space-y-4">
                 <div class="fintech-card p-5 bg-white border border-slate-200 shadow-sm relative overflow-hidden">
                     <div class="flex justify-between items-center mb-3">
-                        <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Dinero Disponible</span>
-                        <button onclick="togglePrivacy()" id="privacy-btn" class="text-slate-400 hover:text-slate-600 text-xs flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full">
-                            <span>👁️</span> <span id="privacy-label" class="text-[10px]">Ocultar</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Dinero Disponible</span>
+                            <span class="bg-blue-50 text-blue-600 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Demo</span>
+                        </div>
+                        <button onclick="togglePrivacy()" id="privacy-btn" class="text-slate-400 hover:text-slate-600 text-xs flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <span id="privacy-label" class="text-[10px] font-medium">Ocultar</span>
                         </button>
                     </div>
                     <div class="mb-4">
@@ -95,11 +99,31 @@
                 </div>
 
                 <!-- ACCIONES RÁPIDAS -->
-                <div class="grid grid-cols-4 gap-3 mb-5 px-1">
-                    <button class="flex flex-col items-center gap-1.5"><div class="h-12 w-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-xl shadow-sm text-blue-600 hover:bg-slate-50 transition">💸</div><span class="text-[10px] font-semibold text-slate-600">Transferir</span></button>
-                    <button class="flex flex-col items-center gap-1.5"><div class="h-12 w-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-xl shadow-sm text-emerald-600 hover:bg-slate-50 transition">⬇️</div><span class="text-[10px] font-semibold text-slate-600">Recibir</span></button>
-                    <button class="flex flex-col items-center gap-1.5"><div class="h-12 w-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-xl shadow-sm text-purple-600 hover:bg-slate-50 transition">📄</div><span class="text-[10px] font-semibold text-slate-600">Pagar</span></button>
-                    <button class="flex flex-col items-center gap-1.5"><div class="h-12 w-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-xl shadow-sm text-orange-600 hover:bg-slate-50 transition">⭐</div><span class="text-[10px] font-semibold text-slate-600">Beneficios</span></button>
+                <div class="grid grid-cols-4 gap-3 mb-6 px-2">
+                    <button onclick="mostrarModalProximamente('Transferir')" class="flex flex-col items-center gap-2 group">
+                        <div class="h-14 w-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm text-blue-600 group-hover:bg-blue-50 transition-colors group-active:scale-95">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                        </div>
+                        <span class="text-[11px] font-medium text-slate-700">Transferir</span>
+                    </button>
+                    <button onclick="mostrarModalProximamente('Recibir')" class="flex flex-col items-center gap-2 group">
+                        <div class="h-14 w-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm text-emerald-600 group-hover:bg-emerald-50 transition-colors group-active:scale-95">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                        </div>
+                        <span class="text-[11px] font-medium text-slate-700">Recibir</span>
+                    </button>
+                    <button onclick="mostrarModalProximamente('Pagar')" class="flex flex-col items-center gap-2 group">
+                        <div class="h-14 w-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm text-purple-600 group-hover:bg-purple-50 transition-colors group-active:scale-95">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        </div>
+                        <span class="text-[11px] font-medium text-slate-700">Pagar</span>
+                    </button>
+                    <button onclick="mostrarModalProximamente('Beneficios')" class="flex flex-col items-center gap-2 group">
+                        <div class="h-14 w-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm text-orange-500 group-hover:bg-orange-50 transition-colors group-active:scale-95">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </div>
+                        <span class="text-[11px] font-medium text-slate-700">Beneficios</span>
+                    </button>
                 </div>
 
                 <!-- MOVIMIENTOS RECIENTES -->
@@ -244,11 +268,35 @@
             </section>
         </main>
 
-        <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 flex justify-between items-center z-50 shadow-lg max-w-[390px] mx-auto">
-            <button onclick="switchTab('home')" id="btn-home" class="nav-item active flex flex-col items-center gap-1 w-12"><span class="text-xl">🏠</span><span class="text-[9px] font-semibold mt-0.5">Home</span></button>
-            <button onclick="switchTab('tarjetas')" id="btn-tarjetas" class="nav-item flex flex-col items-center gap-1 w-12"><span class="text-xl">💳</span><span class="text-[9px] font-semibold mt-0.5">Tarjetas</span></button>
-            <button onclick="switchTab('ia')" id="btn-ia" class="nav-item flex flex-col items-center gap-1 w-12"><span class="text-xl">✦</span><span class="text-[9px] font-semibold mt-0.5">Asistente</span></button>
-            <button onclick="switchTab('perfil')" id="btn-perfil" class="nav-item flex flex-col items-center gap-1 w-12"><span class="text-xl">⚙️</span><span class="text-[9px] font-semibold mt-0.5">Perfil</span></button>
+        <!-- MODAL INFORMATIVO GLOBAL -->
+        <div id="info-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-200">
+            <div class="bg-white rounded-3xl p-6 w-[85%] max-w-[320px] shadow-2xl transform scale-95 transition-transform duration-200" id="info-modal-content">
+                <div class="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto text-blue-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                </div>
+                <h3 class="text-center font-bold text-slate-900 text-lg mb-2" id="info-modal-title">Próximamente</h3>
+                <p class="text-center text-slate-500 text-xs leading-relaxed mb-6">La función <span id="info-modal-action" class="font-semibold text-slate-700"></span> aún no está conectada al sistema financiero real. Estará disponible en futuras actualizaciones.</p>
+                <button onclick="cerrarModalProximamente()" class="w-full btn-primary py-3 rounded-xl text-sm font-semibold">Entendido</button>
+            </div>
+        </div>
+
+        <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-3 px-6 flex justify-between items-center z-50 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] max-w-[390px] mx-auto pb-[calc(12px+env(safe-area-inset-bottom))]">
+            <button onclick="switchTab('home')" id="btn-home" class="nav-item active flex flex-col items-center gap-1.5 w-12 group">
+                <svg class="w-6 h-6 transition-transform group-active:scale-95" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                <span class="text-[10px] font-semibold">Home</span>
+            </button>
+            <button onclick="switchTab('tarjetas')" id="btn-tarjetas" class="nav-item flex flex-col items-center gap-1.5 w-12 group">
+                <svg class="w-6 h-6 transition-transform group-active:scale-95" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"></rect><line x1="2" x2="22" y1="10" y2="10"></line></svg>
+                <span class="text-[10px] font-semibold">Tarjetas</span>
+            </button>
+            <button onclick="switchTab('ia')" id="btn-ia" class="nav-item flex flex-col items-center gap-1.5 w-12 group">
+                <svg class="w-6 h-6 transition-transform group-active:scale-95" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+                <span class="text-[10px] font-semibold">Asistente</span>
+            </button>
+            <button onclick="switchTab('perfil')" id="btn-perfil" class="nav-item flex flex-col items-center gap-1.5 w-12 group">
+                <svg class="w-6 h-6 transition-transform group-active:scale-95" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span class="text-[10px] font-semibold">Perfil</span>
+            </button>
         </nav>
     </div>
 
@@ -276,7 +324,6 @@
                     document.getElementById('user-email-display').innerText = data.email;
                     document.getElementById('user-initials').innerText = data.email.substring(0, 2).toUpperCase();
                     
-                    // Actualizar el nombre en la tarjeta mock basada en el email
                     const nombreUsuario = data.email.split('@')[0].toUpperCase();
                     document.getElementById('card-holder-name').innerText = nombreUsuario;
                     
@@ -459,6 +506,25 @@
                 await cargarConversaciones();
             } catch (err) { alert("Error de conexión: " + err.message); }
             finally { sendBtn.disabled = false; }
+        }
+
+        function mostrarModalProximamente(accion) {
+            document.getElementById('info-modal-action').innerText = accion;
+            const modal = document.getElementById('info-modal');
+            const content = document.getElementById('info-modal-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function cerrarModalProximamente() {
+            const modal = document.getElementById('info-modal');
+            const content = document.getElementById('info-modal-content');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 200);
         }
     </script>
 </body>
