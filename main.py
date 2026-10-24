@@ -490,6 +490,7 @@ def login(user_data: UserLogin, request: Request, response: Response, db: Sessio
     }
 
 
+
 @app.post("/api/auth/bootstrap-admin", dependencies=[Depends(verify_csrf)])
 def bootstrap_admin(
     payload: BootstrapAdminRequest,
@@ -498,64 +499,145 @@ def bootstrap_admin(
     db: Session = Depends(get_db)
 ):
     ip = get_client_ip(request)
-    if not check_rate_limit(f"bootstrap:{ip}", max_attempts=5, window_seconds=600):
-        record_audit_event(db, "BOOTSTRAP_RATE_LIMITED", "admin", "DENIED", actor=current_user, ip_address=ip, commit=True)
-        raise HTTPException(status_code=429, detail="Too many bootstrap attempts.")
+
+    if not check_rate_limit(
+        f"bootstrap:{ip}",
+        max_attempts=5,
+        window_seconds=600
+    ):
+        record_audit_event(
+            db,
+            "BOOTSTRAP_RATE_LIMITED",
+            "admin",
+            "DENIED",
+            actor=current_user,
+            ip_address=ip,
+            commit=True
+        )
+        raise HTTPException(
+            status_code=429,
+            detail="Too many bootstrap attempts."
+        )
 
     expected_email = os.getenv("BOOTSTRAP_ADMIN_EMAIL", "").strip().lower()
     expected_secret = os.getenv("BOOTSTRAP_ADMIN_SECRET", "").strip()
 
     if not expected_email or not expected_secret:
-        record_audit_event(db, "BOOTSTRAP_NOT_CONFIGURED", "admin", "DENIED", actor=current_user, ip_address=ip, commit=True)
-        raise HTTPException(status_code=403, detail="Bootstrap is disabled in environment.")
+        record_audit_event(
+            db,
+            "BOOTSTRAP_NOT_CONFIGURED",
+            "admin",
+            "DENIED",
+            actor=current_user,
+            ip_address=ip,
+            commit=True
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Bootstrap is disabled in environment."
+        )
 
-    if current_user.email != expected_email or not secrets.compare_digest(payload.secret, expected_secret):
-        record_audit_event(db, "BOOTSTRAP_INVALID_CREDENTIALS", "admin", "DENIED", actor=current_user, ip_address=ip, commit=True)
-        raise HTTPException(status_code=403, detail="Invalid bootstrap credentials.")
+    if (
+        current_user.email.strip().lower() != expected_email
+        or not secrets.compare_digest(payload.secret, expected_secret)
+    ):
+        record_audit_event(
+            db,
+            "BOOTSTRAP_INVALID_CREDENTIALS",
+            "admin",
+            "DENIED",
+            actor=current_user,
+            ip_address=ip,
+            commit=True
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid bootstrap credentials."
+        )
 
     try:
-        # Atomic transaction lock in PostgreSQL to prevent concurrent race conditions
+        # Serialize bootstrap attempts on PostgreSQL.
         if db.bind and db.bind.dialect.name == "postgresql":
             db.execute(text("SELECT pg_advisory_xact_lock(9001001)"))
 
+        # Do not combine FOR UPDATE with COUNT().
+        # The advisory transaction lock serializes this bootstrap path.
         active_owners = (
-            db.query(UserModel)
-            .filter(UserModel.role == "OWNER_ADMIN", UserModel.is_active.is_(True))
-            .with_for_update()
-            .count()
-        )
-        already_bootstrapped = (
-            db.query(AuditLogModel)
-            .filter(AuditLogModel.event_type == "BOOTSTRAP_ADMIN_SUCCESS")
+            db.query(UserModel.id)
+            .filter(
+                UserModel.role == "OWNER_ADMIN",
+                UserModel.is_active.is_(True)
+            )
             .first()
         )
 
-        if active_owners > 0 or already_bootstrapped is not None:
-            db.rollback()
-            record_audit_event(db, "BOOTSTRAP_ALREADY_USED", "admin", "DENIED", actor=current_user, ip_address=ip, commit=True)
-            raise HTTPException(status_code=403, detail="Initial Owner Admin has already been initialized.")
+        already_bootstrapped = (
+            db.query(AuditLogModel.id)
+            .filter(
+                AuditLogModel.event_type == "BOOTSTRAP_ADMIN_SUCCESS"
+            )
+            .first()
+        )
 
+        if active_owners is not None or already_bootstrapped is not None:
+            db.rollback()
+
+            record_audit_event(
+                db,
+                "BOOTSTRAP_ALREADY_USED",
+                "admin",
+                "DENIED",
+                actor=current_user,
+                ip_address=ip,
+                commit=True
+            )
+
+            raise HTTPException(
+                status_code=403,
+                detail="Initial Owner Admin has already been initialized."
+            )
+
+        # Promote the authenticated, explicitly authorized account.
         current_user.role = "OWNER_ADMIN"
         current_user.is_active = True
 
-        # Fail-closed transactional audit (commits together with role promotion)
+        # The audit entry and promotion commit atomically.
         record_audit_event(
-            db, "BOOTSTRAP_ADMIN_SUCCESS", "admin", "SUCCESS",
-            actor=current_user, resource_id=str(current_user.id), ip_address=ip,
-            details={"promoted_role": "OWNER_ADMIN"}, commit=False
+            db,
+            "BOOTSTRAP_ADMIN_SUCCESS",
+            "admin",
+            "SUCCESS",
+            actor=current_user,
+            resource_id=str(current_user.id),
+            ip_address=ip,
+            details={"promoted_role": "OWNER_ADMIN"},
+            commit=False
         )
+
         db.commit()
+
+        logger.info("Bootstrap completed successfully.")
+
         return {
             "message": "Account promoted to OWNER_ADMIN",
             "email": current_user.email,
             "role": current_user.role
         }
+
     except HTTPException:
         raise
-    except Exception as e:
+
+    except Exception:
         db.rollback()
-        logger.error(f"Bootstrap error: {type(e).__name__}")
-        raise HTTPException(status_code=500, detail="Could not complete bootstrap.")
+
+        # Log the traceback for diagnosis without logging secrets.
+        logger.exception("Bootstrap failed with an unexpected error")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Could not complete bootstrap."
+        )
+
 
 
 @app.post("/api/auth/logout", dependencies=[Depends(verify_csrf)])
