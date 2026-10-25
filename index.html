@@ -29,9 +29,7 @@
         @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .crm-banner-bg { background: linear-gradient(135deg, #0F172A 0%, #1E293B 60%, #0F2942 100%); }
 
-        /* PROFESSIONAL PRINT / PDF STYLESHEET FOR LOAN AMORTIZATION SCHEDULE */
         @media print {
             @page { size: letter portrait; margin: 14mm; }
             body { background: #FFFFFF !important; color: #0F172A !important; }
@@ -98,7 +96,6 @@
 
             <!-- PERSISTENT LEFT SIDEBAR (DESKTOP: lg:flex) -->
             <aside class="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-slate-900 text-white border-r border-slate-800 z-40 select-none">
-                <!-- Brand Header with Real NURA Logo -->
                 <div class="px-6 py-5 flex items-center gap-3 border-b border-slate-800/80">
                     <div class="h-10 w-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shadow-sm shrink-0">
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -117,47 +114,39 @@
                     </div>
                 </div>
 
-                <!-- 6 Core Modules Navigation + Assistant -->
                 <div class="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
                     <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Core CRM Modules</p>
 
-                    <!-- 1. Dashboard -->
                     <button type="button" onclick="switchTab('home')" id="side-btn-home" class="side-nav-item active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
                         <span>1. Dashboard</span>
                     </button>
 
-                    <!-- 2. Leads & Pipeline -->
                     <button type="button" onclick="switchTab('leads')" id="side-btn-leads" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                         <span>2. Leads & Pipeline</span>
                     </button>
 
-                    <!-- 3. Customers -->
                     <button type="button" onclick="switchTab('customers')" id="side-btn-customers" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         <span>3. Customers</span>
                     </button>
 
-                    <!-- 4. Loans -->
                     <button type="button" onclick="switchTab('loans')" id="side-btn-loans" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
                         <span>4. Loans</span>
                     </button>
 
-                    <!-- 5. Loan Simulator -->
                     <button type="button" onclick="switchTab('simulator')" id="side-btn-simulator" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
                         <span>5. Loan Simulator</span>
                     </button>
 
-                    <!-- 6. Profile & Team -->
                     <button type="button" onclick="switchTab('perfil')" id="side-btn-perfil" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         <span>6. Profile & Team</span>
                     </button>
 
-                    <!-- Preserved NURA Assistant Quick Access -->
                     <div class="pt-4 mt-4 border-t border-slate-800/80">
                         <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">AI Advisory Copilot</p>
                         <button type="button" onclick="switchTab('ia')" id="side-btn-ia" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
@@ -167,7 +156,6 @@
                     </div>
                 </div>
 
-                <!-- Sidebar Active User Footer -->
                 <div class="p-4 border-t border-slate-800 bg-slate-950/40">
                     <div class="flex items-center gap-3 mb-3">
                         <div class="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs shrink-0" id="sidebar-user-initials">US</div>
@@ -205,17 +193,19 @@
                         </div>
 
                         <div class="flex items-center gap-2 shrink-0">
+                            <button type="button" onclick="openCustomerFormModal('create')" class="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs transition">
+                                <span>+ New Customer</span>
+                            </button>
                             <button type="button" onclick="switchTab('simulator')" class="hidden md:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
-                                <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/></svg>
                                 <span>Loan Simulator</span>
                             </button>
                             <button type="button" onclick="switchTab('ia')" class="py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs flex items-center gap-1.5 transition">
-                                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                                 <span class="hidden sm:inline">Nura Assistant</span>
+                                <span class="sm:hidden">Nura</span>
                             </button>
                             <button type="button" onclick="cerrarSesion()" class="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition shadow-sm text-xs font-semibold px-3 flex items-center gap-1.5">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
                                 <span class="hidden sm:inline">Sign Out</span>
+                                <span class="sm:hidden">Exit</span>
                             </button>
                         </div>
                     </div>
@@ -243,7 +233,6 @@
                             </div>
                             <div class="flex items-center gap-2">
                                 <button type="button" onclick="togglePrivacy()" id="privacy-btn" class="text-slate-600 hover:text-slate-900 text-xs flex items-center gap-1.5 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm transition">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                     <span id="privacy-label" class="font-semibold">Hide Figures</span>
                                 </button>
                                 <button type="button" onclick="switchTab('simulator')" class="btn-primary py-2 px-4 rounded-xl text-xs shadow-sm">
@@ -252,9 +241,8 @@
                             </div>
                         </div>
 
-                        <!-- 5 CORE ACCOUNTING KPI CARDS (A, B, C, D, E) WITH DIRECT NAVIGATION TO FILTERED LOANS -->
+                        <!-- 5 CORE ACCOUNTING KPI CARDS (A, B, C, D, E) -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                            <!-- A. Active Loan Portfolio -->
                             <button type="button" onclick="navigateToLoansFilter('active')" class="fintech-card p-4 bg-white hover:border-blue-400 text-left transition flex flex-col justify-between group">
                                 <div>
                                     <div class="flex items-center justify-between gap-2">
@@ -267,7 +255,6 @@
                                 <span class="text-[10px] font-bold text-blue-600 group-hover:underline mt-3 inline-block">Filter Active Loans →</span>
                             </button>
 
-                            <!-- B. Due Today -->
                             <button type="button" onclick="navigateToLoansFilter('current')" class="fintech-card p-4 bg-white hover:border-amber-400 text-left transition flex flex-col justify-between group">
                                 <div>
                                     <div class="flex items-center justify-between gap-2">
@@ -280,7 +267,6 @@
                                 <span class="text-[10px] font-bold text-blue-600 group-hover:underline mt-3 inline-block">View Current Schedule →</span>
                             </button>
 
-                            <!-- C. Overdue Payments -->
                             <button type="button" onclick="navigateToLoansFilter('overdue')" class="fintech-card p-4 bg-white hover:border-red-400 text-left transition flex flex-col justify-between group">
                                 <div>
                                     <div class="flex items-center justify-between gap-2">
@@ -293,7 +279,6 @@
                                 <span class="text-[10px] font-bold text-red-600 group-hover:underline mt-3 inline-block">Filter Overdue Loans →</span>
                             </button>
 
-                            <!-- D. Total Outstanding -->
                             <button type="button" onclick="navigateToLoansFilter('all')" class="fintech-card p-4 bg-white hover:border-indigo-400 text-left transition flex flex-col justify-between group">
                                 <div>
                                     <div class="flex items-center justify-between gap-2">
@@ -306,7 +291,6 @@
                                 <span class="text-[10px] font-bold text-blue-600 group-hover:underline mt-3 inline-block">Inspect All Loans →</span>
                             </button>
 
-                            <!-- E. Collected This Week -->
                             <button type="button" onclick="navigateToLoansFilter('all')" class="fintech-card p-4 bg-white hover:border-emerald-400 text-left transition flex flex-col justify-between group">
                                 <div>
                                     <div class="flex items-center justify-between gap-2">
@@ -320,14 +304,12 @@
                             </button>
                         </div>
 
-                        <!-- PORTFOLIO DISTRIBUTION & COMPLEMENTARY OPERATIONAL PANELS -->
                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                            <!-- Portfolio Status Breakdown (7 cols) -->
                             <div class="lg:col-span-7 fintech-card p-5 bg-white space-y-4">
                                 <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                                     <div>
                                         <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Portfolio Distribution by Loan Status</h3>
-                                        <p class="text-[11px] text-slate-500">Derived strictly from schedule dates and confirmed payments (No manual overrides)</p>
+                                        <p class="text-[11px] text-slate-500">Derived strictly from schedule dates and confirmed payments</p>
                                     </div>
                                     <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-full">0 Live Loans</span>
                                 </div>
@@ -354,51 +336,28 @@
                                         <p class="text-[10px] text-slate-400 mt-0.5">100% obligations settled</p>
                                     </button>
                                 </div>
-
-                                <!-- Upcoming Payments & Recent Collections Empty State -->
-                                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/60 text-xs text-slate-600 space-y-1">
-                                    <p class="font-bold text-slate-800">Upcoming Installments & Recent Collections</p>
-                                    <p class="text-[11px] text-slate-500">No active payment schedules or confirmed collections are stored in PostgreSQL yet. Use the <strong>Loan Simulator</strong> to model 16-week schedules or inspect the <strong>Customers</strong> and <strong>Loans</strong> modules.</p>
-                                </div>
                             </div>
 
-                            <!-- Commercial Pipeline & Activity Summary (5 cols) -->
                             <div class="lg:col-span-5 fintech-card p-5 bg-white space-y-4">
                                 <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                                     <div>
-                                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Commercial Pipeline & Products</h3>
-                                        <p class="text-[11px] text-slate-500">Origination funnel and active products</p>
+                                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Customers & Origination Funnel</h3>
+                                        <p class="text-[11px] text-slate-500">Live PostgreSQL customer directory connected</p>
                                     </div>
-                                    <button type="button" onclick="switchTab('leads')" class="text-xs font-semibold text-blue-600 hover:underline">Open Pipeline →</button>
+                                    <button type="button" onclick="switchTab('customers')" class="text-xs font-semibold text-blue-600 hover:underline">Open Directory →</button>
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-3">
-                                    <button type="button" onclick="switchTab('leads')" class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-left">
+                                    <button type="button" onclick="switchTab('customers')" class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-left hover:bg-emerald-50 transition">
+                                        <p class="text-[10px] font-bold text-emerald-800 uppercase">Registered Customers</p>
+                                        <p id="dash-customers-count" class="text-2xl font-extrabold text-emerald-900 mt-0.5">0</p>
+                                        <span class="text-[10px] font-semibold text-emerald-700">Live in PostgreSQL →</span>
+                                    </button>
+                                    <button type="button" onclick="switchTab('leads')" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-left hover:bg-slate-100 transition">
                                         <p class="text-[10px] font-bold text-slate-500 uppercase">Open Prospects</p>
-                                        <p class="text-lg font-extrabold text-slate-900 mt-0.5">0</p>
+                                        <p class="text-2xl font-extrabold text-slate-900 mt-0.5">0</p>
+                                        <span class="text-[10px] font-semibold text-blue-600">Pipeline →</span>
                                     </button>
-                                    <button type="button" onclick="switchTab('customers')" class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-left">
-                                        <p class="text-[10px] font-bold text-slate-500 uppercase">Registered Customers</p>
-                                        <p class="text-lg font-extrabold text-slate-900 mt-0.5">0</p>
-                                    </button>
-                                </div>
-
-                                <div class="space-y-2 pt-1">
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Supported Credit Products (MXN)</p>
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                                        <div>
-                                            <span class="font-bold text-slate-900">Personal Loan</span>
-                                            <span class="text-slate-500 block text-[11px]">Weekly installments • 16-week reference term</span>
-                                        </div>
-                                        <button type="button" onclick="switchTab('simulator')" class="text-[11px] font-semibold text-blue-600 hover:underline">Simulate →</button>
-                                    </div>
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                                        <div>
-                                            <span class="font-bold text-slate-900">Business Loan</span>
-                                            <span class="text-slate-500 block text-[11px]">Commercial working capital • MXN</span>
-                                        </div>
-                                        <button type="button" onclick="switchTab('simulator')" class="text-[11px] font-semibold text-blue-600 hover:underline">Simulate →</button>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -422,147 +381,78 @@
                                         Call List & Follow-ups
                                     </button>
                                 </div>
-                                <button type="button" onclick="mostrarModalProximamente('Lead Registration (Requires Database Table leads)')" class="btn-primary py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 shadow-sm shrink-0">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-                                    <span>New Lead</span>
+                                <button type="button" onclick="mostrarModalProximamente('Lead Registration (Scheduled for Stage 2 Backend)')" class="btn-primary py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 shadow-sm shrink-0">
+                                    <span>+ New Lead</span>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Search and Filter Bar -->
-                        <div class="fintech-card p-4 bg-white grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <input type="text" placeholder="Search prospect by name, phone, or Lead ID..." class="fintech-input rounded-xl px-3.5 py-2 text-xs">
-                            <select class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
-                                <option value="ALL">Stage: All Pipeline Stages</option>
-                                <option value="NEW">New</option>
-                                <option value="CONTACT_ATTEMPTED">Contact Attempted</option>
-                                <option value="CONTACTED">Contacted</option>
-                                <option value="QUALIFIED">Qualified</option>
-                                <option value="APPLICATION_STARTED">Application Started</option>
-                                <option value="UNDER_REVIEW">Under Review</option>
-                                <option value="APPROVED">Approved</option>
-                                <option value="CONVERTED">Converted</option>
-                                <option value="NURTURE">Nurture / Follow-up Later</option>
-                                <option value="LOST">Lost</option>
-                            </select>
-                            <select class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
-                                <option value="ALL">Product: All Credit Products</option>
-                                <option value="Personal Loan">Personal Loan</option>
-                                <option value="Business Loan">Business Loan</option>
-                            </select>
+                        <div id="leads-pipeline-view" class="fintech-card p-8 bg-white text-center space-y-3">
+                            <h3 class="text-base font-bold text-slate-900">Leads & Pipeline Database Scheduled for Stage 2</h3>
+                            <p class="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                                Now that the <code>customers</code> directory is live in PostgreSQL (Stage 1), the <code>leads</code> and <code>interactions</code> tables will connect directly to this module in Stage 2 with automatic duplicate prevention.
+                            </p>
                         </div>
 
-                        <!-- SUB-VIEW 2A: PIPELINE STAGES -->
-                        <div id="leads-pipeline-view" class="space-y-4">
-                            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                                <div class="lg:col-span-7 fintech-card p-8 bg-white text-center space-y-3">
-                                    <div class="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                                    </div>
-                                    <h3 class="text-base font-bold text-slate-900">No live prospects registered in database</h3>
-                                    <p class="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                                        Lead records, stage transition history, and deduplicated customer conversions require the <code>leads</code> and <code>customers</code> PostgreSQL tables. Conversion is strictly controlled so a prospect is never duplicated as a customer.
-                                    </p>
-                                </div>
-
-                                <!-- Blueprint Lead Detail Card -->
-                                <div class="lg:col-span-5 fintech-card p-5 bg-white border-dashed border-2 border-slate-300 space-y-3.5">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <div>
-                                            <div class="flex items-center gap-1.5 flex-wrap">
-                                                <span class="bg-amber-100 text-amber-800 text-[9px] font-extrabold px-2 py-0.5 rounded uppercase">UI Layout Blueprint</span>
-                                                <span class="bg-blue-50 text-blue-700 text-[9px] font-bold px-2 py-0.5 rounded uppercase">Stage: Qualified</span>
-                                            </div>
-                                            <h4 class="text-sm font-bold text-slate-900 mt-2">Prospect Card Specification</h4>
-                                            <p class="text-xs text-slate-500">Lead ID: LD-XXXX • Source: Referral</p>
-                                        </div>
-                                        <div class="text-right shrink-0">
-                                            <p class="text-sm font-extrabold text-slate-900">$50,000.00 MXN</p>
-                                            <p class="text-[11px] text-slate-500 font-medium">Personal Loan</p>
-                                        </div>
-                                    </div>
-                                    <p class="text-[11px] text-slate-500 leading-relaxed border-t border-slate-100 pt-2.5">
-                                        <strong>Conversion Rule:</strong> Converting a lead verifies phone/email uniqueness against <code>customers</code>, links historical call notes, and never creates an active loan without formal credit approval.
-                                    </p>
-                                    <div class="grid grid-cols-3 gap-2 pt-1">
-                                        <button type="button" onclick="mostrarModalProximamente('Log Call Outcome (Requires interactions table)')" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">Log Call</button>
-                                        <button type="button" onclick="mostrarModalProximamente('Change Stage (Requires lead_stage_history table)')" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">Stage</button>
-                                        <button type="button" onclick="mostrarModalProximamente('Controlled Lead-to-Customer Conversion (Requires API)')" class="py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs transition">Convert</button>
-                                    </div>
-                                </div>
+                        <div id="leads-calllist-view" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="fintech-card p-4 bg-white flex items-center justify-between">
+                                <div><p class="text-[11px] font-bold text-red-600 uppercase">Overdue Calls</p></div>
+                                <p class="text-2xl font-extrabold text-slate-900">0</p>
                             </div>
-                        </div>
-
-                        <!-- SUB-VIEW 2B: CALL LIST & FOLLOW-UPS -->
-                        <div id="leads-calllist-view" class="hidden space-y-4">
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div class="fintech-card p-4 bg-white flex items-center justify-between">
-                                    <div>
-                                        <p class="text-[11px] font-bold text-red-600 uppercase">Overdue Calls</p>
-                                        <p class="text-xs text-slate-500 mt-0.5">Scheduled prior to today</p>
-                                    </div>
-                                    <p class="text-2xl font-extrabold text-slate-900">0</p>
-                                </div>
-                                <div class="fintech-card p-4 bg-white flex items-center justify-between">
-                                    <div>
-                                        <p class="text-[11px] font-bold text-blue-600 uppercase">Today's Calls</p>
-                                        <p class="text-xs text-slate-500 mt-0.5">Scheduled for today</p>
-                                    </div>
-                                    <p class="text-2xl font-extrabold text-slate-900">0</p>
-                                </div>
-                                <div class="fintech-card p-4 bg-white flex items-center justify-between">
-                                    <div>
-                                        <p class="text-[11px] font-bold text-slate-600 uppercase">Upcoming (7d)</p>
-                                        <p class="text-xs text-slate-500 mt-0.5">Future scheduled callbacks</p>
-                                    </div>
-                                    <p class="text-2xl font-extrabold text-slate-900">0</p>
-                                </div>
+                            <div class="fintech-card p-4 bg-white flex items-center justify-between">
+                                <div><p class="text-[11px] font-bold text-blue-600 uppercase">Today's Calls</p></div>
+                                <p class="text-2xl font-extrabold text-slate-900">0</p>
+                            </div>
+                            <div class="fintech-card p-4 bg-white flex items-center justify-between">
+                                <div><p class="text-[11px] font-bold text-slate-600 uppercase">Upcoming (7d)</p></div>
+                                <p class="text-2xl font-extrabold text-slate-900">0</p>
                             </div>
                         </div>
                     </section>
 
                     <!-- ========================================================= -->
-                    <!-- MODULE 3: CUSTOMERS — CLIENT DIRECTORY (#tab-customers)   -->
+                    <!-- MODULE 3: CUSTOMERS — LIVE POSTGRESQL DIRECTORY           -->
                     <!-- ========================================================= -->
                     <section id="tab-customers" class="tab-content space-y-5">
                         <!-- MASTER DIRECTORY VIEW -->
                         <div id="customers-master-view" class="space-y-5">
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div>
-                                    <h1 class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Customers Directory</h1>
-                                    <p class="text-xs text-slate-500 mt-0.5">Registered borrowers (Individuals & Businesses), credit exposure, and document files</p>
+                                    <div class="flex items-center gap-2">
+                                        <h1 class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Customers Directory</h1>
+                                        <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Live PostgreSQL</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 mt-0.5">Registered borrowers (Individuals & Businesses) with unique <code>CUST-XXXXX</code> identifiers</p>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button type="button" onclick="openCustomerProfileBlueprint()" class="py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition shadow-sm">
-                                        Inspect Customer Profile View (5 Tabs)
+                                    <button type="button" onclick="loadCustomers(1)" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
+                                        Refresh
                                     </button>
-                                    <button type="button" onclick="mostrarModalProximamente('New Customer Registration (Requires customers table)')" class="btn-primary py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-                                        <span>New Customer</span>
+                                    <button type="button" id="btn-new-customer" onclick="openCustomerFormModal('create')" class="btn-primary py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
+                                        <span>+ New Customer</span>
                                     </button>
                                 </div>
                             </div>
 
-                            <!-- Search, Filters & Sort Controls -->
+                            <!-- Live Search, Filters & Sort Controls -->
                             <div class="fintech-card p-4 bg-white grid grid-cols-1 sm:grid-cols-4 gap-3">
                                 <div class="sm:col-span-2">
-                                    <input type="text" id="customer-search-input" placeholder="Search by Customer Number (e.g., CUST-0001) or Full Legal Name..." class="w-full fintech-input rounded-xl px-3.5 py-2 text-xs">
+                                    <input type="text" id="customer-search-input" oninput="debounceCustomerSearch()" placeholder="Search by Customer Number (CUST-00001), Full Name, or Phone..." class="w-full fintech-input rounded-xl px-3.5 py-2 text-xs">
                                 </div>
-                                <select class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
+                                <select id="customer-status-filter" onchange="loadCustomers(1)" class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
                                     <option value="ALL">Status: All Customers</option>
                                     <option value="ACTIVE">Active Borrower</option>
-                                    <option value="INACTIVE">Inactive / No Open Loans</option>
                                     <option value="PENDING_VERIFICATION">Pending KYC Verification</option>
+                                    <option value="INACTIVE">Inactive</option>
                                 </select>
-                                <select class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
+                                <select id="customer-sort-select" onchange="loadCustomers(1)" class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
+                                    <option value="CREATED_DESC">Sort: Newest Registered</option>
                                     <option value="NAME_ASC">Sort: Full Name (A–Z)</option>
                                     <option value="NUMBER_ASC">Sort: Customer Number</option>
-                                    <option value="BALANCE_DESC">Sort: Highest Outstanding Balance</option>
-                                    <option value="LAST_PAYMENT_DESC">Sort: Most Recent Payment</option>
                                 </select>
                             </div>
 
-                            <!-- Professional Customers Table -->
+                            <!-- Live Customers Table -->
                             <div class="fintech-card bg-white overflow-hidden">
                                 <div class="overflow-x-auto">
                                     <table class="w-full text-left border-collapse">
@@ -570,6 +460,7 @@
                                             <tr class="bg-slate-50/90 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                                                 <th class="py-3.5 px-4">Customer Number</th>
                                                 <th class="py-3.5 px-4">Full Name / Legal Entity</th>
+                                                <th class="py-3.5 px-4">Primary Phone</th>
                                                 <th class="py-3.5 px-4 text-right">Current Outstanding Balance</th>
                                                 <th class="py-3.5 px-4 text-center">Active Loans</th>
                                                 <th class="py-3.5 px-4">Customer Status</th>
@@ -577,30 +468,19 @@
                                                 <th class="py-3.5 px-4 text-right">Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody class="divide-y divide-slate-100 text-xs">
+                                        <tbody id="customers-table-tbody" class="divide-y divide-slate-100 text-xs">
                                             <tr>
-                                                <td colspan="7" class="py-12 px-6 text-center">
-                                                    <div class="max-w-md mx-auto space-y-2.5">
-                                                        <p class="text-sm font-bold text-slate-900">No customer records stored in PostgreSQL yet</p>
-                                                        <p class="text-xs text-slate-500 leading-relaxed">
-                                                            Customer Numbers are stable business identifiers (distinct from internal database primary keys) generated upon formal registration or lead conversion. Click below to inspect the complete 5-tab Customer Profile specification.
-                                                        </p>
-                                                        <button type="button" onclick="openCustomerProfileBlueprint()" class="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs transition">
-                                                            <span>Open Customer Profile Specification (5 Tabs)</span>
-                                                            <span>→</span>
-                                                        </button>
-                                                    </div>
-                                                </td>
+                                                <td colspan="8" class="py-10 text-center text-slate-400">Loading customers from PostgreSQL...</td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
                                 <!-- Pagination Footer -->
                                 <div class="px-4 py-3 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                                    <span>Showing 0 of 0 customers</span>
+                                    <span id="customers-pagination-info">Showing 0 of 0 customers</span>
                                     <div class="flex gap-1.5">
-                                        <button type="button" disabled class="px-3 py-1 rounded-lg border border-slate-200 bg-white text-slate-400 cursor-not-allowed">Previous</button>
-                                        <button type="button" disabled class="px-3 py-1 rounded-lg border border-slate-200 bg-white text-slate-400 cursor-not-allowed">Next</button>
+                                        <button type="button" id="cust-prev-btn" onclick="changeCustomerPage(-1)" disabled class="px-3 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed">Previous</button>
+                                        <button type="button" id="cust-next-btn" onclick="changeCustomerPage(1)" disabled class="px-3 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed">Next</button>
                                     </div>
                                 </div>
                             </div>
@@ -608,24 +488,25 @@
 
                         <!-- INDIVIDUAL CUSTOMER PROFILE DETAIL VIEW (5 TABS: A, B, C, D, E) -->
                         <div id="customer-detail-view" class="hidden space-y-5">
-                            <!-- Breadcrumb & Header -->
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
                                 <div class="space-y-1">
                                     <div class="flex items-center gap-2 text-xs text-slate-500">
-                                        <button type="button" onclick="closeCustomerProfileBlueprint()" class="text-blue-600 hover:underline font-semibold flex items-center gap-1">
+                                        <button type="button" onclick="closeCustomerProfileView()" class="text-blue-600 hover:underline font-semibold flex items-center gap-1">
                                             <span>← Back to Customers Directory</span>
                                         </button>
                                         <span>/</span>
-                                        <span class="font-semibold text-slate-700">Customer Profile Specification</span>
+                                        <span id="detail-cust-number-crumb" class="font-bold text-slate-800">CUST-00001</span>
                                     </div>
                                     <div class="flex items-center gap-2.5 flex-wrap">
-                                        <h2 class="text-xl font-extrabold text-slate-900">Customer Record Blueprint</h2>
-                                        <span class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">UI Specification • No Live DB Record</span>
+                                        <h2 id="detail-cust-title" class="text-xl font-extrabold text-slate-900">Customer Name</h2>
+                                        <span id="detail-cust-entity-badge" class="bg-blue-50 text-blue-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">INDIVIDUAL</span>
+                                        <span id="detail-cust-status-badge" class="bg-emerald-50 text-emerald-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">ACTIVE</span>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button type="button" onclick="switchCustomerEntityType('INDIVIDUAL')" id="cust-type-ind-btn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white">Individual (Persona Física)</button>
-                                    <button type="button" onclick="switchCustomerEntityType('BUSINESS')" id="cust-type-biz-btn" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600">Business (Persona Moral)</button>
+                                    <button type="button" id="btn-edit-customer" onclick="openCustomerFormModal('edit')" class="btn-primary py-2 px-4 rounded-xl text-xs shadow-sm">
+                                        Edit Customer Information
+                                    </button>
                                 </div>
                             </div>
 
@@ -638,87 +519,81 @@
                                 <button type="button" id="ctab-btn-documents" onclick="switchCustomerProfileTab('documents')" class="py-2 px-4 rounded-xl font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap">E. Documents (KYC)</button>
                             </div>
 
-                            <!-- TAB A: PERSONAL / CORPORATE INFORMATION -->
+                            <!-- TAB A: PERSONAL / CORPORATE INFORMATION (POPULATED FROM POSTGRESQL) -->
                             <div id="ctab-panel-personal" class="fintech-card p-5 bg-white space-y-5">
                                 <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                                     <div>
-                                        <h3 class="text-sm font-bold text-slate-900" id="cust-info-heading">Individual Borrower Information</h3>
-                                        <p class="text-[11px] text-slate-500">Verification states distinguish Not Provided, Pending Verification, and Verified fields</p>
+                                        <h3 class="text-sm font-bold text-slate-900" id="cust-info-heading">Registered Borrower Information</h3>
+                                        <p class="text-[11px] text-slate-500">Live PostgreSQL record</p>
                                     </div>
-                                    <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2.5 py-1 rounded-full">Verification: Pending DB Record</span>
+                                    <span id="detail-verification-badge" class="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2.5 py-1 rounded-full">PENDING_VERIFICATION</span>
                                 </div>
 
-                                <!-- Standard Individual / Shared Fields -->
                                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
                                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Customer Number (Stable ID)</p>
-                                        <p class="font-bold text-slate-900 mt-1">Not Assigned (Requires DB)</p>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Customer Number (Immutable)</p>
+                                        <p id="det-customer-number" class="font-bold text-slate-900 mt-1 font-mono">—</p>
                                     </div>
                                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Full Legal Name</p>
-                                        <p class="font-semibold text-slate-500 mt-1">Not Provided</p>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Full Legal Name / Razón Social</p>
+                                        <p id="det-full-name" class="font-bold text-slate-900 mt-1">—</p>
                                     </div>
                                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Date of Birth / Incorporation</p>
-                                        <p class="font-semibold text-slate-500 mt-1">Not Provided</p>
+                                        <p id="det-dob" class="font-semibold text-slate-700 mt-1">—</p>
                                     </div>
                                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Primary Phone Number</p>
-                                        <p class="font-semibold text-slate-500 mt-1">Not Provided</p>
+                                        <p id="det-phone-primary" class="font-bold text-slate-900 mt-1">—</p>
                                     </div>
                                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Additional Phone Number</p>
-                                        <p class="font-semibold text-slate-500 mt-1">Not Provided</p>
+                                        <p id="det-phone-secondary" class="font-semibold text-slate-700 mt-1">—</p>
                                     </div>
                                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Email Address</p>
-                                        <p class="font-semibold text-slate-500 mt-1">Not Provided</p>
+                                        <p id="det-email" class="font-semibold text-slate-700 mt-1">—</p>
                                     </div>
                                     <div class="sm:col-span-2 lg:col-span-3 p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Full Residential / Fiscal Address</p>
-                                        <p class="font-semibold text-slate-500 mt-1">Not Provided • Pending Proof of Address Verification</p>
+                                        <p id="det-address" class="font-semibold text-slate-700 mt-1">—</p>
                                     </div>
                                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Employment / Activity Status</p>
-                                        <p class="font-semibold text-slate-500 mt-1">Not Provided</p>
+                                        <p id="det-emp-status" class="font-semibold text-slate-700 mt-1">—</p>
                                     </div>
                                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Employer or Business Name</p>
-                                        <p class="font-semibold text-slate-500 mt-1">Not Provided</p>
+                                        <p id="det-employer" class="font-semibold text-slate-700 mt-1">—</p>
                                     </div>
                                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Occupation / Industry</p>
-                                        <p class="font-semibold text-slate-500 mt-1">Not Provided</p>
+                                        <p id="det-occupation" class="font-semibold text-slate-700 mt-1">—</p>
                                     </div>
                                     <div class="sm:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Employment / Business Address</p>
-                                        <p class="font-semibold text-slate-500 mt-1">Not Provided</p>
+                                        <p id="det-emp-address" class="font-semibold text-slate-700 mt-1">—</p>
                                     </div>
                                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Customer Since & Status</p>
-                                        <p class="font-semibold text-slate-500 mt-1">N/A • Pending Registration</p>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Customer Since & Tax ID (RFC)</p>
+                                        <p id="det-since-rfc" class="font-semibold text-slate-700 mt-1">—</p>
                                     </div>
                                 </div>
 
-                                <!-- Business Entity Specific Section (Shown when Business is toggled) -->
-                                <div id="cust-business-fields" class="hidden pt-4 border-t border-slate-200 space-y-3">
-                                    <h4 class="text-xs font-bold text-blue-700 uppercase tracking-wider">Corporate / Business Borrower Fields (Persona Moral)</h4>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                                        <div class="p-3 rounded-xl bg-blue-50/40 border border-blue-200/60">
-                                            <p class="text-[10px] font-bold text-slate-500 uppercase">Legal Entity Name (Razón Social)</p>
-                                            <p class="font-semibold text-slate-600 mt-1">Not Provided</p>
-                                        </div>
+                                <div id="det-business-block" class="hidden pt-4 border-t border-slate-200 space-y-3">
+                                    <h4 class="text-xs font-bold text-blue-700 uppercase tracking-wider">Corporate / Business Borrower Details (Persona Moral)</h4>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                                         <div class="p-3 rounded-xl bg-blue-50/40 border border-blue-200/60">
                                             <p class="text-[10px] font-bold text-slate-500 uppercase">Trade Name (Nombre Comercial)</p>
-                                            <p class="font-semibold text-slate-600 mt-1">Not Provided</p>
+                                            <p id="det-trade-name" class="font-bold text-slate-900 mt-1">—</p>
                                         </div>
                                         <div class="p-3 rounded-xl bg-blue-50/40 border border-blue-200/60">
                                             <p class="text-[10px] font-bold text-slate-500 uppercase">Authorized Legal Representative</p>
-                                            <p class="font-semibold text-slate-600 mt-1">Not Provided</p>
+                                            <p id="det-legal-rep" class="font-bold text-slate-900 mt-1">—</p>
                                         </div>
                                         <div class="p-3 rounded-xl bg-blue-50/40 border border-blue-200/60">
-                                            <p class="text-[10px] font-bold text-slate-500 uppercase">Corporate Tax ID (RFC) & Contact</p>
-                                            <p class="font-semibold text-slate-600 mt-1">Pending Verification</p>
+                                            <p class="text-[10px] font-bold text-slate-500 uppercase">Corporate Tax ID (RFC)</p>
+                                            <p id="det-corp-rfc" class="font-bold text-slate-900 mt-1">—</p>
                                         </div>
                                     </div>
                                 </div>
@@ -728,7 +603,7 @@
                             <div id="ctab-panel-summary" class="hidden fintech-card p-5 bg-white space-y-4">
                                 <div class="border-b border-slate-100 pb-3">
                                     <h3 class="text-sm font-bold text-slate-900">Aggregated Customer Credit Summary</h3>
-                                    <p class="text-[11px] text-slate-500">Aggregates all active loans for the customer without double-counting installments</p>
+                                    <p class="text-[11px] text-slate-500">Aggregates all active loans for this customer</p>
                                 </div>
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                                     <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
@@ -736,7 +611,7 @@
                                         <p class="text-base font-extrabold text-slate-900 mt-1">$0.00 MXN</p>
                                     </div>
                                     <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Total Amount Due (Prin + Int)</p>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Total Amount Due</p>
                                         <p class="text-base font-extrabold text-slate-900 mt-1">$0.00 MXN</p>
                                     </div>
                                     <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
@@ -747,18 +622,6 @@
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Active Loans / Total Loans</p>
                                         <p class="text-base font-extrabold text-slate-900 mt-1">0 / 0</p>
                                     </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Last Payment Date</p>
-                                        <p class="font-bold text-slate-700 mt-1">N/A</p>
-                                    </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Next Payment Due Date</p>
-                                        <p class="font-bold text-slate-700 mt-1">N/A</p>
-                                    </div>
-                                    <div class="sm:col-span-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Remaining Installments Across Active Loans</p>
-                                        <p class="font-bold text-slate-700 mt-1">0 Installments</p>
-                                    </div>
                                 </div>
                             </div>
 
@@ -766,113 +629,23 @@
                             <div id="ctab-panel-loans" class="hidden fintech-card bg-white overflow-hidden">
                                 <div class="p-4 border-b border-slate-100 flex items-center justify-between">
                                     <h3 class="text-sm font-bold text-slate-900">Associated Customer Loans</h3>
-                                    <button type="button" onclick="switchTab('loans'); openLoanDetailBlueprint();" class="text-xs font-semibold text-blue-600 hover:underline">Inspect Loan Detail View →</button>
+                                    <button type="button" onclick="switchTab('simulator')" class="text-xs font-semibold text-blue-600 hover:underline">Simulate Loan Offer →</button>
                                 </div>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase text-slate-500">
-                                                <th class="py-3 px-4">Loan Number</th>
-                                                <th class="py-3 px-4">Product</th>
-                                                <th class="py-3 px-4 text-right">Original Principal</th>
-                                                <th class="py-3 px-4 text-right">Outstanding Principal</th>
-                                                <th class="py-3 px-4 text-right">Payment Amount</th>
-                                                <th class="py-3 px-4">Frequency</th>
-                                                <th class="py-3 px-4">Next Due Date</th>
-                                                <th class="py-3 px-4 text-center">Remaining Inst.</th>
-                                                <th class="py-3 px-4">Loan Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="text-xs">
-                                            <tr>
-                                                <td colspan="9" class="py-8 text-center text-slate-500">No loans associated with this customer record.</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                <div class="p-8 text-center text-xs text-slate-500">
+                                    No active loans associated with this customer yet. Formal loan origination will be enabled in Stage 3.
                                 </div>
                             </div>
 
                             <!-- TAB D: INTERACTIONS & NOTES -->
-                            <div id="ctab-panel-interactions" class="hidden fintech-card p-5 bg-white space-y-4">
-                                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                                    <div>
-                                        <h3 class="text-sm font-bold text-slate-900">Chronological Interactions & Notes</h3>
-                                        <p class="text-[11px] text-slate-500">Distinguishes Internal Team Notes from Customer-Facing communications with full user attribution</p>
-                                    </div>
-                                    <span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2.5 py-1 rounded-full">Requires Backend API</span>
-                                </div>
-                                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                                        <select disabled class="fintech-input rounded-xl p-2.5 opacity-70 cursor-not-allowed">
-                                            <option>Visibility: Internal Team Note (Restricted)</option>
-                                            <option>Visibility: Customer-Facing Summary</option>
-                                        </select>
-                                        <input type="text" disabled value="Author: Authenticated Team Member (Auto-stamped)" class="fintech-input rounded-xl p-2.5 opacity-70 cursor-not-allowed">
-                                    </div>
-                                    <textarea disabled rows="2" class="w-full fintech-input rounded-xl p-3 text-xs opacity-70 cursor-not-allowed" placeholder="Note submission is disabled until the customer_interactions PostgreSQL table and API endpoint are enabled..."></textarea>
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-[11px] text-slate-500">Persistence is never simulated without server confirmation.</span>
-                                        <button type="button" onclick="mostrarModalProximamente('Save Customer Interaction (Requires customer_interactions table)')" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 font-semibold text-xs">Requires Backend Persistence</button>
-                                    </div>
-                                </div>
+                            <div id="ctab-panel-interactions" class="hidden fintech-card p-5 bg-white space-y-3">
+                                <h3 class="text-sm font-bold text-slate-900">Chronological Interactions & Notes</h3>
+                                <p class="text-xs text-slate-500">Persistent customer notes and call logs will be activated with the <code>interactions</code> table in Stage 2.</p>
                             </div>
 
-                            <!-- TAB E: DOCUMENTS (SECURE KYC VAULT SPECIFICATION) -->
-                            <div id="ctab-panel-documents" class="hidden fintech-card p-5 bg-white space-y-4">
-                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
-                                    <div>
-                                        <h3 class="text-sm font-bold text-slate-900">Customer Document Dossier (KYC & Contracts)</h3>
-                                        <p class="text-[11px] text-slate-500">Private server-side storage architecture • Public permanent URLs are strictly prohibited</p>
-                                    </div>
-                                    <button type="button" onclick="mostrarModalProximamente('Secure Document Upload (Requires Private Storage & Server MIME Validation)')" class="px-3.5 py-2 rounded-xl bg-slate-900 text-white font-semibold text-xs">
-                                        Upload Document (Requires Storage Backend)
-                                    </button>
-                                </div>
-
-                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
-                                        <div>
-                                            <p class="font-bold text-slate-900">1. Government ID / INE</p>
-                                            <p class="text-[11px] text-slate-500">Status: Not Uploaded</p>
-                                        </div>
-                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">Required</span>
-                                    </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
-                                        <div>
-                                            <p class="font-bold text-slate-900">2. Proof of Address</p>
-                                            <p class="text-[11px] text-slate-500">Status: Not Uploaded</p>
-                                        </div>
-                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">Required</span>
-                                    </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
-                                        <div>
-                                            <p class="font-bold text-slate-900">3. Signed Loan Agreement</p>
-                                            <p class="text-[11px] text-slate-500">Status: Not Uploaded</p>
-                                        </div>
-                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">Contract</span>
-                                    </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
-                                        <div>
-                                            <p class="font-bold text-slate-900">4. Proof of Income</p>
-                                            <p class="text-[11px] text-slate-500">Status: Not Uploaded</p>
-                                        </div>
-                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">Underwriting</span>
-                                    </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
-                                        <div>
-                                            <p class="font-bold text-slate-900">5. Bank Statements</p>
-                                            <p class="text-[11px] text-slate-500">Status: Not Uploaded</p>
-                                        </div>
-                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">Optional</span>
-                                    </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
-                                        <div>
-                                            <p class="font-bold text-slate-900">6. Other Documents</p>
-                                            <p class="text-[11px] text-slate-500">Status: Not Uploaded</p>
-                                        </div>
-                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">Auxiliary</span>
-                                    </div>
-                                </div>
+                            <!-- TAB E: DOCUMENTS -->
+                            <div id="ctab-panel-documents" class="hidden fintech-card p-5 bg-white space-y-3">
+                                <h3 class="text-sm font-bold text-slate-900">Customer Document Dossier (KYC & Contracts)</h3>
+                                <p class="text-xs text-slate-500">Private server-side document storage (INE, Proof of Address, Signed Loan Agreement) will be enabled in Stage 5.</p>
                             </div>
                         </div>
                     </section>
@@ -881,7 +654,6 @@
                     <!-- MODULE 4: LOANS — LOAN SERVICING & BOOK (#tab-loans)      -->
                     <!-- ========================================================= -->
                     <section id="tab-loans" class="tab-content space-y-5">
-                        <!-- MASTER LOANS TABLE VIEW -->
                         <div id="loans-master-view" class="space-y-5">
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div>
@@ -898,180 +670,30 @@
                                 </div>
                             </div>
 
-                            <!-- Status Filter Pills & Orthogonal Status Rule Explanation -->
                             <div class="fintech-card p-4 bg-white space-y-3">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                     <div class="flex gap-1.5 overflow-x-auto no-scrollbar text-xs">
-                                        <button type="button" id="lfilter-all" onclick="setLoansFilterUI('all')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-900 text-white">All Loans (0)</button>
-                                        <button type="button" id="lfilter-active" onclick="setLoansFilterUI('active')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Active Loans (0)</button>
-                                        <button type="button" id="lfilter-current" onclick="setLoansFilterUI('current')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Current / On-Time (0)</button>
-                                        <button type="button" id="lfilter-overdue" onclick="setLoansFilterUI('overdue')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-red-50 text-red-600 hover:bg-red-100">Overdue (0)</button>
-                                        <button type="button" id="lfilter-paidoff" onclick="setLoansFilterUI('paidoff')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200">Paid Off / Closed (0)</button>
+                                        <button type="button" onclick="setLoansFilterUI('all')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-900 text-white">All Loans (0)</button>
+                                        <button type="button" onclick="setLoansFilterUI('active')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Active Loans (0)</button>
+                                        <button type="button" onclick="setLoansFilterUI('current')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Current / On-Time (0)</button>
+                                        <button type="button" onclick="setLoansFilterUI('overdue')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-red-50 text-red-600 hover:bg-red-100">Overdue (0)</button>
+                                        <button type="button" onclick="setLoansFilterUI('paidoff')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200">Paid Off / Closed (0)</button>
                                     </div>
                                     <span id="loans-active-filter-label" class="text-[11px] font-semibold text-blue-600">Showing: All Loans</span>
                                 </div>
-                                <p class="text-[11px] text-slate-500 border-t border-slate-100 pt-2">
-                                    <strong>Accounting Status Rule:</strong> <em>Active</em> (unliquidated obligation) and <em>Current / On-Time</em> (zero past-due installments) are not mutually exclusive—an active loan is simultaneously <em>Current</em> when all matured installments are paid on time, or <em>Overdue</em> when at least one matured installment has an unpaid balance.
-                                </p>
                             </div>
 
-                            <!-- Search & Product Filter -->
-                            <div class="fintech-card p-4 bg-white grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <input type="text" placeholder="Search by Loan Number (e.g., LN-0001) or Customer Name..." class="fintech-input rounded-xl px-3.5 py-2 text-xs">
-                                <select class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
-                                    <option value="ALL">Product: All Products</option>
-                                    <option value="Personal Loan">Personal Loan</option>
-                                    <option value="Business Loan">Business Loan</option>
-                                </select>
-                                <select class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
-                                    <option value="NEXT_DUE_ASC">Sort: Next Payment Date (Earliest)</option>
-                                    <option value="DPD_DESC">Sort: Days Past Due (Highest)</option>
-                                    <option value="OUTSTANDING_DESC">Sort: Outstanding Principal (Highest)</option>
-                                </select>
-                            </div>
-
-                            <!-- Loans Master Table -->
-                            <div class="fintech-card bg-white overflow-hidden">
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                                <th class="py-3.5 px-3">Loan Number</th>
-                                                <th class="py-3.5 px-3">Customer</th>
-                                                <th class="py-3.5 px-3">Product</th>
-                                                <th class="py-3.5 px-3 text-right">Original Principal</th>
-                                                <th class="py-3.5 px-3 text-right">Outstanding Principal</th>
-                                                <th class="py-3.5 px-3 text-right">Total Amount Due</th>
-                                                <th class="py-3.5 px-3 text-right">Installment Amt</th>
-                                                <th class="py-3.5 px-3">Next Payment Date</th>
-                                                <th class="py-3.5 px-3 text-center">Days Past Due</th>
-                                                <th class="py-3.5 px-3 text-center">Rem. Inst.</th>
-                                                <th class="py-3.5 px-3">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-slate-100 text-xs">
-                                            <tr>
-                                                <td colspan="11" class="py-12 px-6 text-center">
-                                                    <div class="max-w-md mx-auto space-y-2.5">
-                                                        <p class="text-sm font-bold text-slate-900">No formalized loans stored in PostgreSQL yet</p>
-                                                        <p class="text-xs text-slate-500 leading-relaxed">
-                                                            Active loans, reproducible amortization schedules, and payment allocations require the <code>loans</code>, <code>loan_installments</code>, and <code>payments</code> tables. Click below to inspect the 10-section Loan Detail view.
-                                                        </p>
-                                                        <button type="button" onclick="openLoanDetailBlueprint()" class="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs transition">
-                                                            <span>Open 10-Section Loan Detail Blueprint</span>
-                                                            <span>→</span>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div class="fintech-card bg-white p-10 text-center space-y-2.5">
+                                <p class="text-sm font-bold text-slate-900">No formalized loans stored in PostgreSQL yet</p>
+                                <p class="text-xs text-slate-500 max-w-md mx-auto">The <code>loans</code> and <code>loan_installments</code> tables are scheduled for Stage 3.</p>
                             </div>
                         </div>
 
-                        <!-- LOAN DETAIL 10-SECTION VIEW (#loan-detail-view) -->
-                        <div id="loan-detail-view" class="hidden space-y-5">
-                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
-                                <div class="space-y-1">
-                                    <div class="flex items-center gap-2 text-xs text-slate-500">
-                                        <button type="button" onclick="closeLoanDetailBlueprint()" class="text-blue-600 hover:underline font-semibold">← Back to Loans Table</button>
-                                        <span>/</span>
-                                        <span class="font-semibold text-slate-700">Loan Servicing Specification (10 Sections)</span>
-                                    </div>
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <h2 class="text-xl font-extrabold text-slate-900">Loan File & Schedule Architecture</h2>
-                                        <span class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">Blueprint Specification</span>
-                                    </div>
-                                </div>
-                                <button type="button" onclick="switchTab('customers'); openCustomerProfileBlueprint();" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50">
-                                    View Linked Customer Profile →
-                                </button>
-                            </div>
-
-                            <!-- Sections 1, 2, 3: Credit Summary, Customer Info, Approved Terms Snapshot -->
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 text-xs">
-                                <div class="fintech-card p-4 bg-white space-y-2">
-                                    <p class="text-[10px] font-bold uppercase text-blue-600">1. Credit Summary</p>
-                                    <div class="flex justify-between"><span>Loan Number:</span><span class="font-bold">Unassigned (DB Pending)</span></div>
-                                    <div class="flex justify-between"><span>Lifecycle State:</span><span class="font-bold text-slate-700">N/A</span></div>
-                                    <div class="flex justify-between"><span>Delinquency State:</span><span class="font-bold text-emerald-700">0 Days Past Due</span></div>
-                                    <div class="flex justify-between"><span>Outstanding Principal:</span><span class="font-bold">$0.00 MXN</span></div>
-                                </div>
-                                <div class="fintech-card p-4 bg-white space-y-2">
-                                    <p class="text-[10px] font-bold uppercase text-blue-600">2. Customer Information</p>
-                                    <div class="flex justify-between"><span>Customer Number:</span><span class="font-bold">N/A</span></div>
-                                    <div class="flex justify-between"><span>Legal Name:</span><span class="font-bold">No Linked Borrower</span></div>
-                                    <div class="flex justify-between"><span>Primary Phone:</span><span>Not Provided</span></div>
-                                    <div class="flex justify-between"><span>KYC Dossier:</span><span>Pending Verification</span></div>
-                                </div>
-                                <div class="fintech-card p-4 bg-white space-y-2">
-                                    <p class="text-[10px] font-bold uppercase text-blue-600">3. Immutable Approved Terms</p>
-                                    <div class="flex justify-between"><span>Product:</span><span class="font-bold">Personal / Business Loan</span></div>
-                                    <div class="flex justify-between"><span>Interest Method:</span><span class="font-bold">Flat on Original Principal</span></div>
-                                    <div class="flex justify-between"><span>Payment Frequency:</span><span class="font-bold">Weekly (16 Installments)</span></div>
-                                    <div class="flex justify-between"><span>Partial Payment Rule:</span><span>Reduces Remaining Amt Only</span></div>
-                                </div>
-                            </div>
-
-                            <!-- Section 4: Contractual Amortization Schedule Table -->
-                            <div class="fintech-card bg-white overflow-hidden">
-                                <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-                                    <div>
-                                        <h3 class="text-sm font-bold text-slate-900">4. Contractual Amortization & Servicing Schedule</h3>
-                                        <p class="text-[11px] text-slate-500">Partial payments reduce Remaining Amount without marking an installment Paid until Remaining Amount == $0.00 MXN</p>
-                                    </div>
-                                </div>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-left border-collapse text-xs">
-                                        <thead>
-                                            <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase text-slate-500">
-                                                <th class="py-3 px-3">Inst. #</th>
-                                                <th class="py-3 px-3">Due Date</th>
-                                                <th class="py-3 px-3 text-right">Beginning Balance</th>
-                                                <th class="py-3 px-3 text-right">Principal Due</th>
-                                                <th class="py-3 px-3 text-right">Interest Due</th>
-                                                <th class="py-3 px-3 text-right">Scheduled Payment</th>
-                                                <th class="py-3 px-3 text-right">Amount Paid</th>
-                                                <th class="py-3 px-3 text-right">Remaining Amount</th>
-                                                <th class="py-3 px-3">Payment Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td colspan="9" class="py-8 text-center text-slate-500">No active loan schedule loaded. Use the <strong>Loan Simulator</strong> (Module 5) to generate and print full 16-week schedules.</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <!-- Sections 5, 6, 7, 8, 9, 10 Grid -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                                <div class="fintech-card p-4 bg-white space-y-1.5">
-                                    <p class="font-bold text-slate-900">5. Payment History</p>
-                                    <p class="text-slate-500 text-[11px]">Chronological ledger of confirmed payments, folios, and principal/interest allocations (0 records).</p>
-                                </div>
-                                <div class="fintech-card p-4 bg-white space-y-1.5">
-                                    <p class="font-bold text-slate-900">6. Pending Payments</p>
-                                    <p class="text-slate-500 text-[11px]">Future scheduled installments and partially paid current installments (0 pending).</p>
-                                </div>
-                                <div class="fintech-card p-4 bg-white space-y-1.5">
-                                    <p class="font-bold text-red-600">7. Overdue Payments</p>
-                                    <p class="text-slate-500 text-[11px]">Installments with Due Date prior to today and Remaining Amount &gt; $0.00 MXN (0 overdue).</p>
-                                </div>
-                                <div class="fintech-card p-4 bg-white space-y-1.5">
-                                    <p class="font-bold text-slate-900">8. Related Documents</p>
-                                    <p class="text-slate-500 text-[11px]">Signed promissory note, loan contract, and disbursement receipt (Requires private storage).</p>
-                                </div>
-                                <div class="fintech-card p-4 bg-white space-y-1.5">
-                                    <p class="font-bold text-slate-900">9. Servicing Interactions & Notes</p>
-                                    <p class="text-slate-500 text-[11px]">Collection calls, payment promises, and servicing notes linked to this loan.</p>
-                                </div>
-                                <div class="fintech-card p-4 bg-white space-y-1.5">
-                                    <p class="font-bold text-slate-900">10. Change History & Audit Trail</p>
-                                    <p class="text-slate-500 text-[11px]">Immutable log of approval, disbursement, payment application, and any authorized reversal.</p>
-                                </div>
+                        <div id="loan-detail-view" class="hidden space-y-4">
+                            <button type="button" onclick="closeLoanDetailBlueprint()" class="text-xs text-blue-600 hover:underline font-semibold">← Back to Loans Table</button>
+                            <div class="fintech-card p-6 bg-white text-xs text-slate-600">
+                                <p class="font-bold text-slate-900 text-sm mb-2">10-Section Loan Servicing Blueprint Ready</p>
+                                <p>Includes Credit Summary, Linked Customer, Immutable Approved Terms, 16-Week Amortization Schedule, Payment Ledger, Pending/Overdue Installments, Documents, Notes, and Audit Trail.</p>
                             </div>
                         </div>
                     </section>
@@ -1080,7 +702,6 @@
                     <!-- MODULE 5: LOAN SIMULATOR (#tab-simulator)                 -->
                     <!-- ========================================================= -->
                     <section id="tab-simulator" class="tab-content space-y-6">
-                        <!-- PRINT-ONLY OFFICIAL HEADER WITH REAL NURA LOGO -->
                         <div id="print-document-header" class="hidden pb-4 mb-4 border-b-2 border-slate-900">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
@@ -1107,7 +728,6 @@
                             </div>
                         </div>
 
-                        <!-- Interactive Simulator Header (Hidden on Print) -->
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 no-print">
                             <div>
                                 <div class="flex items-center gap-2">
@@ -1124,15 +744,12 @@
                                     + Compare Scenario
                                 </button>
                                 <button type="button" onclick="printLoanSimulation()" class="btn-primary py-2 px-4 rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                                     <span>Print / Save PDF</span>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Simulator Configuration Form + Summary Grid -->
                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                            <!-- Editable Parameters Panel (5 cols on Desktop, Hidden on Print) -->
                             <div class="lg:col-span-5 fintech-card p-5 bg-white space-y-4 no-print">
                                 <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
                                     <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Editable Simulation Parameters</h3>
@@ -1147,47 +764,26 @@
                                             <option value="Business Loan">Business Loan</option>
                                         </select>
                                     </div>
-
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Loan Amount (MXN)</label>
                                         <input type="number" id="sim-principal" value="50000" min="1000" max="10000000" step="500" oninput="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold">
                                     </div>
-
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Monthly Flat Rate (%)</label>
                                         <input type="number" id="sim-monthly-rate" value="10" min="0" max="100" step="0.5" oninput="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold">
                                     </div>
-
-                                    <div class="sm:col-span-2">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Interest Calculation Method</label>
-                                        <select id="sim-method" onchange="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
-                                            <option value="FLAT_ORIGINAL_PRINCIPAL">Flat Interest on Original Principal (Fixed Monthly Rate)</option>
-                                        </select>
-                                    </div>
-
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Loan Term (Weeks)</label>
                                         <input type="number" id="sim-term-weeks" value="16" min="1" max="104" step="1" oninput="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold">
                                     </div>
-
                                     <div>
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Payment Frequency</label>
-                                        <select id="sim-frequency" onchange="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
-                                            <option value="WEEKLY">Weekly (Every 7 Days)</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="sm:col-span-2">
-                                        <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Assumed Full Monthly Interest Periods</label>
+                                        <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Full Monthly Periods</label>
                                         <input type="number" id="sim-interest-months" value="4" min="1" max="36" step="1" oninput="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold border-amber-300 bg-amber-50/40">
-                                        <p class="text-[10px] text-slate-500 mt-1">Reference scenario uses <strong>4 full monthly interest periods</strong> for a 16-week schedule.</p>
                                     </div>
-
                                     <div>
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Start / Disbursement Date</label>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Start Date</label>
                                         <input type="date" id="sim-start-date" onchange="handleStartDateChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs">
                                     </div>
-
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">First Payment Date</label>
                                         <input type="date" id="sim-first-payment-date" onchange="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs">
@@ -1195,7 +791,6 @@
                                 </div>
                             </div>
 
-                            <!-- Executive Simulation Summary & Method Assumptions (7 cols on Desktop, Full Width on Print) -->
                             <div class="lg:col-span-7 space-y-4">
                                 <div class="fintech-card p-5 bg-white space-y-4">
                                     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1232,7 +827,7 @@
                                             <p id="sum-final-payment" class="text-sm font-extrabold text-slate-900 mt-0.5">$4,375.00 MXN</p>
                                         </div>
                                         <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase">Installments & Frequency</p>
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">Installments</p>
                                             <p id="sum-term-freq" class="font-bold text-slate-800 mt-0.5">16 Weekly Installments</p>
                                         </div>
                                         <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
@@ -1245,17 +840,15 @@
                                         </div>
                                     </div>
 
-                                    <!-- Explicit Financial Assumption & Calendar Notice -->
                                     <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/90 text-[11px] text-amber-900 space-y-1 leading-relaxed">
                                         <p class="font-bold">Calculation Method & Calendar Assumption Disclosure:</p>
-                                        <p id="sim-assumption-text">
+                                        <p>
                                             • <strong>Flat Interest on Original Principal:</strong> Monthly interest is calculated strictly on the original principal (Original Principal × Monthly Rate) and does not decrease as principal is amortized.<br>
-                                            • <strong>Weeks vs. Calendar Months Notice:</strong> 16 calendar weeks (112 days) do not equal 4 exact calendar months. This scenario models <span id="disc-months">4</span> full contractual monthly interest periods distributed evenly across <span id="disc-weeks">16</span> weekly installments (with exact cent-rounding adjustment on the final installment if required). Contractual prorating for partial months and early payoff rules require explicit business rule approval before loan origination.
+                                            • <strong>Weeks vs. Calendar Months Notice:</strong> This scenario models <span id="disc-months">4</span> full contractual monthly interest periods distributed across <span id="disc-weeks">16</span> weekly installments.
                                         </p>
                                     </div>
                                 </div>
 
-                                <!-- Scenario Comparison Drawer (Visible when scenarios are saved) -->
                                 <div id="sim-comparison-card" class="hidden fintech-card p-5 bg-white space-y-3 no-print">
                                     <div class="flex items-center justify-between">
                                         <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Saved Scenario Comparison</h3>
@@ -1281,14 +874,10 @@
                             </div>
                         </div>
 
-                        <!-- Complete Amortization Schedule Table -->
                         <div class="fintech-card bg-white overflow-hidden">
-                            <div class="p-4 sm:px-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                <div>
-                                    <h3 class="text-sm font-bold text-slate-900">Amortization Schedule Table</h3>
-                                    <p class="text-[11px] text-slate-500">Exact cent reconciliation: Sum of Principal + Sum of Interest equals Total Repayment to the cent</p>
-                                </div>
-                                <span id="sim-reconciliation-badge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-full">✓ Cent-Exact Invariant Verified</span>
+                            <div class="p-4 sm:px-5 border-b border-slate-100 flex items-center justify-between">
+                                <h3 class="text-sm font-bold text-slate-900">Amortization Schedule Table</h3>
+                                <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-full">✓ Cent-Exact Invariant Verified</span>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse text-xs">
@@ -1309,10 +898,9 @@
                             </div>
                         </div>
 
-                        <!-- Print-Only Footer -->
                         <div id="print-document-footer" class="hidden pt-4 border-t border-slate-300 text-[10px] text-slate-500 flex justify-between">
                             <span>NURA CRM • Non-Binding Financial Simulation Document • All figures in MXN</span>
-                            <span>Page 1 / Multi-page headers enabled</span>
+                            <span>Multi-page headers enabled</span>
                         </div>
                     </section>
 
@@ -1326,7 +914,6 @@
                         </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                            <!-- Left Column: User Identity Card & Sign Out (4 cols) -->
                             <div class="lg:col-span-4 space-y-4">
                                 <div class="fintech-card p-5 bg-white space-y-4">
                                     <div class="flex items-center justify-between">
@@ -1341,109 +928,54 @@
                                     </div>
                                 </div>
 
-                                <!-- ONE-TIME BOOTSTRAP BANNER (HIDDEN FOR OWNER_ADMIN) -->
                                 <div id="bootstrap-banner" class="hidden fintech-card p-4 bg-amber-50 border border-amber-200 space-y-2.5">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-xs font-bold text-amber-900">Owner Admin Activation</span>
-                                        <span class="text-[9px] font-bold uppercase bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full">One-Time Setup</span>
-                                    </div>
-                                    <p class="text-[11px] text-amber-800 leading-relaxed">Activate your account as <strong>OWNER_ADMIN</strong> using the bootstrap secret configured in Render.</p>
+                                    <span class="text-xs font-bold text-amber-900">Owner Admin Activation</span>
                                     <button type="button" onclick="openBootstrapModal()" class="w-full py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition">
                                         Activate Owner Admin
                                     </button>
                                 </div>
 
                                 <button type="button" onclick="cerrarSesion()" class="w-full py-3.5 px-4 rounded-2xl bg-white border border-red-200/80 text-xs font-bold text-red-600 hover:bg-red-50 transition flex items-center justify-center gap-2 shadow-sm">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
                                     <span>Secure Sign Out</span>
                                 </button>
                             </div>
 
-                            <!-- Right Column: Team Admin, Audit Viewer & Preferences (8 cols) -->
                             <div class="lg:col-span-8 space-y-5">
                                 <div class="fintech-card bg-white overflow-hidden">
                                     <div class="bg-slate-50/80 px-5 py-3 border-b border-slate-100">
                                         <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account, Team & Security Administration</span>
                                     </div>
                                     <div class="divide-y divide-slate-100">
-                                        <!-- Team Management (Visible to OWNER_ADMIN) -->
-                                        <button type="button" id="btn-team-management" onclick="openTeamModal()" class="hidden w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left group">
-                                            <div class="flex items-center gap-3.5">
-                                                <div class="h-10 w-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                                </div>
-                                                <div>
-                                                    <p class="text-xs sm:text-sm font-bold text-slate-900">Team & Access Management</p>
-                                                    <p class="text-[11px] text-slate-500">Add Owners, Sales Agents, and manage team member roles</p>
-                                                </div>
+                                        <button type="button" id="btn-team-management" onclick="openTeamModal()" class="hidden w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left">
+                                            <div>
+                                                <p class="text-xs sm:text-sm font-bold text-slate-900">Team & Access Management</p>
+                                                <p class="text-[11px] text-slate-500">Add Owners, Sales Agents, and manage team member roles</p>
                                             </div>
-                                            <svg class="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+                                            <span class="text-slate-400">→</span>
                                         </button>
 
-                                        <!-- Audit Logs Viewer (Visible to OWNER_ADMIN, connected to existing /api/admin/audit-logs) -->
-                                        <button type="button" id="btn-audit-logs" onclick="openAuditLogsModal()" class="hidden w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left group">
-                                            <div class="flex items-center gap-3.5">
-                                                <div class="h-10 w-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                                </div>
-                                                <div>
-                                                    <p class="text-xs sm:text-sm font-bold text-slate-900">Security Audit Trail (Append-Only)</p>
-                                                    <p class="text-[11px] text-slate-500">Inspect real-time authentication, role, and administrative events</p>
-                                                </div>
+                                        <button type="button" id="btn-audit-logs" onclick="openAuditLogsModal()" class="hidden w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left">
+                                            <div>
+                                                <p class="text-xs sm:text-sm font-bold text-slate-900">Security Audit Trail (Append-Only)</p>
+                                                <p class="text-[11px] text-slate-500">Inspect real-time authentication, customer, and administrative events</p>
                                             </div>
-                                            <svg class="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+                                            <span class="text-slate-400">→</span>
                                         </button>
 
-                                        <button type="button" onclick="openProfileSection('personal')" class="w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left group">
-                                            <div class="flex items-center gap-3.5">
-                                                <div class="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                                </div>
-                                                <div>
-                                                    <p class="text-xs sm:text-sm font-bold text-slate-900">Personal Information</p>
-                                                    <p class="text-[11px] text-slate-500">Name, email address, and assigned CRM role</p>
-                                                </div>
+                                        <button type="button" onclick="openProfileSection('personal')" class="w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left">
+                                            <div>
+                                                <p class="text-xs sm:text-sm font-bold text-slate-900">Personal Information</p>
+                                                <p class="text-[11px] text-slate-500">Name, email address, and assigned CRM role</p>
                                             </div>
-                                            <svg class="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+                                            <span class="text-slate-400">→</span>
                                         </button>
 
-                                        <button type="button" onclick="openProfileSection('security')" class="w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left group">
-                                            <div class="flex items-center gap-3.5">
-                                                <div class="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                                </div>
-                                                <div>
-                                                    <p class="text-xs sm:text-sm font-bold text-slate-900">Security & Privacy</p>
-                                                    <p class="text-[11px] text-slate-500">Portfolio figure visibility and access controls</p>
-                                                </div>
+                                        <button type="button" onclick="openProfileSection('security')" class="w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left">
+                                            <div>
+                                                <p class="text-xs sm:text-sm font-bold text-slate-900">Security & Privacy</p>
+                                                <p class="text-[11px] text-slate-500">Portfolio figure visibility and access controls</p>
                                             </div>
-                                            <svg class="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
-                                        </button>
-
-                                        <button type="button" onclick="openProfileSection('preferences')" class="w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left group">
-                                            <div class="flex items-center gap-3.5">
-                                                <div class="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/></svg>
-                                                </div>
-                                                <div>
-                                                    <p class="text-xs sm:text-sm font-bold text-slate-900">Application Preferences</p>
-                                                    <p class="text-[11px] text-slate-500">Language, currency (MXN), and active credit products</p>
-                                                </div>
-                                            </div>
-                                            <svg class="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
-                                        </button>
-
-                                        <button type="button" onclick="openProfileSection('support')" class="w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left group">
-                                            <div class="flex items-center gap-3.5">
-                                                <div class="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                                                </div>
-                                                <div>
-                                                    <p class="text-xs sm:text-sm font-bold text-slate-900">Help & Support Center</p>
-                                                    <p class="text-[11px] text-slate-500">Connect with Nura CRM Assistant</p>
-                                                </div>
-                                            </div>
-                                            <svg class="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+                                            <span class="text-slate-400">→</span>
                                         </button>
                                     </div>
                                 </div>
@@ -1467,43 +999,23 @@
                                         <button type="button" onclick="nuevaConversacion()" class="text-[11px] text-blue-600 hover:text-blue-700 font-semibold bg-blue-50 hover:bg-blue-100 transition px-3 py-1.5 rounded-lg">+ New</button>
                                     </div>
                                 </div>
-
                                 <div id="conversations-bar" class="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-y-auto lg:max-h-[260px] no-scrollbar text-xs"></div>
-
-                                <div class="pt-3 border-t border-slate-100 space-y-2">
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quick CRM Prompts</p>
-                                    <div class="flex lg:flex-col gap-2 overflow-x-auto no-scrollbar">
-                                        <button type="button" onclick="enviarSugerencia('Explain the difference between flat interest on original principal and declining balance')" class="whitespace-nowrap lg:whitespace-normal text-left px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-xl transition">📊 Flat Interest vs Declining Balance</button>
-                                        <button type="button" onclick="enviarSugerencia('Draft a professional follow-up call script for a qualified lead')" class="whitespace-nowrap lg:whitespace-normal text-left px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-xl transition">📞 Follow-up Call Script</button>
-                                        <button type="button" onclick="enviarSugerencia('What documents are required for KYC verification in Mexico?')" class="whitespace-nowrap lg:whitespace-normal text-left px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium rounded-xl transition">📁 KYC Checklist</button>
-                                    </div>
-                                </div>
                             </div>
 
                             <div class="lg:col-span-8 fintech-card p-4 sm:p-5 bg-white flex flex-col h-[500px] lg:h-[600px]">
                                 <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
                                     <div class="flex items-center gap-3">
-                                        <div class="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-sm">
-                                            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
-                                        </div>
+                                        <div class="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-sm">N</div>
                                         <div>
                                             <h2 class="text-sm font-bold text-slate-900">Nura CRM Assistant</h2>
                                             <span class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Advisory Mode • Read-Only Safety</span>
                                         </div>
                                     </div>
                                 </div>
-
-                                <div id="chat-messages" class="flex-1 overflow-y-auto space-y-4 pr-1 mt-1 flex flex-col">
-                                    <div class="chat-msg-executive p-3.5 mr-12 text-[13px] leading-relaxed self-start max-w-[85%]">
-                                        <p class="font-bold text-slate-900 mb-1">Hello, I'm Nura. How can I help you with your leads, credit evaluations, or simulations today?</p>
-                                    </div>
-                                </div>
-
+                                <div id="chat-messages" class="flex-1 overflow-y-auto space-y-4 pr-1 mt-1 flex flex-col"></div>
                                 <div class="pt-3 border-t border-slate-100 mt-3 flex gap-2">
                                     <input type="text" id="chat-input" placeholder="Message Nura..." onkeypress="handleKeyPress(event)" class="flex-1 fintech-input rounded-xl px-4 py-3 text-xs sm:text-[13px]">
-                                    <button type="button" onclick="enviarMensajeChat()" id="send-chat-btn" class="btn-primary px-5 rounded-xl text-xs flex items-center justify-center gap-1.5">
-                                        <span>Send</span>
-                                    </button>
+                                    <button type="button" onclick="enviarMensajeChat()" id="send-chat-btn" class="btn-primary px-5 rounded-xl text-xs">Send</button>
                                 </div>
                             </div>
                         </div>
@@ -1513,15 +1025,121 @@
         </div>
 
         <!-- ================================================================= -->
-        <!-- MODALS (PROFILE, BOOTSTRAP, TEAM MANAGEMENT, AUDIT LOGS, INFO)    -->
+        <!-- CUSTOMER CREATE / EDIT MODAL (CONNECTED TO /api/customers)        -->
         <!-- ================================================================= -->
+        <div id="customer-form-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[640px] max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <h3 id="customer-modal-title" class="font-bold text-slate-900 text-base">Register New Customer</h3>
+                        <p class="text-[11px] text-slate-500">Phone, Email, and RFC are automatically checked to prevent duplicates</p>
+                    </div>
+                    <button type="button" onclick="closeCustomerFormModal()" class="h-8 w-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">✕</button>
+                </div>
+
+                <div id="customer-form-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <form id="customer-form" onsubmit="handleCustomerFormSubmit(event)" class="space-y-4 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Entity Type *</label>
+                            <select id="cf-entity-type" onchange="toggleCustomerModalEntityFields()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="INDIVIDUAL">Individual (Persona Física)</option>
+                                <option value="BUSINESS">Business (Persona Moral)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Customer Status *</label>
+                            <select id="cf-status" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="ACTIVE">ACTIVE</option>
+                                <option value="PENDING_VERIFICATION">PENDING_VERIFICATION</option>
+                                <option value="INACTIVE">INACTIVE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">KYC Verification *</label>
+                            <select id="cf-verification" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="PENDING_VERIFICATION">PENDING_VERIFICATION</option>
+                                <option value="VERIFIED">VERIFIED</option>
+                                <option value="NOT_PROVIDED">NOT_PROVIDED</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="sm:col-span-2">
+                            <label id="cf-name-label" class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Full Legal Name *</label>
+                            <input type="text" id="cf-full-name" required minlength="3" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Full legal name or Razón Social">
+                        </div>
+
+                        <!-- Business Specific Fields -->
+                        <div id="cf-business-group" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-blue-50/50 border border-blue-200/70">
+                            <div>
+                                <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Legal Representative Name *</label>
+                                <input type="text" id="cf-legal-rep" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs" placeholder="Authorized representative">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Trade Name (Nombre Comercial)</label>
+                                <input type="text" id="cf-trade-name" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs" placeholder="Commercial brand name">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Primary Phone Number *</label>
+                            <input type="text" id="cf-phone-primary" required class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="10-digit phone (e.g., 55 1234 5678)">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Additional Phone Number</label>
+                            <input type="text" id="cf-phone-secondary" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Optional secondary phone">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Email Address</label>
+                            <input type="email" id="cf-email" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="customer@email.com">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tax ID (RFC)</label>
+                            <input type="text" id="cf-rfc" class="w-full fintech-input rounded-xl p-2.5 text-xs uppercase" placeholder="Optional RFC">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Date of Birth / Incorporation</label>
+                            <input type="date" id="cf-dob" class="w-full fintech-input rounded-xl p-2.5 text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Employment / Activity Status</label>
+                            <input type="text" id="cf-emp-status" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Employed, Business Owner, etc.">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Employer or Business Name</label>
+                            <input type="text" id="cf-employer" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Company or business name">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Occupation / Industry</label>
+                            <input type="text" id="cf-occupation" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Role or industry sector">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Full Residential / Fiscal Address</label>
+                            <input type="text" id="cf-address" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Street, number, neighborhood, city, state, ZIP">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Employment / Business Address</label>
+                            <input type="text" id="cf-emp-address" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Workplace or branch address">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                        <button type="button" onclick="closeCustomerFormModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs">Cancel</button>
+                        <button type="submit" id="cf-submit-btn" class="btn-primary py-2.5 px-5 rounded-xl text-xs">Save Customer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <!-- PROFILE DETAIL MODAL -->
         <div id="profile-detail-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-end sm:items-center justify-center opacity-0 transition-opacity duration-200 p-4 no-print">
             <div class="bg-white rounded-3xl p-6 w-full max-w-[400px] shadow-2xl transform translate-y-4 sm:translate-y-0 scale-95 transition-all duration-200" id="profile-detail-card">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                     <h3 class="font-bold text-slate-900 text-sm" id="profile-modal-title">Details</h3>
-                    <button type="button" onclick="closeProfileSection()" class="h-7 w-7 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center">✕</button>
+                    <button type="button" onclick="closeProfileSection()" class="h-7 w-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">✕</button>
                 </div>
                 <div id="profile-modal-body" class="text-xs text-slate-600 space-y-3 mb-5"></div>
                 <div id="profile-modal-footer">
@@ -1534,7 +1152,6 @@
         <div id="bootstrap-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
             <div class="bg-white rounded-3xl p-6 w-full max-w-[380px] shadow-2xl space-y-4">
                 <h3 class="font-bold text-slate-900 text-sm">Activate Owner Admin</h3>
-                <p class="text-xs text-slate-500 leading-relaxed">Enter the <code>BOOTSTRAP_ADMIN_SECRET</code> configured in your Render environment variables.</p>
                 <input type="password" id="bootstrap-secret-input" class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="Enter bootstrap secret">
                 <div id="bootstrap-error" class="hidden p-2.5 bg-red-50 text-red-700 rounded-xl text-xs"></div>
                 <div class="grid grid-cols-2 gap-2">
@@ -1551,25 +1168,20 @@
                     <h3 class="font-bold text-slate-900 text-sm">Team & Access Management</h3>
                     <button type="button" onclick="closeTeamModal()" class="h-7 w-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">✕</button>
                 </div>
-
                 <form id="create-member-form" onsubmit="handleCreateTeamMember(event)" class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 text-xs">
                     <p class="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Add Team Member</p>
-                    <input type="text" id="new-member-name" required class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs" placeholder="Full Name (e.g., Wife / Brother-in-law)">
+                    <input type="text" id="new-member-name" required class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs" placeholder="Full Name">
                     <input type="email" id="new-member-email" required class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs" placeholder="Email Address">
                     <input type="password" id="new-member-password" required minlength="8" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs" placeholder="Password (min. 8 characters)">
-                    <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Role</label>
-                        <select id="new-member-role" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs font-semibold">
-                            <option value="OWNER_ADMIN">OWNER_ADMIN (Full Owner Access)</option>
-                            <option value="SALES_AGENT">SALES_AGENT (Salesperson / Vendedor)</option>
-                            <option value="CREDIT_ADVISOR">CREDIT_ADVISOR (Credit Analyst)</option>
-                            <option value="OPERATIONS_OFFICER">OPERATIONS_OFFICER (Collections)</option>
-                        </select>
-                    </div>
+                    <select id="new-member-role" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs font-semibold">
+                        <option value="OWNER_ADMIN">OWNER_ADMIN (Full Owner Access)</option>
+                        <option value="SALES_AGENT">SALES_AGENT (Salesperson / Vendedor)</option>
+                        <option value="CREDIT_ADVISOR">CREDIT_ADVISOR (Credit Analyst)</option>
+                        <option value="OPERATIONS_OFFICER">OPERATIONS_OFFICER (Collections)</option>
+                    </select>
                     <div id="team-form-msg" class="hidden text-xs p-2 rounded-lg"></div>
                     <button type="submit" id="create-member-btn" class="w-full btn-primary py-2.5 rounded-xl text-xs">Create Account</button>
                 </form>
-
                 <div>
                     <p class="font-bold text-slate-700 text-[11px] uppercase tracking-wider mb-2">Current Team Members</p>
                     <div id="team-members-list" class="space-y-2 text-xs"></div>
@@ -1577,14 +1189,11 @@
             </div>
         </div>
 
-        <!-- SECURITY AUDIT TRAIL MODAL (CONNECTED TO /api/admin/audit-logs) -->
+        <!-- SECURITY AUDIT TRAIL MODAL -->
         <div id="audit-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
             <div class="bg-white rounded-3xl p-6 w-full max-w-[680px] max-h-[85vh] flex flex-col shadow-2xl space-y-4">
                 <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-                    <div>
-                        <h3 class="font-bold text-slate-900 text-sm">Security Audit Trail (Append-Only)</h3>
-                        <p class="text-[11px] text-slate-500">Live records from PostgreSQL <code>audit_logs</code> table</p>
-                    </div>
+                    <h3 class="font-bold text-slate-900 text-sm">Security Audit Trail (Append-Only)</h3>
                     <button type="button" onclick="closeAuditLogsModal()" class="h-7 w-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">✕</button>
                 </div>
                 <div id="audit-logs-list" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1"></div>
@@ -1594,11 +1203,8 @@
         <!-- GLOBAL INFO MODAL -->
         <div id="info-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-200 p-4 no-print">
             <div class="bg-white rounded-3xl p-6 w-full max-w-[380px] shadow-2xl transform scale-95 transition-transform duration-200" id="info-modal-content">
-                <div class="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto text-blue-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-                </div>
-                <h3 class="text-center font-bold text-slate-900 text-base mb-2" id="info-modal-title">Backend Persistence Required</h3>
-                <p class="text-center text-slate-500 text-xs leading-relaxed mb-6">The <span id="info-modal-action" class="font-semibold text-slate-800"></span> operation requires backend database persistence and API endpoints scheduled for the next authorized phase. No simulated changes were saved.</p>
+                <h3 class="text-center font-bold text-slate-900 text-base mb-2">Scheduled for Next Stage</h3>
+                <p class="text-center text-slate-500 text-xs leading-relaxed mb-6">The <span id="info-modal-action" class="font-semibold text-slate-800"></span> operation will be activated in its corresponding backend phase.</p>
                 <button type="button" onclick="cerrarModalProximamente()" class="w-full btn-primary py-3 rounded-xl text-xs font-semibold">Understood</button>
             </div>
         </div>
@@ -1606,27 +1212,21 @@
         <!-- MOBILE & TABLET 6-MODULE BOTTOM NAVIGATION BAR (lg:hidden) -->
         <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-1.5 grid grid-cols-6 gap-0.5 items-center z-50 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] pb-[calc(8px+env(safe-area-inset-bottom))] no-print">
             <button type="button" onclick="switchTab('home')" id="btn-home" class="nav-item active flex flex-col items-center gap-1 py-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
                 <span class="text-[9px] font-semibold truncate">Dashboard</span>
             </button>
             <button type="button" onclick="switchTab('leads')" id="btn-leads" class="nav-item flex flex-col items-center gap-1 py-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                 <span class="text-[9px] font-semibold truncate">Leads</span>
             </button>
             <button type="button" onclick="switchTab('customers')" id="btn-customers" class="nav-item flex flex-col items-center gap-1 py-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 <span class="text-[9px] font-semibold truncate">Customers</span>
             </button>
             <button type="button" onclick="switchTab('loans')" id="btn-loans" class="nav-item flex flex-col items-center gap-1 py-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
                 <span class="text-[9px] font-semibold truncate">Loans</span>
             </button>
             <button type="button" onclick="switchTab('simulator')" id="btn-simulator" class="nav-item flex flex-col items-center gap-1 py-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/></svg>
                 <span class="text-[9px] font-semibold truncate">Simulator</span>
             </button>
             <button type="button" onclick="switchTab('perfil')" id="btn-perfil" class="nav-item flex flex-col items-center gap-1 py-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 <span class="text-[9px] font-semibold truncate">Profile</span>
             </button>
         </nav>
@@ -1652,10 +1252,6 @@
                 return dt.toISOString().split('T')[0];
             },
 
-            /**
-             * Computes a deterministic Flat Interest on Original Principal schedule.
-             * All monetary math is executed in integer cents to prevent binary float drift.
-             */
             calculateFlatSchedule({
                 principalPesos,
                 monthlyRatePercent,
@@ -1664,16 +1260,14 @@
                 firstPaymentDateISO
             }) {
                 const principalCents = Math.max(0, Math.round(Number(principalPesos) * 100));
-                const rateBasisPoints = Math.max(0, Math.round(Number(monthlyRatePercent) * 100)); // 10% = 1000 bps
+                const rateBasisPoints = Math.max(0, Math.round(Number(monthlyRatePercent) * 100));
                 const monthsCount = Math.max(1, parseInt(assumedInterestMonths, 10) || 4);
                 const installmentsCount = Math.max(1, parseInt(termWeeks, 10) || 16);
 
-                // Monthly Interest in cents = PrincipalCents * (rateBasisPoints / 10000)
                 const monthlyInterestCents = Math.round((principalCents * rateBasisPoints) / 10000);
                 const totalInterestCents = monthlyInterestCents * monthsCount;
                 const totalRepaymentCents = principalCents + totalInterestCents;
 
-                // Regular installment components (integer division; final installment absorbs exact remainder)
                 const regularPrincipalCents = Math.floor(principalCents / installmentsCount);
                 const regularInterestCents = Math.floor(totalInterestCents / installmentsCount);
 
@@ -1713,17 +1307,6 @@
                     });
                 }
 
-                const regularPaymentCents = schedule[0].scheduledPaymentCents;
-                const finalPaymentCents = schedule[schedule.length - 1].scheduledPaymentCents;
-                const estimatedPayoffDate = schedule[schedule.length - 1].dueDate;
-
-                const invariantValid = (
-                    accumulatedPrincipalCents === principalCents &&
-                    accumulatedInterestCents === totalInterestCents &&
-                    (accumulatedPrincipalCents + accumulatedInterestCents) === totalRepaymentCents &&
-                    remainingPrincipalCents === 0
-                );
-
                 return {
                     principalCents,
                     monthlyRatePercent: Number(monthlyRatePercent),
@@ -1732,18 +1315,17 @@
                     installmentsCount,
                     totalInterestCents,
                     totalRepaymentCents,
-                    regularPaymentCents,
-                    finalPaymentCents,
+                    regularPaymentCents: schedule[0].scheduledPaymentCents,
+                    finalPaymentCents: schedule[schedule.length - 1].scheduledPaymentCents,
                     firstPaymentDateISO,
-                    estimatedPayoffDate,
-                    invariantValid,
+                    estimatedPayoffDate: schedule[schedule.length - 1].dueDate,
                     schedule
                 };
             }
         };
 
         /* =========================================================================
-           2. APPLICATION STATE & AUTHENTICATION (PRESERVED FROM EXISTING SYSTEM)
+           2. APPLICATION STATE & AUTHENTICATION
            ========================================================================= */
         let currentConversationId = null;
         let currentUser = null;
@@ -1751,6 +1333,13 @@
         let currentSimulationId = 'SIM-2026-0001';
         let currentSimulationResult = null;
         let savedComparisonScenarios = [];
+
+        // Customers State
+        let currentCustomersPage = 1;
+        let currentCustomersTotal = 0;
+        let currentSelectedCustomer = null;
+        let customerFormMode = 'create';
+        let customerSearchTimer = null;
 
         const SECTION_TITLES = {
             home: 'Dashboard',
@@ -1814,9 +1403,14 @@
                         auditBtn?.classList.add('hidden');
                     }
 
+                    // Hide Create/Edit customer buttons if role is OPERATIONS_OFFICER
+                    const canWriteCustomers = ['OWNER_ADMIN', 'SALES_AGENT', 'CREDIT_ADVISOR'].includes(data.role);
+                    document.getElementById('btn-new-customer')?.classList.toggle('hidden', !canWriteCustomers);
+                    document.getElementById('btn-edit-customer')?.classList.toggle('hidden', !canWriteCustomers);
+
                     document.getElementById('auth-view').classList.add('hidden');
                     document.getElementById('app-view').classList.remove('hidden');
-                    await cargarConversaciones();
+                    await Promise.all([cargarConversaciones(), loadCustomers(1)]);
                 } else {
                     mostrarAuthView();
                 }
@@ -1872,7 +1466,254 @@
         }
 
         /* =========================================================================
-           3. NAVIGATION & MODULE SUB-VIEWS (CUSTOMERS, LOANS, LEADS)
+           3. STAGE 1 LIVE CUSTOMERS MODULE (GET, POST, PATCH)
+           ========================================================================= */
+        function debounceCustomerSearch() {
+            clearTimeout(customerSearchTimer);
+            customerSearchTimer = setTimeout(() => loadCustomers(1), 280);
+        }
+
+        async function loadCustomers(page = 1) {
+            currentCustomersPage = page;
+            const search = document.getElementById('customer-search-input')?.value.trim() || '';
+            const status = document.getElementById('customer-status-filter')?.value || 'ALL';
+            const sort = document.getElementById('customer-sort-select')?.value || 'CREATED_DESC';
+            const tbody = document.getElementById('customers-table-tbody');
+
+            const params = new URLSearchParams({ page: String(page), page_size: '20', sort });
+            if (search) params.set('search', search);
+            if (status && status !== 'ALL') params.set('status', status);
+
+            try {
+                const res = await fetch(`/api/customers?${params.toString()}`);
+                if (!res.ok) throw new Error("Could not load customers");
+                const data = await res.json();
+                currentCustomersTotal = data.total || 0;
+
+                const dashCountEl = document.getElementById('dash-customers-count');
+                if (dashCountEl) dashCountEl.innerText = String(currentCustomersTotal);
+
+                tbody.innerHTML = '';
+                if (!data.items || data.items.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="py-12 px-6 text-center">
+                                <div class="max-w-md mx-auto space-y-2">
+                                    <p class="text-sm font-bold text-slate-900">No customers found</p>
+                                    <p class="text-xs text-slate-500">Click "+ New Customer" to register your first borrower in PostgreSQL.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    data.items.forEach(c => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-50/90 transition cursor-pointer';
+                        tr.onclick = () => openCustomerDetail(c.id);
+
+                        const statusBadgeClass = c.status === 'ACTIVE'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : (c.status === 'INACTIVE' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-amber-50 text-amber-800 border-amber-200');
+
+                        tr.innerHTML = `
+                            <td class="py-3.5 px-4 font-mono font-bold text-blue-700"></td>
+                            <td class="py-3.5 px-4">
+                                <p class="font-bold text-slate-900 cust-name-cell"></p>
+                                <p class="text-[10px] text-slate-500 cust-sub-cell"></p>
+                            </td>
+                            <td class="py-3.5 px-4 font-medium text-slate-700 cust-phone-cell"></td>
+                            <td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-900">$0.00 MXN</td>
+                            <td class="py-3.5 px-4 text-center font-bold text-slate-700">0</td>
+                            <td class="py-3.5 px-4">
+                                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${statusBadgeClass}">${c.status}</span>
+                            </td>
+                            <td class="py-3.5 px-4 text-slate-400">N/A</td>
+                            <td class="py-3.5 px-4 text-right">
+                                <button type="button" class="text-xs font-bold text-blue-600 hover:underline">View Profile →</button>
+                            </td>
+                        `;
+                        tr.children[0].innerText = c.customer_number;
+                        tr.querySelector('.cust-name-cell').innerText = c.full_legal_name;
+                        tr.querySelector('.cust-sub-cell').innerText = c.entity_type === 'BUSINESS'
+                            ? `Business • Rep: ${c.legal_representative_name || 'N/A'}`
+                            : `Individual • ${c.email || 'No email'}`;
+                        tr.querySelector('.cust-phone-cell').innerText = c.phone_primary;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                const startIdx = currentCustomersTotal === 0 ? 0 : (page - 1) * data.page_size + 1;
+                const endIdx = Math.min(page * data.page_size, currentCustomersTotal);
+                document.getElementById('customers-pagination-info').innerText = `Showing ${startIdx}–${endIdx} of ${currentCustomersTotal} customers`;
+                document.getElementById('cust-prev-btn').disabled = page <= 1;
+                document.getElementById('cust-next-btn').disabled = endIdx >= currentCustomersTotal;
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-red-600">${err.message}</td></tr>`;
+            }
+        }
+
+        function changeCustomerPage(delta) {
+            const next = currentCustomersPage + delta;
+            if (next >= 1) loadCustomers(next);
+        }
+
+        async function openCustomerDetail(customerId) {
+            try {
+                const res = await fetch(`/api/customers/${customerId}`);
+                if (!res.ok) throw new Error("Could not load customer profile");
+                const c = await res.json();
+                currentSelectedCustomer = c;
+
+                document.getElementById('detail-cust-number-crumb').innerText = c.customer_number;
+                document.getElementById('detail-cust-title').innerText = c.full_legal_name;
+                document.getElementById('detail-cust-entity-badge').innerText = c.entity_type;
+                document.getElementById('detail-cust-status-badge').innerText = c.status;
+                document.getElementById('detail-verification-badge').innerText = c.verification_status;
+
+                const valOrNP = v => (v && String(v).trim()) ? String(v) : 'Not Provided';
+                document.getElementById('det-customer-number').innerText = c.customer_number;
+                document.getElementById('det-full-name').innerText = c.full_legal_name;
+                document.getElementById('det-dob').innerText = valOrNP(c.date_of_birth);
+                document.getElementById('det-phone-primary').innerText = c.phone_primary;
+                document.getElementById('det-phone-secondary').innerText = valOrNP(c.phone_secondary);
+                document.getElementById('det-email').innerText = valOrNP(c.email);
+                document.getElementById('det-address').innerText = valOrNP(c.address_full);
+                document.getElementById('det-emp-status').innerText = valOrNP(c.employment_status);
+                document.getElementById('det-employer').innerText = valOrNP(c.employer_or_business_name);
+                document.getElementById('det-occupation').innerText = valOrNP(c.occupation_or_industry);
+                document.getElementById('det-emp-address').innerText = valOrNP(c.employment_address);
+                const sinceDate = c.customer_since ? c.customer_since.split('T')[0] : 'N/A';
+                document.getElementById('det-since-rfc').innerText = `Since ${sinceDate} • RFC: ${valOrNP(c.tax_id_rfc)}`;
+
+                const bizBlock = document.getElementById('det-business-block');
+                if (c.entity_type === 'BUSINESS') {
+                    bizBlock.classList.remove('hidden');
+                    document.getElementById('det-trade-name').innerText = valOrNP(c.trade_name);
+                    document.getElementById('det-legal-rep').innerText = valOrNP(c.legal_representative_name);
+                    document.getElementById('det-corp-rfc').innerText = valOrNP(c.tax_id_rfc);
+                } else {
+                    bizBlock.classList.add('hidden');
+                }
+
+                document.getElementById('customers-master-view').classList.add('hidden');
+                document.getElementById('customer-detail-view').classList.remove('hidden');
+                switchCustomerProfileTab('personal');
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        function closeCustomerProfileView() {
+            document.getElementById('customer-detail-view').classList.add('hidden');
+            document.getElementById('customers-master-view').classList.remove('hidden');
+        }
+
+        function toggleCustomerModalEntityFields() {
+            const entityType = document.getElementById('cf-entity-type').value;
+            const isBiz = entityType === 'BUSINESS';
+            document.getElementById('cf-business-group').classList.toggle('hidden', !isBiz);
+            document.getElementById('cf-legal-rep').required = isBiz;
+            document.getElementById('cf-name-label').innerText = isBiz
+                ? 'Legal Entity Name (Razón Social) *'
+                : 'Full Legal Name *';
+        }
+
+        function openCustomerFormModal(mode) {
+            customerFormMode = mode;
+            const errBox = document.getElementById('customer-form-error');
+            errBox.classList.add('hidden');
+            const form = document.getElementById('customer-form');
+            form.reset();
+
+            if (mode === 'edit' && currentSelectedCustomer) {
+                const c = currentSelectedCustomer;
+                document.getElementById('customer-modal-title').innerText = `Edit Customer ${c.customer_number}`;
+                document.getElementById('cf-entity-type').value = c.entity_type || 'INDIVIDUAL';
+                document.getElementById('cf-status').value = c.status || 'ACTIVE';
+                document.getElementById('cf-verification').value = c.verification_status || 'PENDING_VERIFICATION';
+                document.getElementById('cf-full-name').value = c.full_legal_name || '';
+                document.getElementById('cf-legal-rep').value = c.legal_representative_name || '';
+                document.getElementById('cf-trade-name').value = c.trade_name || '';
+                document.getElementById('cf-phone-primary').value = c.phone_primary || '';
+                document.getElementById('cf-phone-secondary').value = c.phone_secondary || '';
+                document.getElementById('cf-email').value = c.email || '';
+                document.getElementById('cf-rfc').value = c.tax_id_rfc || '';
+                document.getElementById('cf-dob').value = c.date_of_birth || '';
+                document.getElementById('cf-emp-status').value = c.employment_status || '';
+                document.getElementById('cf-employer').value = c.employer_or_business_name || '';
+                document.getElementById('cf-occupation').value = c.occupation_or_industry || '';
+                document.getElementById('cf-address').value = c.address_full || '';
+                document.getElementById('cf-emp-address').value = c.employment_address || '';
+            } else {
+                document.getElementById('customer-modal-title').innerText = 'Register New Customer';
+            }
+
+            toggleCustomerModalEntityFields();
+            document.getElementById('customer-form-modal').classList.remove('hidden');
+        }
+
+        function closeCustomerFormModal() {
+            document.getElementById('customer-form-modal').classList.add('hidden');
+        }
+
+        async function handleCustomerFormSubmit(e) {
+            e.preventDefault();
+            const errBox = document.getElementById('customer-form-error');
+            const submitBtn = document.getElementById('cf-submit-btn');
+            errBox.classList.add('hidden');
+            submitBtn.disabled = true;
+
+            const payload = {
+                entity_type: document.getElementById('cf-entity-type').value,
+                status: document.getElementById('cf-status').value,
+                verification_status: document.getElementById('cf-verification').value,
+                full_legal_name: document.getElementById('cf-full-name').value.trim(),
+                legal_representative_name: document.getElementById('cf-legal-rep').value.trim() || null,
+                trade_name: document.getElementById('cf-trade-name').value.trim() || null,
+                phone_primary: document.getElementById('cf-phone-primary').value.trim(),
+                phone_secondary: document.getElementById('cf-phone-secondary').value.trim() || null,
+                email: document.getElementById('cf-email').value.trim() || null,
+                tax_id_rfc: document.getElementById('cf-rfc').value.trim() || null,
+                date_of_birth: document.getElementById('cf-dob').value || null,
+                employment_status: document.getElementById('cf-emp-status').value.trim() || null,
+                employer_or_business_name: document.getElementById('cf-employer').value.trim() || null,
+                occupation_or_industry: document.getElementById('cf-occupation').value.trim() || null,
+                address_full: document.getElementById('cf-address').value.trim() || null,
+                employment_address: document.getElementById('cf-emp-address').value.trim() || null
+            };
+
+            const isEdit = (customerFormMode === 'edit' && currentSelectedCustomer);
+            const url = isEdit ? `/api/customers/${currentSelectedCustomer.id}` : '/api/customers';
+            const method = isEdit ? 'PATCH' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCookie('csrf_token')
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    const msg = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+                    throw new Error(msg || 'Failed to save customer');
+                }
+                closeCustomerFormModal();
+                await loadCustomers(currentCustomersPage);
+                switchTab('customers');
+                await openCustomerDetail(data.id);
+            } catch (err) {
+                errBox.innerText = err.message;
+                errBox.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        /* =========================================================================
+           4. NAVIGATION & SUB-VIEWS
            ========================================================================= */
         function switchTab(tabId) {
             const targetTab = document.getElementById('tab-' + tabId);
@@ -1920,47 +1761,8 @@
 
         function switchLeadsSubView(subView) {
             const isPipeline = subView !== 'call-list';
-            const pipeBtn = document.getElementById('seg-pipeline-btn');
-            const callBtn = document.getElementById('seg-calllist-btn');
-            const pipeView = document.getElementById('leads-pipeline-view');
-            const callView = document.getElementById('leads-calllist-view');
-
-            if (isPipeline) {
-                pipeBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm';
-                callBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all text-slate-500 hover:text-slate-800';
-                pipeView.classList.remove('hidden');
-                callView.classList.add('hidden');
-            } else {
-                callBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm';
-                pipeBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all text-slate-500 hover:text-slate-800';
-                callView.classList.remove('hidden');
-                pipeView.classList.add('hidden');
-            }
-        }
-
-        function openCustomerProfileBlueprint() {
-            document.getElementById('customers-master-view').classList.add('hidden');
-            document.getElementById('customer-detail-view').classList.remove('hidden');
-            switchCustomerProfileTab('personal');
-        }
-
-        function closeCustomerProfileBlueprint() {
-            document.getElementById('customer-detail-view').classList.add('hidden');
-            document.getElementById('customers-master-view').classList.remove('hidden');
-        }
-
-        function switchCustomerEntityType(type) {
-            const isBiz = type === 'BUSINESS';
-            document.getElementById('cust-business-fields').classList.toggle('hidden', !isBiz);
-            document.getElementById('cust-info-heading').innerText = isBiz
-                ? 'Corporate / Business Borrower Information (Persona Moral)'
-                : 'Individual Borrower Information (Persona Física)';
-            document.getElementById('cust-type-ind-btn').className = !isBiz
-                ? 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white'
-                : 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600';
-            document.getElementById('cust-type-biz-btn').className = isBiz
-                ? 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white'
-                : 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600';
+            document.getElementById('leads-pipeline-view').classList.toggle('hidden', !isPipeline);
+            document.getElementById('leads-calllist-view').classList.toggle('hidden', isPipeline);
         }
 
         function switchCustomerProfileTab(tabKey) {
@@ -1990,7 +1792,7 @@
         }
 
         /* =========================================================================
-           4. LOAN SIMULATOR CONTROLLER & PRINT / PDF EXPORT
+           5. LOAN SIMULATOR CONTROLLER & PRINT
            ========================================================================= */
         function generateSimulationId() {
             const rnd = Math.floor(1000 + Math.random() * 9000);
@@ -2035,7 +1837,6 @@
             res.simulationId = currentSimulationId;
             currentSimulationResult = res;
 
-            // Update Summary UI
             document.getElementById('sim-badge-id').innerText = currentSimulationId;
             document.getElementById('print-sim-id').innerText = currentSimulationId;
             document.getElementById('print-sim-date').innerText = new Date().toLocaleString('en-US');
@@ -2056,7 +1857,6 @@
             document.getElementById('disc-months').innerText = String(res.monthsCount);
             document.getElementById('disc-weeks').innerText = String(res.installmentsCount);
 
-            // Render Schedule Rows
             const tbody = document.getElementById('sim-schedule-tbody');
             const tfoot = document.getElementById('sim-schedule-tfoot');
             tbody.innerHTML = '';
@@ -2141,7 +1941,7 @@
         }
 
         /* =========================================================================
-           5. PRIVACY, BOOTSTRAP, TEAM MANAGEMENT, AUDIT LOGS & NURA CHAT
+           6. PRIVACY, TEAM MANAGEMENT, AUDIT LOGS & NURA CHAT
            ========================================================================= */
         function togglePrivacy() {
             isPrivacyOn = !isPrivacyOn;
@@ -2152,10 +1952,6 @@
             const privacyLabel = document.getElementById('privacy-label');
             if (privacyLabel) {
                 privacyLabel.innerText = isPrivacyOn ? 'Show Figures' : 'Hide Figures';
-            }
-            const modalPrivacyStatus = document.getElementById('modal-privacy-status');
-            if (modalPrivacyStatus) {
-                modalPrivacyStatus.innerText = isPrivacyOn ? 'Hidden' : 'Visible';
             }
         }
 
@@ -2174,28 +1970,18 @@
             const errBox = document.getElementById('bootstrap-error');
             const btn = document.getElementById('bootstrap-submit-btn');
             errBox.classList.add('hidden');
-
-            if (!secret) {
-                errBox.innerText = "Please enter the bootstrap secret.";
-                errBox.classList.remove('hidden');
-                return;
-            }
-
+            if (!secret) return;
             btn.disabled = true;
             try {
                 const res = await fetch('/api/auth/bootstrap-admin', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': getCookie('csrf_token')
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('csrf_token') },
                     body: JSON.stringify({ secret })
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || "Bootstrap failed");
                 closeBootstrapModal();
                 await checkAuthStatus();
-                alert("Success! Your account is now OWNER_ADMIN.");
             } catch (err) {
                 errBox.innerText = err.message;
                 errBox.classList.remove('hidden');
@@ -2254,10 +2040,7 @@
             try {
                 const res = await fetch('/api/auth/register', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': getCookie('csrf_token')
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('csrf_token') },
                     body: JSON.stringify({ email, password, full_name, role })
                 });
                 const data = await res.json();
@@ -2292,7 +2075,7 @@
                     item.className = 'p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2';
                     item.innerHTML = `
                         <div class="min-w-0">
-                            <p class="font-bold text-slate-900">${l.event_type} <span class="text-[10px] font-normal text-slate-500">(${l.resource_type})</span></p>
+                            <p class="font-bold text-slate-900">${l.event_type} <span class="text-[10px] font-normal text-slate-500">(${l.resource_type}: ${l.resource_id || 'N/A'})</span></p>
                             <p class="text-[10px] text-slate-500 truncate">Actor ID: ${l.actor_user_id || 'System'} • Role: ${l.actor_role || 'N/A'} • ${l.created_at}</p>
                         </div>
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${l.outcome === 'SUCCESS' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'} shrink-0">${l.outcome}</span>
@@ -2345,10 +2128,7 @@
             try {
                 const res = await fetch('/api/conversations', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': getCookie('csrf_token')
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('csrf_token') },
                     body: JSON.stringify({ title: 'New Consultation' })
                 });
                 if (res.ok) {
@@ -2380,7 +2160,7 @@
                     if (messages.length === 0) {
                         const welcome = document.createElement('div');
                         welcome.className = 'chat-msg-executive p-3.5 mr-12 text-[13px] leading-relaxed self-start max-w-[85%]';
-                        welcome.innerHTML = '<p class="font-bold text-slate-900 mb-1">Hello, I\'m Nura. How can I help you with your leads, credit evaluations, or simulations today?</p>';
+                        welcome.innerHTML = '<p class="font-bold text-slate-900 mb-1">Hello, I\'m Nura. How can I help you with your leads, customers, or credit simulations today?</p>';
                         container.appendChild(welcome);
                     } else {
                         messages.forEach(msg => {
@@ -2396,7 +2176,6 @@
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') enviarMensajeChat(); }
-        function enviarSugerencia(texto) { switchTab('ia'); document.getElementById('chat-input').value = texto; enviarMensajeChat(); }
 
         async function enviarMensajeChat() {
             const input = document.getElementById('chat-input');
@@ -2424,10 +2203,7 @@
             try {
                 const res = await fetch('/chat-ejecutivo', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': getCookie('csrf_token')
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('csrf_token') },
                     body: JSON.stringify({ mensaje: texto, conversation_id: currentConversationId })
                 });
                 if (res.status === 401 || res.status === 403) {
@@ -2451,81 +2227,23 @@
             const card = document.getElementById('profile-detail-card');
             const titleEl = document.getElementById('profile-modal-title');
             const bodyEl = document.getElementById('profile-modal-body');
-            const footerEl = document.getElementById('profile-modal-footer');
 
-            const email = currentUser && currentUser.email ? currentUser.email : 'Not available';
-            const displayName = currentUser && (currentUser.full_name || currentUser.email) ? (currentUser.full_name || currentUser.email.split('@')[0].toUpperCase()) : 'Not provided';
-            const roleName = currentUser && currentUser.role ? currentUser.role : 'Standard';
-
-            footerEl.innerHTML = `<button type="button" onclick="closeProfileSection()" class="w-full btn-primary py-3 rounded-xl text-xs font-semibold">Close</button>`;
+            const email = currentUser?.email || 'Not available';
+            const displayName = currentUser?.full_name || email.split('@')[0].toUpperCase();
+            const roleName = currentUser?.role || 'Standard';
 
             if (section === 'personal') {
                 titleEl.innerText = 'Personal Information';
                 bodyEl.innerHTML = `
                     <div class="space-y-2.5">
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                            <p class="text-[10px] font-semibold text-slate-400 uppercase">Email Address</p>
-                            <p class="text-xs font-bold text-slate-900 mt-0.5">${email}</p>
-                        </div>
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                            <p class="text-[10px] font-semibold text-slate-400 uppercase">Profile Display Name</p>
-                            <p class="text-xs font-bold text-slate-900 mt-0.5">${displayName}</p>
-                        </div>
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                            <p class="text-[10px] font-semibold text-slate-400 uppercase">Assigned CRM Role</p>
-                            <p class="text-xs font-bold text-blue-700 mt-0.5">${roleName}</p>
-                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Email</p><p class="text-xs font-bold text-slate-900 mt-0.5">${email}</p></div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Name</p><p class="text-xs font-bold text-slate-900 mt-0.5">${displayName}</p></div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Role</p><p class="text-xs font-bold text-blue-700 mt-0.5">${roleName}</p></div>
                     </div>
                 `;
-            } else if (section === 'security') {
+            } else {
                 titleEl.innerText = 'Security & Privacy';
-                bodyEl.innerHTML = `
-                    <div class="space-y-2.5">
-                        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-bold text-slate-900">Portfolio Figure Privacy</p>
-                                <p class="text-[10px] text-slate-500">Status: <span id="modal-privacy-status" class="font-semibold">${isPrivacyOn ? 'Hidden' : 'Visible'}</span></p>
-                            </div>
-                            <button type="button" onclick="togglePrivacy()" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] hover:bg-slate-100 transition">
-                                Toggle
-                            </button>
-                        </div>
-                        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-                            <p class="text-xs font-bold text-slate-900">Read-Only AI Protection</p>
-                            <p class="text-[10px] text-slate-500 mt-0.5">Nura Assistant is restricted to advisory mode and cannot move funds or approve loans.</p>
-                        </div>
-                    </div>
-                `;
-            } else if (section === 'preferences') {
-                titleEl.innerText = 'Application Preferences';
-                bodyEl.innerHTML = `
-                    <div class="space-y-2.5">
-                        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-bold text-slate-900">Language & Currency</p>
-                                <p class="text-[10px] text-slate-500">Standardized operational format</p>
-                            </div>
-                            <span class="text-[11px] font-semibold text-slate-700">English • MXN</span>
-                        </div>
-                        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-                            <p class="text-xs font-bold text-slate-900">Active Credit Products</p>
-                            <p class="text-[10px] text-slate-500 mt-0.5">Personal Loan • Business Loan</p>
-                        </div>
-                    </div>
-                `;
-            } else if (section === 'support') {
-                titleEl.innerText = 'Help & Support Center';
-                bodyEl.innerHTML = `
-                    <div class="space-y-3">
-                        <p class="text-xs text-slate-600 leading-relaxed">Need help with your account, credit simulations, or workflows? Connect directly with <strong>Nura CRM Assistant</strong>.</p>
-                    </div>
-                `;
-                footerEl.innerHTML = `
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" onclick="closeProfileSection()" class="w-full py-3 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700">Cancel</button>
-                        <button type="button" onclick="openNuraSupport()" class="w-full btn-primary py-3 rounded-xl text-xs font-semibold">Ask Nura</button>
-                    </div>
-                `;
+                bodyEl.innerHTML = `<p class="text-xs text-slate-600">Session authenticated with HttpOnly cookies, CSRF token protection, and append-only PostgreSQL audit logs.</p>`;
             }
 
             modal.classList.remove('hidden');
@@ -2541,12 +2259,6 @@
             modal.classList.add('opacity-0');
             card.classList.add('scale-95', 'translate-y-4');
             setTimeout(() => modal.classList.add('hidden'), 200);
-        }
-
-        function openNuraSupport() {
-            closeProfileSection();
-            switchTab('ia');
-            setTimeout(() => document.getElementById('chat-input')?.focus(), 220);
         }
 
         function mostrarModalProximamente(accion) {
