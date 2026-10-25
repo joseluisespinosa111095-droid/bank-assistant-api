@@ -1,21 +1,22 @@
 import os
+import re
 import time
 import hashlib
 import json
 import logging
 import secrets
 from collections import defaultdict
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, date, timezone, timedelta
 from typing import Optional, List
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request
+from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr, Field
 import google.generativeai as genai
 from sqlalchemy import (
     create_engine, Column, Integer, BigInteger, String, Text,
-    DateTime, Boolean, ForeignKey, event, text
+    Date, DateTime, Boolean, ForeignKey, event, text, or_
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from passlib.context import CryptContext
@@ -60,6 +61,10 @@ VALID_ROLES = {
 }
 
 SUPPORTED_PRODUCTS = ["Personal Loan", "Business Loan"]
+
+VALID_CUSTOMER_ENTITY_TYPES = {"INDIVIDUAL", "BUSINESS"}
+VALID_CUSTOMER_STATUSES = {"ACTIVE", "INACTIVE", "PENDING_VERIFICATION"}
+VALID_VERIFICATION_STATUSES = {"NOT_PROVIDED", "PENDING_VERIFICATION", "VERIFIED"}
 
 
 # --- SQLALCHEMY MODELS ---
@@ -129,6 +134,43 @@ class AuditLogModel(Base):
     actor = relationship("UserModel", back_populates="audit_events")
 
 
+class CustomerModel(Base):
+    __tablename__ = "customers"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    customer_number = Column(String(24), unique=True, index=True, nullable=False)
+    entity_type = Column(String(20), default="INDIVIDUAL", nullable=False)
+    status = Column(String(30), default="ACTIVE", index=True, nullable=False)
+    verification_status = Column(String(30), default="PENDING_VERIFICATION", nullable=False)
+    full_legal_name = Column(String(180), index=True, nullable=False)
+    trade_name = Column(String(160), nullable=True)
+    legal_representative_name = Column(String(160), nullable=True)
+    tax_id_rfc = Column(String(20), index=True, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+    phone_primary = Column(String(25), nullable=False)
+    phone_primary_normalized = Column(String(20), unique=True, index=True, nullable=False)
+    phone_secondary = Column(String(25), nullable=True)
+    phone_secondary_normalized = Column(String(20), nullable=True)
+    email = Column(String(255), index=True, nullable=True)
+    address_full = Column(Text, nullable=True)
+    employment_status = Column(String(60), nullable=True)
+    employer_or_business_name = Column(String(160), nullable=True)
+    occupation_or_industry = Column(String(120), nullable=True)
+    employment_address = Column(Text, nullable=True)
+    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), index=True, nullable=False)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    customer_since = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+
+    owner = relationship("UserModel", foreign_keys=[owner_user_id])
+    creator = relationship("UserModel", foreign_keys=[created_by_user_id])
+
+
 @event.listens_for(AuditLogModel, "before_update")
 def _prevent_audit_update(mapper, connection, target):
     raise RuntimeError("AuditLogModel is append-only: UPDATE is forbidden.")
@@ -139,7 +181,7 @@ def _prevent_audit_delete(mapper, connection, target):
     raise RuntimeError("AuditLogModel is append-only: DELETE is forbidden.")
 
 
-# --- RATE LIMITING & IP HELPERS ---
+# --- RATE LIMITING, PHONE NORMALIZATION & IP HELPERS ---
 _RATE_BUCKETS = defaultdict(list)
 
 
@@ -171,10 +213,46 @@ def mask_email_for_audit(raw_email: str) -> str:
     return f"{masked_local}@{domain}"[:60]
 
 
+def normalize_phone_number(raw_phone: Optional[str], required: bool = True) -> Optional[str]:
+    if not raw_phone or not raw_phone.strip():
+        if required:
+            raise HTTPException(status_code=422, detail="Primary phone number is required.")
+        return None
+    digits = re.sub(r"\D", "", raw_phone)
+    # Normalize +52 (12 digits) or 521 (13 digits) Mexican numbers to standard 10-digit national number
+    if len(digits) == 12 and digits.startswith("52"):
+        digits = digits[2:]
+    elif len(digits) == 13 and digits.startswith("521"):
+        digits = digits[3:]
+    if len(digits) < 10 or len(digits) > 15:
+        raise HTTPException(
+            status_code=422,
+            detail="Phone number must contain between 10 and 15 valid digits."
+        )
+    return digits
+
+
+def generate_next_customer_number(db: Session) -> str:
+    if db.bind and db.bind.dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(9002001)"))
+
+    last_customer = db.query(CustomerModel.id, CustomerModel.customer_number).order_by(CustomerModel.id.desc()).first()
+    next_seq = 1
+    if last_customer:
+        match = re.search(r"(\d+)$", last_customer.customer_number or "")
+        if match:
+            next_seq = max(int(match.group(1)) + 1, (last_customer.id or 0) + 1)
+        else:
+            next_seq = (last_customer.id or 0) + 1
+    return f"CUST-{next_seq:05d}"
+
+
 # --- TRANSACTIONAL & STANDALONE AUDIT SERVICE ---
 SENSITIVE_AUDIT_KEYS = {
     "password", "password_hash", "token", "session_token",
-    "csrf_token", "secret", "bootstrap_secret", "api_key"
+    "csrf_token", "secret", "bootstrap_secret", "api_key",
+    "phone", "phone_primary", "phone_secondary", "address_full",
+    "tax_id_rfc", "date_of_birth", "full_legal_name"
 }
 
 
@@ -212,7 +290,6 @@ def record_audit_event(
     )
 
     if not commit:
-        # Fail-closed: if audit flush fails, the caller's operation rolls back together
         db.add(entry)
         db.flush()
         return
@@ -231,7 +308,7 @@ async def lifespan(app: FastAPI):
     # Database schema is managed by Alembic
     yield
 
-app = FastAPI(title="NURA CRM | Credit & Pipeline System", version="7.1.0", lifespan=lifespan)
+app = FastAPI(title="NURA CRM | Credit & Pipeline System", version="7.2.0", lifespan=lifespan)
 
 if os.getenv("GEMINI_API_KEY"):
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -245,7 +322,7 @@ def get_db():
         db.close()
 
 
-# --- PYDANTIC SCHEMAS (Preserving backward compatibility) ---
+# --- PYDANTIC SCHEMAS ---
 class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
@@ -274,10 +351,49 @@ class ChatRequest(BaseModel):
 
 
 class TransaccionInput(BaseModel):
-    # Preserved from original main.py for backward compatibility
     descripcion: str
     monto: float
     tipo: str
+
+
+class CustomerCreateRequest(BaseModel):
+    entity_type: str = Field(default="INDIVIDUAL")
+    status: str = Field(default="ACTIVE")
+    verification_status: str = Field(default="PENDING_VERIFICATION")
+    full_legal_name: str = Field(..., min_length=3, max_length=180)
+    trade_name: Optional[str] = Field(default=None, max_length=160)
+    legal_representative_name: Optional[str] = Field(default=None, max_length=160)
+    tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
+    date_of_birth: Optional[date] = None
+    phone_primary: str = Field(..., min_length=10, max_length=25)
+    phone_secondary: Optional[str] = Field(default=None, max_length=25)
+    email: Optional[EmailStr] = None
+    address_full: Optional[str] = Field(default=None, max_length=1000)
+    employment_status: Optional[str] = Field(default=None, max_length=60)
+    employer_or_business_name: Optional[str] = Field(default=None, max_length=160)
+    occupation_or_industry: Optional[str] = Field(default=None, max_length=120)
+    employment_address: Optional[str] = Field(default=None, max_length=1000)
+    owner_user_id: Optional[int] = None
+
+
+class CustomerUpdateRequest(BaseModel):
+    entity_type: Optional[str] = None
+    status: Optional[str] = None
+    verification_status: Optional[str] = None
+    full_legal_name: Optional[str] = Field(default=None, min_length=3, max_length=180)
+    trade_name: Optional[str] = Field(default=None, max_length=160)
+    legal_representative_name: Optional[str] = Field(default=None, max_length=160)
+    tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
+    date_of_birth: Optional[date] = None
+    phone_primary: Optional[str] = Field(default=None, min_length=10, max_length=25)
+    phone_secondary: Optional[str] = Field(default=None, max_length=25)
+    email: Optional[EmailStr] = None
+    address_full: Optional[str] = Field(default=None, max_length=1000)
+    employment_status: Optional[str] = Field(default=None, max_length=60)
+    employer_or_business_name: Optional[str] = Field(default=None, max_length=160)
+    occupation_or_industry: Optional[str] = Field(default=None, max_length=120)
+    employment_address: Optional[str] = Field(default=None, max_length=1000)
+    owner_user_id: Optional[int] = None
 
 
 # --- CSRF PROTECTION WITH AUDIT ---
@@ -406,7 +522,6 @@ class AIService:
         )
 
         try:
-            # Build structured conversation without duplicating the current user message
             structured_contents = []
             for m in prior_messages[-10:]:
                 mapped_role = "user" if m.role == "user" else "model"
@@ -418,7 +533,6 @@ class AIService:
                 model = genai.GenerativeModel(model_name, system_instruction=system_rules)
                 res = model.generate_content(structured_contents)
             except TypeError:
-                # Fallback if SDK version requires single prompt string
                 model = genai.GenerativeModel(model_name)
                 fallback_prompt = f"[SYSTEM INSTRUCTIONS]\n{system_rules}\n\n[CONVERSATION HISTORY]\n"
                 for m in prior_messages[-10:]:
@@ -490,7 +604,6 @@ def login(user_data: UserLogin, request: Request, response: Response, db: Sessio
     }
 
 
-
 @app.post("/api/auth/bootstrap-admin", dependencies=[Depends(verify_csrf)])
 def bootstrap_admin(
     payload: BootstrapAdminRequest,
@@ -556,12 +669,9 @@ def bootstrap_admin(
         )
 
     try:
-        # Serialize bootstrap attempts on PostgreSQL.
         if db.bind and db.bind.dialect.name == "postgresql":
             db.execute(text("SELECT pg_advisory_xact_lock(9001001)"))
 
-        # Do not combine FOR UPDATE with COUNT().
-        # The advisory transaction lock serializes this bootstrap path.
         active_owners = (
             db.query(UserModel.id)
             .filter(
@@ -597,11 +707,9 @@ def bootstrap_admin(
                 detail="Initial Owner Admin has already been initialized."
             )
 
-        # Promote the authenticated, explicitly authorized account.
         current_user.role = "OWNER_ADMIN"
         current_user.is_active = True
 
-        # The audit entry and promotion commit atomically.
         record_audit_event(
             db,
             "BOOTSTRAP_ADMIN_SUCCESS",
@@ -629,15 +737,11 @@ def bootstrap_admin(
 
     except Exception:
         db.rollback()
-
-        # Log the traceback for diagnosis without logging secrets.
         logger.exception("Bootstrap failed with an unexpected error")
-
         raise HTTPException(
             status_code=500,
             detail="Could not complete bootstrap."
         )
-
 
 
 @app.post("/api/auth/logout", dependencies=[Depends(verify_csrf)])
@@ -771,15 +875,15 @@ def update_team_user(
                 detail="You cannot demote or deactivate your own OWNER_ADMIN account."
             )
 
-        # Prevent removing or deactivating the last active OWNER_ADMIN
+        # PostgreSQL-safe check: lock rows on UserModel.id without combining FOR UPDATE + COUNT()
         if target.role == "OWNER_ADMIN" and (new_role != "OWNER_ADMIN" or not new_active):
-            active_owners = (
-                db.query(UserModel)
+            active_owner_rows = (
+                db.query(UserModel.id)
                 .filter(UserModel.role == "OWNER_ADMIN", UserModel.is_active.is_(True))
                 .with_for_update()
-                .count()
+                .all()
             )
-            if active_owners <= 1:
+            if len(active_owner_rows) <= 1:
                 raise HTTPException(
                     status_code=400,
                     detail="Cannot demote or deactivate the last active OWNER_ADMIN."
@@ -834,6 +938,404 @@ def get_audit_logs(
         "ip_address": l.ip_address,
         "details": json.loads(l.details_json) if l.details_json else None
     } for l in logs]
+
+
+# --- CUSTOMERS MODULE ENDPOINTS (STAGE 1 CREDIT BACKEND) ---
+def serialize_customer_item(c: CustomerModel) -> dict:
+    return {
+        "id": c.id,
+        "customer_number": c.customer_number,
+        "entity_type": c.entity_type,
+        "status": c.status,
+        "verification_status": c.verification_status,
+        "full_legal_name": c.full_legal_name,
+        "trade_name": c.trade_name,
+        "legal_representative_name": c.legal_representative_name,
+        "tax_id_rfc": c.tax_id_rfc,
+        "date_of_birth": c.date_of_birth.isoformat() if c.date_of_birth else None,
+        "phone_primary": c.phone_primary,
+        "phone_primary_normalized": c.phone_primary_normalized,
+        "phone_secondary": c.phone_secondary,
+        "email": c.email,
+        "address_full": c.address_full,
+        "employment_status": c.employment_status,
+        "employer_or_business_name": c.employer_or_business_name,
+        "occupation_or_industry": c.occupation_or_industry,
+        "employment_address": c.employment_address,
+        "owner_user_id": c.owner_user_id,
+        "created_by_user_id": c.created_by_user_id,
+        "customer_since": c.customer_since.isoformat() if c.customer_since else None,
+        "created_at": c.created_at.isoformat() if c.created_at else None,
+        "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+        # Accounting indicators remain 0 until the loans table is enabled in Stage 3
+        "current_outstanding_balance_cents": 0,
+        "active_loans_count": 0,
+        "last_payment_date": None
+    }
+
+
+@app.get("/api/customers")
+def list_customers(
+    search: Optional[str] = Query(default=None, max_length=120),
+    status: Optional[str] = Query(default="ALL"),
+    entity_type: Optional[str] = Query(default="ALL"),
+    sort: str = Query(default="CREATED_DESC"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=15, ge=1, le=100),
+    current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")),
+    db: Session = Depends(get_db)
+):
+    query = db.query(CustomerModel)
+
+    if status and status.upper() != "ALL":
+        query = query.filter(CustomerModel.status == status.upper())
+
+    if entity_type and entity_type.upper() != "ALL":
+        query = query.filter(CustomerModel.entity_type == entity_type.upper())
+
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        digits_only = re.sub(r"\D", "", search)
+        filters = [
+            CustomerModel.customer_number.ilike(term),
+            CustomerModel.full_legal_name.ilike(term),
+            CustomerModel.trade_name.ilike(term),
+            CustomerModel.email.ilike(term),
+            CustomerModel.tax_id_rfc.ilike(term)
+        ]
+        if digits_only:
+            filters.append(CustomerModel.phone_primary_normalized.ilike(f"%{digits_only}%"))
+        query = query.filter(or_(*filters))
+
+    total = query.count()
+
+    sort_key = (sort or "CREATED_DESC").upper()
+    if sort_key == "NAME_ASC":
+        query = query.order_by(CustomerModel.full_legal_name.asc(), CustomerModel.id.asc())
+    elif sort_key == "NUMBER_ASC":
+        query = query.order_by(CustomerModel.customer_number.asc())
+    else:
+        query = query.order_by(CustomerModel.id.desc())
+
+    offset = (page - 1) * page_size
+    rows = query.offset(offset).limit(page_size).all()
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
+    return {
+        "items": [serialize_customer_item(c) for c in rows],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages
+    }
+
+
+@app.post("/api/customers", dependencies=[Depends(verify_csrf)])
+def create_customer(
+    payload: CustomerCreateRequest,
+    request: Request,
+    current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR")),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    entity_type = (payload.entity_type or "INDIVIDUAL").strip().upper()
+    if entity_type not in VALID_CUSTOMER_ENTITY_TYPES:
+        raise HTTPException(status_code=422, detail="entity_type must be INDIVIDUAL or BUSINESS.")
+
+    status_val = (payload.status or "ACTIVE").strip().upper()
+    if status_val not in VALID_CUSTOMER_STATUSES:
+        raise HTTPException(status_code=422, detail=f"Invalid status. Allowed: {sorted(VALID_CUSTOMER_STATUSES)}")
+
+    verif_val = (payload.verification_status or "PENDING_VERIFICATION").strip().upper()
+    if verif_val not in VALID_VERIFICATION_STATUSES:
+        raise HTTPException(status_code=422, detail=f"Invalid verification_status. Allowed: {sorted(VALID_VERIFICATION_STATUSES)}")
+
+    full_name_clean = payload.full_legal_name.strip()
+    if len(full_name_clean) < 3:
+        raise HTTPException(status_code=422, detail="Full Legal Name must have at least 3 characters.")
+
+    legal_rep_clean = payload.legal_representative_name.strip() if payload.legal_representative_name else None
+    if entity_type == "BUSINESS" and not legal_rep_clean:
+        raise HTTPException(
+            status_code=422,
+            detail="Legal Representative Name is required for Business (Persona Moral) customers."
+        )
+
+    phone_norm = normalize_phone_number(payload.phone_primary, required=True)
+    phone_sec_norm = normalize_phone_number(payload.phone_secondary, required=False)
+    email_clean = payload.email.strip().lower() if payload.email else None
+    rfc_clean = payload.tax_id_rfc.strip().upper() if payload.tax_id_rfc and payload.tax_id_rfc.strip() else None
+
+    try:
+        # Deduplication check by primary phone
+        dup_phone = db.query(CustomerModel).filter(CustomerModel.phone_primary_normalized == phone_norm).first()
+        if dup_phone:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Primary phone number is already registered under customer {dup_phone.customer_number}."
+            )
+
+        # Deduplication check by email (if provided)
+        if email_clean:
+            dup_email = db.query(CustomerModel).filter(CustomerModel.email == email_clean).first()
+            if dup_email:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Email address is already registered under customer {dup_email.customer_number}."
+                )
+
+        # Deduplication check by RFC (if provided)
+        if rfc_clean:
+            dup_rfc = db.query(CustomerModel).filter(CustomerModel.tax_id_rfc == rfc_clean).first()
+            if dup_rfc:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Tax ID (RFC) is already registered under customer {dup_rfc.customer_number}."
+                )
+
+        customer_number = generate_next_customer_number(db)
+        owner_id = payload.owner_user_id if payload.owner_user_id else current_user.id
+
+        new_customer = CustomerModel(
+            customer_number=customer_number,
+            entity_type=entity_type,
+            status=status_val,
+            verification_status=verif_val,
+            full_legal_name=full_name_clean,
+            trade_name=payload.trade_name.strip() if payload.trade_name and payload.trade_name.strip() else None,
+            legal_representative_name=legal_rep_clean,
+            tax_id_rfc=rfc_clean,
+            date_of_birth=payload.date_of_birth,
+            phone_primary=payload.phone_primary.strip(),
+            phone_primary_normalized=phone_norm,
+            phone_secondary=payload.phone_secondary.strip() if payload.phone_secondary and payload.phone_secondary.strip() else None,
+            phone_secondary_normalized=phone_sec_norm,
+            email=email_clean,
+            address_full=payload.address_full.strip() if payload.address_full and payload.address_full.strip() else None,
+            employment_status=payload.employment_status.strip() if payload.employment_status and payload.employment_status.strip() else None,
+            employer_or_business_name=payload.employer_or_business_name.strip() if payload.employer_or_business_name and payload.employer_or_business_name.strip() else None,
+            occupation_or_industry=payload.occupation_or_industry.strip() if payload.occupation_or_industry and payload.occupation_or_industry.strip() else None,
+            employment_address=payload.employment_address.strip() if payload.employment_address and payload.employment_address.strip() else None,
+            owner_user_id=owner_id,
+            created_by_user_id=current_user.id
+        )
+        db.add(new_customer)
+        db.flush()
+
+        # Transactional fail-closed audit log without PII
+        record_audit_event(
+            db, "CUSTOMER_CREATED", "customer", "SUCCESS",
+            actor=current_user, resource_id=new_customer.customer_number, ip_address=ip,
+            details={
+                "customer_id": new_customer.id,
+                "customer_number": new_customer.customer_number,
+                "entity_type": new_customer.entity_type,
+                "status": new_customer.status
+            },
+            commit=False
+        )
+        db.commit()
+        db.refresh(new_customer)
+        return serialize_customer_item(new_customer)
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception(f"Error creating customer: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Could not create customer record.")
+
+
+@app.get("/api/customers/{customer_id}")
+def get_customer_detail(
+    customer_id: int,
+    current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")),
+    db: Session = Depends(get_db)
+):
+    customer = db.query(CustomerModel).filter(CustomerModel.id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found.")
+
+    data = serialize_customer_item(customer)
+    data["owner_name"] = (customer.owner.full_name or customer.owner.email) if customer.owner else "Assigned Team Member"
+    data["credit_summary"] = {
+        "current_outstanding_principal_cents": 0,
+        "total_amount_due_cents": 0,
+        "overdue_amount_cents": 0,
+        "active_loans_count": 0,
+        "total_loans_count": 0,
+        "last_payment_date": None,
+        "next_payment_due_date": None,
+        "remaining_installments_count": 0
+    }
+    data["loans"] = []
+    return data
+
+
+@app.patch("/api/customers/{customer_id}", dependencies=[Depends(verify_csrf)])
+def update_customer(
+    customer_id: int,
+    payload: CustomerUpdateRequest,
+    request: Request,
+    current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR")),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    try:
+        customer = db.query(CustomerModel).filter(CustomerModel.id == customer_id).with_for_update().first()
+        if not customer:
+            raise HTTPException(status_code=404, detail="Customer not found.")
+
+        updated_fields = []
+
+        if payload.entity_type is not None:
+            et = payload.entity_type.strip().upper()
+            if et not in VALID_CUSTOMER_ENTITY_TYPES:
+                raise HTTPException(status_code=422, detail="Invalid entity_type.")
+            customer.entity_type = et
+            updated_fields.append("entity_type")
+
+        if payload.status is not None:
+            st = payload.status.strip().upper()
+            if st not in VALID_CUSTOMER_STATUSES:
+                raise HTTPException(status_code=422, detail="Invalid status.")
+            customer.status = st
+            updated_fields.append("status")
+
+        if payload.verification_status is not None:
+            vs = payload.verification_status.strip().upper()
+            if vs not in VALID_VERIFICATION_STATUSES:
+                raise HTTPException(status_code=422, detail="Invalid verification_status.")
+            customer.verification_status = vs
+            updated_fields.append("verification_status")
+
+        if payload.full_legal_name is not None:
+            name_clean = payload.full_legal_name.strip()
+            if len(name_clean) < 3:
+                raise HTTPException(status_code=422, detail="Full Legal Name must have at least 3 characters.")
+            customer.full_legal_name = name_clean
+            updated_fields.append("full_legal_name")
+
+        if payload.phone_primary is not None:
+            phone_norm = normalize_phone_number(payload.phone_primary, required=True)
+            dup_phone = (
+                db.query(CustomerModel)
+                .filter(CustomerModel.phone_primary_normalized == phone_norm, CustomerModel.id != customer.id)
+                .first()
+            )
+            if dup_phone:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Primary phone number already belongs to customer {dup_phone.customer_number}."
+                )
+            customer.phone_primary = payload.phone_primary.strip()
+            customer.phone_primary_normalized = phone_norm
+            updated_fields.append("phone_primary")
+
+        if payload.phone_secondary is not None:
+            sec_clean = payload.phone_secondary.strip()
+            customer.phone_secondary = sec_clean or None
+            customer.phone_secondary_normalized = normalize_phone_number(sec_clean, required=False) if sec_clean else None
+            updated_fields.append("phone_secondary")
+
+        if payload.email is not None:
+            email_clean = payload.email.strip().lower() if payload.email else None
+            if email_clean:
+                dup_email = (
+                    db.query(CustomerModel)
+                    .filter(CustomerModel.email == email_clean, CustomerModel.id != customer.id)
+                    .first()
+                )
+                if dup_email:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Email address already belongs to customer {dup_email.customer_number}."
+                    )
+            customer.email = email_clean
+            updated_fields.append("email")
+
+        if payload.tax_id_rfc is not None:
+            rfc_clean = payload.tax_id_rfc.strip().upper() or None
+            if rfc_clean:
+                dup_rfc = (
+                    db.query(CustomerModel)
+                    .filter(CustomerModel.tax_id_rfc == rfc_clean, CustomerModel.id != customer.id)
+                    .first()
+                )
+                if dup_rfc:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Tax ID (RFC) already belongs to customer {dup_rfc.customer_number}."
+                    )
+            customer.tax_id_rfc = rfc_clean
+            updated_fields.append("tax_id_rfc")
+
+        if payload.trade_name is not None:
+            customer.trade_name = payload.trade_name.strip() or None
+            updated_fields.append("trade_name")
+
+        if payload.legal_representative_name is not None:
+            customer.legal_representative_name = payload.legal_representative_name.strip() or None
+            updated_fields.append("legal_representative_name")
+
+        if customer.entity_type == "BUSINESS" and not customer.legal_representative_name:
+            raise HTTPException(
+                status_code=422,
+                detail="Legal Representative Name is required for Business (Persona Moral) customers."
+            )
+
+        if payload.date_of_birth is not None:
+            customer.date_of_birth = payload.date_of_birth
+            updated_fields.append("date_of_birth")
+
+        if payload.address_full is not None:
+            customer.address_full = payload.address_full.strip() or None
+            updated_fields.append("address_full")
+
+        if payload.employment_status is not None:
+            customer.employment_status = payload.employment_status.strip() or None
+            updated_fields.append("employment_status")
+
+        if payload.employer_or_business_name is not None:
+            customer.employer_or_business_name = payload.employer_or_business_name.strip() or None
+            updated_fields.append("employer_or_business_name")
+
+        if payload.occupation_or_industry is not None:
+            customer.occupation_or_industry = payload.occupation_or_industry.strip() or None
+            updated_fields.append("occupation_or_industry")
+
+        if payload.employment_address is not None:
+            customer.employment_address = payload.employment_address.strip() or None
+            updated_fields.append("employment_address")
+
+        if payload.owner_user_id is not None:
+            customer.owner_user_id = payload.owner_user_id
+            updated_fields.append("owner_user_id")
+
+        customer.updated_at = datetime.now(timezone.utc)
+
+        record_audit_event(
+            db, "CUSTOMER_UPDATED", "customer", "SUCCESS",
+            actor=current_user, resource_id=customer.customer_number, ip_address=ip,
+            details={
+                "customer_id": customer.id,
+                "customer_number": customer.customer_number,
+                "updated_fields": ",".join(updated_fields)[:240]
+            },
+            commit=False
+        )
+        db.commit()
+        db.refresh(customer)
+        return serialize_customer_item(customer)
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception(f"Error updating customer: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Could not update customer record.")
 
 
 # --- CONVERSATIONS & NURA ASSISTANT ENDPOINTS ---
@@ -914,7 +1416,6 @@ def chat_ejecutivo(
             db.refresh(conv)
             conv_id = conv.id
 
-        # Query previous messages BEFORE inserting the new user message to prevent duplicate prompt entry
         prior_messages = (
             db.query(ChatMessageModel)
             .filter(ChatMessageModel.conversation_id == conv_id)
@@ -951,4 +1452,7 @@ def chat_ejecutivo(
 
 @app.get("/", response_class=FileResponse)
 def home():
-    return "index.html"
+    return FileResponse(
+        "index.html",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+    )
