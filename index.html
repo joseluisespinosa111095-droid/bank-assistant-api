@@ -193,7 +193,10 @@
                         </div>
 
                         <div class="flex items-center gap-2 shrink-0">
-                            <button type="button" onclick="openCustomerFormModal('create')" class="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs transition">
+                            <button type="button" id="top-btn-new-lead" onclick="openLeadFormModal('create')" class="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition shadow-sm">
+                                <span>+ New Lead</span>
+                            </button>
+                            <button type="button" id="top-btn-new-customer" onclick="openCustomerFormModal('create')" class="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs transition">
                                 <span>+ New Customer</span>
                             </button>
                             <button type="button" onclick="switchTab('simulator')" class="hidden md:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
@@ -342,21 +345,26 @@
                                 <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                                     <div>
                                         <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Customers & Origination Funnel</h3>
-                                        <p class="text-[11px] text-slate-500">Live PostgreSQL customer directory connected</p>
+                                        <p class="text-[11px] text-slate-500">Live PostgreSQL Customers & Leads connected</p>
                                     </div>
-                                    <button type="button" onclick="switchTab('customers')" class="text-xs font-semibold text-blue-600 hover:underline">Open Directory →</button>
+                                    <button type="button" onclick="switchTab('leads')" class="text-xs font-semibold text-blue-600 hover:underline">Open Pipeline →</button>
                                 </div>
 
-                                <div class="grid grid-cols-2 gap-3">
-                                    <button type="button" onclick="switchTab('customers')" class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-left hover:bg-emerald-50 transition">
-                                        <p class="text-[10px] font-bold text-emerald-800 uppercase">Registered Customers</p>
+                                <div class="grid grid-cols-3 gap-2.5">
+                                    <button type="button" onclick="switchTab('customers')" class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-left hover:bg-emerald-50 transition">
+                                        <p class="text-[10px] font-bold text-emerald-800 uppercase">Customers</p>
                                         <p id="dash-customers-count" class="text-2xl font-extrabold text-emerald-900 mt-0.5">0</p>
-                                        <span class="text-[10px] font-semibold text-emerald-700">Live in PostgreSQL →</span>
+                                        <span class="text-[10px] font-semibold text-emerald-700">Directory →</span>
                                     </button>
-                                    <button type="button" onclick="switchTab('leads')" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-left hover:bg-slate-100 transition">
-                                        <p class="text-[10px] font-bold text-slate-500 uppercase">Open Prospects</p>
-                                        <p class="text-2xl font-extrabold text-slate-900 mt-0.5">0</p>
-                                        <span class="text-[10px] font-semibold text-blue-600">Pipeline →</span>
+                                    <button type="button" onclick="switchTab('leads'); switchLeadsSubView('pipeline');" class="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-left hover:bg-blue-50 transition">
+                                        <p class="text-[10px] font-bold text-blue-800 uppercase">Open Leads</p>
+                                        <p id="dash-leads-count" class="text-2xl font-extrabold text-blue-900 mt-0.5">0</p>
+                                        <span class="text-[10px] font-semibold text-blue-700">Pipeline →</span>
+                                    </button>
+                                    <button type="button" onclick="switchTab('leads'); switchLeadsSubView('call-list');" class="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-left hover:bg-amber-50 transition">
+                                        <p class="text-[10px] font-bold text-amber-800 uppercase">Calls Today</p>
+                                        <p id="dash-calls-today-count" class="text-2xl font-extrabold text-amber-900 mt-0.5">0</p>
+                                        <span class="text-[10px] font-semibold text-amber-800">Call List →</span>
                                     </button>
                                 </div>
                             </div>
@@ -364,48 +372,237 @@
                     </section>
 
                     <!-- ========================================================= -->
-                    <!-- MODULE 2: LEADS & PIPELINE (#tab-leads)                   -->
+                    <!-- MODULE 2: LEADS & PIPELINE — LIVE POSTGRESQL (#tab-leads) -->
                     <!-- ========================================================= -->
                     <section id="tab-leads" class="tab-content space-y-5">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div>
-                                <h1 class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Leads & Commercial Pipeline</h1>
-                                <p class="text-xs text-slate-500 mt-0.5">Prospect qualification, stage tracking, call list queue, and controlled conversion</p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-2 gap-1" role="tablist">
-                                    <button type="button" id="seg-pipeline-btn" onclick="switchLeadsSubView('pipeline')" class="py-2 px-4 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm">
-                                        Pipeline Stages
+                        <!-- MASTER LEADS & CALL LIST VIEW -->
+                        <div id="leads-master-view" class="space-y-5">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h1 class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Leads & Commercial Pipeline</h1>
+                                        <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Live PostgreSQL</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 mt-0.5">Prospect qualification, stage transitions, daily Call List queue, and atomic conversion to Customer</p>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-2 gap-1" role="tablist">
+                                        <button type="button" id="seg-pipeline-btn" onclick="switchLeadsSubView('pipeline')" class="py-2 px-4 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm">
+                                            Pipeline Stages
+                                        </button>
+                                        <button type="button" id="seg-calllist-btn" onclick="switchLeadsSubView('call-list')" class="py-2 px-4 rounded-xl text-xs font-semibold transition-all text-slate-500 hover:text-slate-800">
+                                            Call List & Follow-ups
+                                        </button>
+                                    </div>
+                                    <button type="button" onclick="loadLeads(1)" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
+                                        Refresh
                                     </button>
-                                    <button type="button" id="seg-calllist-btn" onclick="switchLeadsSubView('call-list')" class="py-2 px-4 rounded-xl text-xs font-semibold transition-all text-slate-500 hover:text-slate-800">
-                                        Call List & Follow-ups
+                                    <button type="button" id="btn-new-lead" onclick="openLeadFormModal('create')" class="btn-primary py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 shadow-sm shrink-0">
+                                        <span>+ New Lead</span>
                                     </button>
                                 </div>
-                                <button type="button" onclick="mostrarModalProximamente('Lead Registration (Scheduled for Stage 2 Backend)')" class="btn-primary py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 shadow-sm shrink-0">
-                                    <span>+ New Lead</span>
+                            </div>
+
+                            <!-- SUB-VIEW 2A: PIPELINE STAGES -->
+                            <div id="leads-pipeline-view" class="space-y-4">
+                                <div class="fintech-card p-4 bg-white grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                    <div class="sm:col-span-2">
+                                        <input type="text" id="lead-search-input" oninput="debounceLeadSearch()" placeholder="Search by Lead Number (LD-00001), Name, Phone, or Email..." class="w-full fintech-input rounded-xl px-3.5 py-2 text-xs">
+                                    </div>
+                                    <select id="lead-stage-filter" onchange="loadLeads(1)" class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
+                                        <option value="ALL">Stage: All Pipeline Stages</option>
+                                        <option value="NEW">NEW</option>
+                                        <option value="CONTACT_ATTEMPTED">CONTACT_ATTEMPTED</option>
+                                        <option value="CONTACTED">CONTACTED</option>
+                                        <option value="QUALIFIED">QUALIFIED</option>
+                                        <option value="APPLICATION_STARTED">APPLICATION_STARTED</option>
+                                        <option value="UNDER_REVIEW">UNDER_REVIEW</option>
+                                        <option value="APPROVED">APPROVED</option>
+                                        <option value="NURTURE">NURTURE</option>
+                                        <option value="CONVERTED">CONVERTED</option>
+                                        <option value="LOST">LOST</option>
+                                    </select>
+                                    <select id="lead-product-filter" onchange="loadLeads(1)" class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
+                                        <option value="ALL">Product: All Credit Products</option>
+                                        <option value="Personal Loan">Personal Loan</option>
+                                        <option value="Business Loan">Business Loan</option>
+                                    </select>
+                                </div>
+
+                                <div class="fintech-card bg-white overflow-hidden">
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr class="bg-slate-50/90 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                                    <th class="py-3.5 px-4">Lead Number</th>
+                                                    <th class="py-3.5 px-4">Prospect / Entity</th>
+                                                    <th class="py-3.5 px-4">Phone & Source</th>
+                                                    <th class="py-3.5 px-4">Product Interest</th>
+                                                    <th class="py-3.5 px-4 text-right">Requested Amount</th>
+                                                    <th class="py-3.5 px-4">Pipeline Stage</th>
+                                                    <th class="py-3.5 px-4">Next Follow-up / Outcome</th>
+                                                    <th class="py-3.5 px-4 text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="leads-table-tbody" class="divide-y divide-slate-100 text-xs">
+                                                <tr>
+                                                    <td colspan="8" class="py-10 text-center text-slate-400">Loading leads from PostgreSQL...</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="px-4 py-3 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                                        <span id="leads-pagination-info">Showing 0 of 0 leads</span>
+                                        <div class="flex gap-1.5">
+                                            <button type="button" id="lead-prev-btn" onclick="changeLeadPage(-1)" disabled class="px-3 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed">Previous</button>
+                                            <button type="button" id="lead-next-btn" onclick="changeLeadPage(1)" disabled class="px-3 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed">Next</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUB-VIEW 2B: CALL LIST & FOLLOW-UPS -->
+                            <div id="leads-calllist-view" class="hidden space-y-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <button type="button" onclick="setCallListBucketFilter('OVERDUE')" class="fintech-card p-4 bg-white hover:border-red-400 flex items-center justify-between text-left transition">
+                                        <div>
+                                            <p class="text-[11px] font-bold text-red-600 uppercase">Overdue Calls</p>
+                                            <p class="text-xs text-slate-500 mt-0.5">Scheduled prior to today</p>
+                                        </div>
+                                        <p id="calllist-overdue-count" class="text-2xl font-extrabold text-red-600">0</p>
+                                    </button>
+                                    <button type="button" onclick="setCallListBucketFilter('TODAY')" class="fintech-card p-4 bg-white hover:border-blue-400 flex items-center justify-between text-left transition">
+                                        <div>
+                                            <p class="text-[11px] font-bold text-blue-600 uppercase">Today's Calls & New</p>
+                                            <p class="text-xs text-slate-500 mt-0.5">Due today or awaiting 1st contact</p>
+                                        </div>
+                                        <p id="calllist-today-count" class="text-2xl font-extrabold text-blue-600">0</p>
+                                    </button>
+                                    <button type="button" onclick="setCallListBucketFilter('UPCOMING')" class="fintech-card p-4 bg-white hover:border-slate-400 flex items-center justify-between text-left transition">
+                                        <div>
+                                            <p class="text-[11px] font-bold text-slate-600 uppercase">Upcoming (Next 7d)</p>
+                                            <p class="text-xs text-slate-500 mt-0.5">Scheduled future callbacks</p>
+                                        </div>
+                                        <p id="calllist-upcoming-count" class="text-2xl font-extrabold text-slate-900">0</p>
+                                    </button>
+                                </div>
+
+                                <div class="fintech-card p-4 bg-white flex flex-wrap items-center justify-between gap-2">
+                                    <div class="flex gap-1.5 text-xs">
+                                        <button type="button" id="cl-btn-TODAY" onclick="setCallListBucketFilter('TODAY')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-900 text-white">Today's Queue</button>
+                                        <button type="button" id="cl-btn-OVERDUE" onclick="setCallListBucketFilter('OVERDUE')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-red-50 text-red-600 hover:bg-red-100">Overdue</button>
+                                        <button type="button" id="cl-btn-UPCOMING" onclick="setCallListBucketFilter('UPCOMING')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Upcoming</button>
+                                    </div>
+                                    <span id="calllist-active-label" class="text-xs font-semibold text-blue-600">Queue: Today's Calls & New Leads</span>
+                                </div>
+
+                                <div id="calllist-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                            </div>
+                        </div>
+
+                        <!-- INDIVIDUAL LEAD DETAIL VIEW (#lead-detail-view) -->
+                        <div id="lead-detail-view" class="hidden space-y-5">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-2 text-xs text-slate-500">
+                                        <button type="button" onclick="closeLeadDetailView()" class="text-blue-600 hover:underline font-semibold">← Back to Leads & Pipeline</button>
+                                        <span>/</span>
+                                        <span id="detail-lead-number-crumb" class="font-bold font-mono text-slate-800">LD-00001</span>
+                                    </div>
+                                    <div class="flex items-center gap-2.5 flex-wrap">
+                                        <h2 id="detail-lead-title" class="text-xl font-extrabold text-slate-900">Prospect Name</h2>
+                                        <span id="detail-lead-stage-badge" class="bg-blue-50 text-blue-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">NEW</span>
+                                        <span id="detail-lead-priority-badge" class="bg-slate-100 text-slate-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">MEDIUM</span>
+                                    </div>
+                                </div>
+                                <div id="lead-detail-actions" class="flex flex-wrap items-center gap-2">
+                                    <button type="button" id="btn-lead-log-call" onclick="openLeadInteractionModal()" class="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-sm">
+                                        📞 Log Call / Note
+                                    </button>
+                                    <button type="button" id="btn-lead-change-stage" onclick="openLeadStageModal()" class="py-2 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
+                                        Change Stage
+                                    </button>
+                                    <button type="button" id="btn-lead-edit" onclick="openLeadFormModal('edit')" class="py-2 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
+                                        Edit Lead
+                                    </button>
+                                    <button type="button" id="btn-lead-convert" onclick="openLeadConvertModal()" class="btn-primary py-2 px-4 rounded-xl text-xs shadow-sm">
+                                        Convert to Customer →
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Converted Customer Banner (Shown when stage === CONVERTED) -->
+                            <div id="lead-converted-banner" class="hidden fintech-card p-4 bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+                                <div class="text-xs text-emerald-900">
+                                    <p class="font-bold">✓ Prospect Converted to Customer</p>
+                                    <p class="text-[11px] text-emerald-800 mt-0.5">All historical calls and notes are linked to the customer record.</p>
+                                </div>
+                                <button type="button" id="btn-view-converted-customer" class="py-2 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs">
+                                    Open Customer Profile →
                                 </button>
                             </div>
-                        </div>
 
-                        <div id="leads-pipeline-view" class="fintech-card p-8 bg-white text-center space-y-3">
-                            <h3 class="text-base font-bold text-slate-900">Leads & Pipeline Database Scheduled for Stage 2</h3>
-                            <p class="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                                Now that the <code>customers</code> directory is live in PostgreSQL (Stage 1), the <code>leads</code> and <code>interactions</code> tables will connect directly to this module in Stage 2 with automatic duplicate prevention.
-                            </p>
-                        </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                                <!-- Lead Summary Fields (5 cols) -->
+                                <div class="lg:col-span-5 fintech-card p-5 bg-white space-y-4">
+                                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2.5">Prospect Qualification Details</h3>
+                                    <div class="grid grid-cols-2 gap-3 text-xs">
+                                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">Lead Number</p>
+                                            <p id="ldet-number" class="font-bold font-mono text-slate-900 mt-0.5">—</p>
+                                        </div>
+                                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">Entity Type</p>
+                                            <p id="ldet-entity" class="font-bold text-slate-900 mt-0.5">—</p>
+                                        </div>
+                                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">Product Interest</p>
+                                            <p id="ldet-product" class="font-bold text-blue-700 mt-0.5">—</p>
+                                        </div>
+                                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">Requested Amount</p>
+                                            <p id="ldet-amount" class="font-extrabold font-mono text-slate-900 mt-0.5">—</p>
+                                        </div>
+                                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">Primary Phone</p>
+                                            <p id="ldet-phone" class="font-bold text-slate-900 mt-0.5">—</p>
+                                        </div>
+                                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">Email Address</p>
+                                            <p id="ldet-email" class="font-semibold text-slate-700 mt-0.5 truncate">—</p>
+                                        </div>
+                                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">Lead Source</p>
+                                            <p id="ldet-source" class="font-semibold text-slate-700 mt-0.5">—</p>
+                                        </div>
+                                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">Next Scheduled Call</p>
+                                            <p id="ldet-followup" class="font-bold text-amber-700 mt-0.5">—</p>
+                                        </div>
+                                        <div class="col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">Summary / Qualification Notes</p>
+                                            <p id="ldet-notes" class="text-slate-700 mt-0.5 whitespace-pre-wrap">—</p>
+                                        </div>
+                                    </div>
 
-                        <div id="leads-calllist-view" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div class="fintech-card p-4 bg-white flex items-center justify-between">
-                                <div><p class="text-[11px] font-bold text-red-600 uppercase">Overdue Calls</p></div>
-                                <p class="text-2xl font-extrabold text-slate-900">0</p>
-                            </div>
-                            <div class="fintech-card p-4 bg-white flex items-center justify-between">
-                                <div><p class="text-[11px] font-bold text-blue-600 uppercase">Today's Calls</p></div>
-                                <p class="text-2xl font-extrabold text-slate-900">0</p>
-                            </div>
-                            <div class="fintech-card p-4 bg-white flex items-center justify-between">
-                                <div><p class="text-[11px] font-bold text-slate-600 uppercase">Upcoming (7d)</p></div>
-                                <p class="text-2xl font-extrabold text-slate-900">0</p>
+                                    <!-- Stage History Timeline -->
+                                    <div class="pt-3 border-t border-slate-100 space-y-2">
+                                        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stage Transition History</h4>
+                                        <div id="ldet-stage-history" class="space-y-2 text-xs max-h-[220px] overflow-y-auto pr-1"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Lead Interactions & Call Log Timeline (7 cols) -->
+                                <div class="lg:col-span-7 fintech-card p-5 bg-white space-y-4">
+                                    <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                                        <div>
+                                            <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Call Logs & Interactions History</h3>
+                                            <p class="text-[11px] text-slate-500">Automatically preserved and linked when converted to Customer</p>
+                                        </div>
+                                        <button type="button" onclick="openLeadInteractionModal()" class="text-xs font-bold text-blue-600 hover:underline">+ Add Entry</button>
+                                    </div>
+                                    <div id="ldet-interactions-list" class="space-y-3 text-xs max-h-[460px] overflow-y-auto pr-1"></div>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -434,7 +631,6 @@
                                 </div>
                             </div>
 
-                            <!-- Live Search, Filters & Sort Controls -->
                             <div class="fintech-card p-4 bg-white grid grid-cols-1 sm:grid-cols-4 gap-3">
                                 <div class="sm:col-span-2">
                                     <input type="text" id="customer-search-input" oninput="debounceCustomerSearch()" placeholder="Search by Customer Number (CUST-00001), Full Name, or Phone..." class="w-full fintech-input rounded-xl px-3.5 py-2 text-xs">
@@ -452,7 +648,6 @@
                                 </select>
                             </div>
 
-                            <!-- Live Customers Table -->
                             <div class="fintech-card bg-white overflow-hidden">
                                 <div class="overflow-x-auto">
                                     <table class="w-full text-left border-collapse">
@@ -475,7 +670,6 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <!-- Pagination Footer -->
                                 <div class="px-4 py-3 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                                     <span id="customers-pagination-info">Showing 0 of 0 customers</span>
                                     <div class="flex gap-1.5">
@@ -495,7 +689,7 @@
                                             <span>← Back to Customers Directory</span>
                                         </button>
                                         <span>/</span>
-                                        <span id="detail-cust-number-crumb" class="font-bold text-slate-800">CUST-00001</span>
+                                        <span id="detail-cust-number-crumb" class="font-bold font-mono text-slate-800">CUST-00001</span>
                                     </div>
                                     <div class="flex items-center gap-2.5 flex-wrap">
                                         <h2 id="detail-cust-title" class="text-xl font-extrabold text-slate-900">Customer Name</h2>
@@ -519,7 +713,7 @@
                                 <button type="button" id="ctab-btn-documents" onclick="switchCustomerProfileTab('documents')" class="py-2 px-4 rounded-xl font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap">E. Documents (KYC)</button>
                             </div>
 
-                            <!-- TAB A: PERSONAL / CORPORATE INFORMATION (POPULATED FROM POSTGRESQL) -->
+                            <!-- TAB A: PERSONAL / CORPORATE INFORMATION -->
                             <div id="ctab-panel-personal" class="fintech-card p-5 bg-white space-y-5">
                                 <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                                     <div>
@@ -636,10 +830,58 @@
                                 </div>
                             </div>
 
-                            <!-- TAB D: INTERACTIONS & NOTES -->
-                            <div id="ctab-panel-interactions" class="hidden fintech-card p-5 bg-white space-y-3">
-                                <h3 class="text-sm font-bold text-slate-900">Chronological Interactions & Notes</h3>
-                                <p class="text-xs text-slate-500">Persistent customer notes and call logs will be activated with the <code>interactions</code> table in Stage 2.</p>
+                            <!-- TAB D: LIVE INTERACTIONS & NOTES (CONNECTED TO POSTGRESQL) -->
+                            <div id="ctab-panel-interactions" class="hidden fintech-card p-5 bg-white space-y-5">
+                                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                                    <div>
+                                        <h3 class="text-sm font-bold text-slate-900">Chronological Interactions & Notes</h3>
+                                        <p class="text-[11px] text-slate-500">Includes direct customer interactions and inherited pre-conversion lead call history</p>
+                                    </div>
+                                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Live Persistence</span>
+                                </div>
+
+                                <div id="cust-interaction-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs"></div>
+
+                                <form id="customer-interaction-form" onsubmit="handleCustomerInteractionSubmit(event)" class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3 text-xs">
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Interaction Type</label>
+                                            <select id="ci-type" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs font-semibold">
+                                                <option value="NOTE">NOTE (Internal / File Note)</option>
+                                                <option value="CALL">CALL (Phone Call)</option>
+                                                <option value="WHATSAPP">WHATSAPP</option>
+                                                <option value="MEETING">MEETING</option>
+                                                <option value="EMAIL">EMAIL</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Visibility</label>
+                                            <select id="ci-visibility" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs font-semibold">
+                                                <option value="INTERNAL">INTERNAL (Team Only)</option>
+                                                <option value="CUSTOMER_FACING">CUSTOMER_FACING</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Call Outcome (Optional)</label>
+                                            <select id="ci-outcome" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs font-semibold">
+                                                <option value="">— None / General Note —</option>
+                                                <option value="ANSWERED">ANSWERED</option>
+                                                <option value="NO_ANSWER">NO_ANSWER</option>
+                                                <option value="VOICEMAIL">VOICEMAIL</option>
+                                                <option value="REQUESTED_CALLBACK">REQUESTED_CALLBACK</option>
+                                                <option value="FOLLOW_UP_REQUIRED">FOLLOW_UP_REQUIRED</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <textarea id="ci-content" required minlength="2" rows="2" class="w-full fintech-input bg-white rounded-xl p-3 text-xs" placeholder="Write interaction summary, call notes, or agreement details..."></textarea>
+                                    </div>
+                                    <div class="flex justify-end">
+                                        <button type="submit" id="ci-submit-btn" class="btn-primary py-2 px-4 rounded-xl text-xs">Save Interaction to PostgreSQL</button>
+                                    </div>
+                                </form>
+
+                                <div id="customer-interactions-list" class="space-y-2.5 text-xs"></div>
                             </div>
 
                             <!-- TAB E: DOCUMENTS -->
@@ -957,7 +1199,7 @@
                                         <button type="button" id="btn-audit-logs" onclick="openAuditLogsModal()" class="hidden w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left">
                                             <div>
                                                 <p class="text-xs sm:text-sm font-bold text-slate-900">Security Audit Trail (Append-Only)</p>
-                                                <p class="text-[11px] text-slate-500">Inspect real-time authentication, customer, and administrative events</p>
+                                                <p class="text-[11px] text-slate-500">Inspect real-time authentication, lead, customer, and administrative events</p>
                                             </div>
                                             <span class="text-slate-400">→</span>
                                         </button>
@@ -1025,7 +1267,255 @@
         </div>
 
         <!-- ================================================================= -->
-        <!-- CUSTOMER CREATE / EDIT MODAL (CONNECTED TO /api/customers)        -->
+        <!-- STAGE 2 MODALS: LEAD FORM, STAGE CHANGE, CALL LOG, CONVERSION     -->
+        <!-- ================================================================= -->
+
+        <!-- LEAD CREATE / EDIT MODAL -->
+        <div id="lead-form-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[620px] max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <h3 id="lead-modal-title" class="font-bold text-slate-900 text-base">Register New Lead</h3>
+                        <p class="text-[11px] text-slate-500">Assigns a unique <code>LD-XXXXX</code> identifier and checks active duplicate phones</p>
+                    </div>
+                    <button type="button" onclick="closeLeadFormModal()" class="h-8 w-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">✕</button>
+                </div>
+
+                <div id="lead-form-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <form id="lead-form" onsubmit="handleLeadFormSubmit(event)" class="space-y-3.5 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Entity Type *</label>
+                            <select id="lf-entity-type" onchange="toggleLeadModalEntityFields()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="INDIVIDUAL">Individual (Persona Física)</option>
+                                <option value="BUSINESS">Business (Persona Moral)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Lead Source *</label>
+                            <select id="lf-source" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="DIRECT_OUTREACH">DIRECT_OUTREACH</option>
+                                <option value="REFERRAL">REFERRAL</option>
+                                <option value="INBOUND_CALL">INBOUND_CALL</option>
+                                <option value="CAMPAIGN">CAMPAIGN</option>
+                                <option value="WEBSITE">WEBSITE</option>
+                                <option value="REPEAT_BORROWER">REPEAT_BORROWER</option>
+                                <option value="OTHER">OTHER</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Priority *</label>
+                            <select id="lf-priority" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="MEDIUM">MEDIUM</option>
+                                <option value="HIGH">HIGH</option>
+                                <option value="LOW">LOW</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Prospect Full Name / Razón Social *</label>
+                            <input type="text" id="lf-full-name" required minlength="3" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Full name or legal entity">
+                        </div>
+
+                        <div id="lf-business-group" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-blue-50/50 border border-blue-200/70">
+                            <div>
+                                <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Legal Representative</label>
+                                <input type="text" id="lf-legal-rep" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs" placeholder="Authorized representative">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Trade Name (Nombre Comercial)</label>
+                                <input type="text" id="lf-trade-name" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs" placeholder="Commercial name">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Primary Phone Number *</label>
+                            <input type="text" id="lf-phone" required class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="10-digit phone (e.g., 55 1234 5678)">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Email Address</label>
+                            <input type="email" id="lf-email" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="prospect@email.com">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Product Interest *</label>
+                            <select id="lf-product" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="Personal Loan">Personal Loan</option>
+                                <option value="Business Loan">Business Loan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Requested Amount (MXN Pesos)</label>
+                            <input type="number" id="lf-amount-pesos" min="0" step="100" value="50000" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Next Follow-up Call Date/Time</label>
+                            <input type="datetime-local" id="lf-followup" class="w-full fintech-input rounded-xl p-2.5 text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tax ID (RFC)</label>
+                            <input type="text" id="lf-rfc" class="w-full fintech-input rounded-xl p-2.5 text-xs uppercase" placeholder="Optional RFC">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Initial Qualification Notes</label>
+                            <textarea id="lf-notes" rows="2" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Context, credit need, or referral details..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                        <button type="button" onclick="closeLeadFormModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs">Cancel</button>
+                        <button type="submit" id="lf-submit-btn" class="btn-primary py-2.5 px-5 rounded-xl text-xs">Save Lead</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- LEAD STAGE TRANSITION MODAL -->
+        <div id="lead-stage-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[440px] shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-900 text-sm">Update Pipeline Stage</h3>
+                    <button type="button" onclick="closeLeadStageModal()" class="h-7 w-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">✕</button>
+                </div>
+                <div id="lead-stage-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs"></div>
+                <form onsubmit="handleLeadStageSubmit(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">New Stage *</label>
+                        <select id="ls-new-stage" onchange="toggleStageModalRequirements()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                            <option value="NEW">NEW</option>
+                            <option value="CONTACT_ATTEMPTED">CONTACT_ATTEMPTED</option>
+                            <option value="CONTACTED">CONTACTED</option>
+                            <option value="QUALIFIED">QUALIFIED (Requires Amount &gt; $0)</option>
+                            <option value="APPLICATION_STARTED">APPLICATION_STARTED</option>
+                            <option value="UNDER_REVIEW">UNDER_REVIEW</option>
+                            <option value="APPROVED">APPROVED</option>
+                            <option value="NURTURE">NURTURE (Requires Next Follow-up Date)</option>
+                            <option value="LOST">LOST (Requires Lost Reason)</option>
+                        </select>
+                    </div>
+                    <div id="ls-lost-group" class="hidden">
+                        <label class="block text-[10px] font-bold text-red-600 uppercase mb-1">Lost Reason *</label>
+                        <input type="text" id="ls-lost-reason" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="e.g., Rate too high, Declined underwriting, Unreachable">
+                    </div>
+                    <div id="ls-followup-group" class="hidden">
+                        <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Next Follow-up Date/Time *</label>
+                        <input type="datetime-local" id="ls-followup" class="w-full fintech-input rounded-xl p-2.5 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Transition Note</label>
+                        <textarea id="ls-note" rows="2" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Optional reason or context for stage change..."></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeLeadStageModal()" class="py-2 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs">Cancel</button>
+                        <button type="submit" id="ls-submit-btn" class="btn-primary py-2 px-4 rounded-xl text-xs">Confirm Stage</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- LEAD CALL / INTERACTION MODAL -->
+        <div id="lead-interaction-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[460px] shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-900 text-sm">Log Call Outcome or Interaction</h3>
+                    <button type="button" onclick="closeLeadInteractionModal()" class="h-7 w-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">✕</button>
+                </div>
+                <div id="lead-int-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs"></div>
+                <form onsubmit="handleLeadInteractionSubmit(event)" class="space-y-3 text-xs">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Channel *</label>
+                            <select id="li-type" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="CALL">CALL</option>
+                                <option value="WHATSAPP">WHATSAPP</option>
+                                <option value="NOTE">INTERNAL NOTE</option>
+                                <option value="MEETING">MEETING</option>
+                                <option value="EMAIL">EMAIL</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Call Outcome</label>
+                            <select id="li-outcome" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="INTERESTED">INTERESTED</option>
+                                <option value="ANSWERED">ANSWERED</option>
+                                <option value="REQUESTED_CALLBACK">REQUESTED_CALLBACK</option>
+                                <option value="FOLLOW_UP_REQUIRED">FOLLOW_UP_REQUIRED</option>
+                                <option value="NO_ANSWER">NO_ANSWER</option>
+                                <option value="VOICEMAIL">VOICEMAIL</option>
+                                <option value="NOT_INTERESTED">NOT_INTERESTED</option>
+                                <option value="WRONG_NUMBER">WRONG_NUMBER</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Schedule Next Follow-up Call</label>
+                        <input type="datetime-local" id="li-followup" class="w-full fintech-input rounded-xl p-2.5 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Call / Interaction Notes *</label>
+                        <textarea id="li-content" required minlength="2" rows="3" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Record what was discussed with the prospect..."></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeLeadInteractionModal()" class="py-2 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs">Cancel</button>
+                        <button type="submit" id="li-submit-btn" class="btn-primary py-2 px-4 rounded-xl text-xs">Save Call Log</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ATOMIC LEAD TO CUSTOMER CONVERSION MODAL -->
+        <div id="lead-convert-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[480px] shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm">Convert Lead to Customer</h3>
+                        <p class="text-[11px] text-slate-500">Deduplicates against existing customers and transfers all call history</p>
+                    </div>
+                    <button type="button" onclick="closeLeadConvertModal()" class="h-7 w-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">✕</button>
+                </div>
+                <div id="lead-convert-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+                <form onsubmit="handleLeadConvertSubmit(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Customer Entity Type *</label>
+                        <select id="lc-entity-type" onchange="toggleConvertModalFields()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                            <option value="INDIVIDUAL">Individual (Persona Física)</option>
+                            <option value="BUSINESS">Business (Persona Moral)</option>
+                        </select>
+                    </div>
+                    <div id="lc-business-group" class="hidden space-y-3 p-3 rounded-2xl bg-blue-50/50 border border-blue-200/70">
+                        <div>
+                            <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Authorized Legal Representative *</label>
+                            <input type="text" id="lc-legal-rep" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs" placeholder="Required for Business customers">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Trade Name (Nombre Comercial)</label>
+                            <input type="text" id="lc-trade-name" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tax ID (RFC)</label>
+                        <input type="text" id="lc-rfc" class="w-full fintech-input rounded-xl p-2.5 text-xs uppercase" placeholder="Optional RFC">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Full Residential / Fiscal Address</label>
+                        <input type="text" id="lc-address" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Optional address">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Conversion Note</label>
+                        <input type="text" id="lc-notes" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Optional conversion note">
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeLeadConvertModal()" class="py-2 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs">Cancel</button>
+                        <button type="submit" id="lc-submit-btn" class="btn-primary py-2 px-5 rounded-xl text-xs">Confirm Conversion</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- CUSTOMER CREATE / EDIT MODAL (STAGE 1)                            -->
         <!-- ================================================================= -->
         <div id="customer-form-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
             <div class="bg-white rounded-3xl p-6 w-full max-w-[640px] max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
@@ -1072,7 +1562,6 @@
                             <input type="text" id="cf-full-name" required minlength="3" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Full legal name or Razón Social">
                         </div>
 
-                        <!-- Business Specific Fields -->
                         <div id="cf-business-group" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-blue-50/50 border border-blue-200/70">
                             <div>
                                 <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Legal Representative Name *</label>
@@ -1239,7 +1728,7 @@
         const NuraFinancialEngine = {
             formatMXNFromCents(cents) {
                 const sign = cents < 0 ? '-' : '';
-                const abs = Math.abs(Math.round(cents));
+                const abs = Math.abs(Math.round(Number(cents) || 0));
                 const pesos = Math.floor(abs / 100);
                 const centavos = String(abs % 100).padStart(2, '0');
                 return `${sign}$${pesos.toLocaleString('en-US')}.${centavos} MXN`;
@@ -1341,6 +1830,14 @@
         let customerFormMode = 'create';
         let customerSearchTimer = null;
 
+        // Leads & Call List State
+        let currentLeadsPage = 1;
+        let currentLeadsTotal = 0;
+        let currentSelectedLead = null;
+        let leadFormMode = 'create';
+        let leadSearchTimer = null;
+        let activeCallListBucket = 'TODAY';
+
         const SECTION_TITLES = {
             home: 'Dashboard',
             leads: 'Leads & Pipeline',
@@ -1350,6 +1847,25 @@
             perfil: 'Profile & Team',
             ia: 'NURA Assistant'
         };
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatDateTimeShort(isoStr) {
+            if (!isoStr) return '—';
+            try {
+                const d = new Date(isoStr);
+                return d.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return isoStr;
+            }
+        }
 
         function getCookie(name) {
             const value = `; ${document.cookie}`;
@@ -1403,14 +1919,16 @@
                         auditBtn?.classList.add('hidden');
                     }
 
-                    // Hide Create/Edit customer buttons if role is OPERATIONS_OFFICER
-                    const canWriteCustomers = ['OWNER_ADMIN', 'SALES_AGENT', 'CREDIT_ADVISOR'].includes(data.role);
-                    document.getElementById('btn-new-customer')?.classList.toggle('hidden', !canWriteCustomers);
-                    document.getElementById('btn-edit-customer')?.classList.toggle('hidden', !canWriteCustomers);
+                    const canWriteOrigination = ['OWNER_ADMIN', 'SALES_AGENT', 'CREDIT_ADVISOR'].includes(data.role);
+                    document.getElementById('btn-new-customer')?.classList.toggle('hidden', !canWriteOrigination);
+                    document.getElementById('btn-edit-customer')?.classList.toggle('hidden', !canWriteOrigination);
+                    document.getElementById('btn-new-lead')?.classList.toggle('hidden', !canWriteOrigination);
+                    document.getElementById('top-btn-new-lead')?.classList.toggle('hidden', !canWriteOrigination);
+                    document.getElementById('top-btn-new-customer')?.classList.toggle('hidden', !canWriteOrigination);
 
                     document.getElementById('auth-view').classList.add('hidden');
                     document.getElementById('app-view').classList.remove('hidden');
-                    await Promise.all([cargarConversaciones(), loadCustomers(1)]);
+                    await Promise.all([cargarConversaciones(), loadCustomers(1), loadLeads(1)]);
                 } else {
                     mostrarAuthView();
                 }
@@ -1466,7 +1984,541 @@
         }
 
         /* =========================================================================
-           3. STAGE 1 LIVE CUSTOMERS MODULE (GET, POST, PATCH)
+           3. STAGE 2 LIVE LEADS & PIPELINE, CALL LIST, INTERACTIONS & CONVERSION
+           ========================================================================= */
+        function debounceLeadSearch() {
+            clearTimeout(leadSearchTimer);
+            leadSearchTimer = setTimeout(() => loadLeads(1), 280);
+        }
+
+        function getStageBadgeStyle(stage) {
+            const styles = {
+                NEW: 'bg-blue-50 text-blue-700 border-blue-200',
+                CONTACT_ATTEMPTED: 'bg-amber-50 text-amber-800 border-amber-200',
+                CONTACTED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                QUALIFIED: 'bg-purple-50 text-purple-700 border-purple-200',
+                APPLICATION_STARTED: 'bg-cyan-50 text-cyan-800 border-cyan-200',
+                UNDER_REVIEW: 'bg-amber-100 text-amber-900 border-amber-300',
+                APPROVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                CONVERTED: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+                NURTURE: 'bg-slate-100 text-slate-700 border-slate-200',
+                LOST: 'bg-red-50 text-red-700 border-red-200'
+            };
+            return styles[stage] || 'bg-slate-100 text-slate-700 border-slate-200';
+        }
+
+        async function loadLeads(page = 1) {
+            currentLeadsPage = page;
+            const search = document.getElementById('lead-search-input')?.value.trim() || '';
+            const stage = document.getElementById('lead-stage-filter')?.value || 'ALL';
+            const product = document.getElementById('lead-product-filter')?.value || 'ALL';
+            const tbody = document.getElementById('leads-table-tbody');
+
+            const params = new URLSearchParams({ page: String(page), page_size: '20' });
+            if (search) params.set('search', search);
+            if (stage && stage !== 'ALL') params.set('stage', stage);
+            if (product && product !== 'ALL') params.set('product_interest', product);
+
+            try {
+                const res = await fetch(`/api/leads?${params.toString()}`);
+                if (!res.ok) throw new Error("Could not load leads");
+                const data = await res.json();
+                currentLeadsTotal = data.total || 0;
+
+                // Update Dashboard & Call List Counters
+                const counts = data.call_list_counts || { open_total: 0, overdue: 0, today: 0, upcoming: 0 };
+                const dashLeadsEl = document.getElementById('dash-leads-count');
+                const dashCallsEl = document.getElementById('dash-calls-today-count');
+                if (dashLeadsEl) dashLeadsEl.innerText = String(counts.open_total);
+                if (dashCallsEl) dashCallsEl.innerText = String(counts.today + counts.overdue);
+
+                document.getElementById('calllist-overdue-count').innerText = String(counts.overdue);
+                document.getElementById('calllist-today-count').innerText = String(counts.today);
+                document.getElementById('calllist-upcoming-count').innerText = String(counts.upcoming);
+
+                tbody.innerHTML = '';
+                if (!data.items || data.items.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="py-12 px-6 text-center">
+                                <div class="max-w-md mx-auto space-y-2">
+                                    <p class="text-sm font-bold text-slate-900">No leads found</p>
+                                    <p class="text-xs text-slate-500">Click "+ New Lead" to register a prospect in PostgreSQL.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    data.items.forEach(l => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-50/90 transition cursor-pointer';
+                        tr.onclick = () => openLeadDetail(l.id);
+
+                        const badgeClass = getStageBadgeStyle(l.stage);
+                        const followUpText = l.next_follow_up_at
+                            ? formatDateTimeShort(l.next_follow_up_at)
+                            : (l.last_interaction_outcome ? `Last: ${l.last_interaction_outcome}` : 'No call scheduled');
+
+                        tr.innerHTML = `
+                            <td class="py-3.5 px-4 font-mono font-bold text-blue-700">${escapeHtml(l.lead_number)}</td>
+                            <td class="py-3.5 px-4">
+                                <p class="font-bold text-slate-900">${escapeHtml(l.full_name)}</p>
+                                <p class="text-[10px] text-slate-500">${escapeHtml(l.entity_type)} • Priority: ${escapeHtml(l.priority)}</p>
+                            </td>
+                            <td class="py-3.5 px-4">
+                                <p class="font-medium text-slate-800">${escapeHtml(l.phone_primary)}</p>
+                                <p class="text-[10px] text-slate-500">${escapeHtml(l.source)}</p>
+                            </td>
+                            <td class="py-3.5 px-4 font-semibold text-slate-700">${escapeHtml(l.product_interest)}</td>
+                            <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-900">${NuraFinancialEngine.formatMXNFromCents(l.requested_amount_cents)}</td>
+                            <td class="py-3.5 px-4">
+                                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${badgeClass}">${escapeHtml(l.stage)}</span>
+                            </td>
+                            <td class="py-3.5 px-4 text-[11px] text-slate-600">${escapeHtml(followUpText)}</td>
+                            <td class="py-3.5 px-4 text-right">
+                                <button type="button" class="text-xs font-bold text-blue-600 hover:underline">Open →</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                const startIdx = currentLeadsTotal === 0 ? 0 : (page - 1) * data.page_size + 1;
+                const endIdx = Math.min(page * data.page_size, currentLeadsTotal);
+                document.getElementById('leads-pagination-info').innerText = `Showing ${startIdx}–${endIdx} of ${currentLeadsTotal} leads`;
+                document.getElementById('lead-prev-btn').disabled = page <= 1;
+                document.getElementById('lead-next-btn').disabled = endIdx >= currentLeadsTotal;
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-red-600">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        function changeLeadPage(delta) {
+            const next = currentLeadsPage + delta;
+            if (next >= 1) loadLeads(next);
+        }
+
+        async function setCallListBucketFilter(bucket) {
+            activeCallListBucket = bucket;
+            const labels = {
+                OVERDUE: 'Queue: Overdue Calls (Requires Immediate Follow-up)',
+                TODAY: "Queue: Today's Scheduled Calls & Uncontacted New Leads",
+                UPCOMING: 'Queue: Upcoming Scheduled Calls'
+            };
+            document.getElementById('calllist-active-label').innerText = labels[bucket] || 'Call Queue';
+
+            ['TODAY', 'OVERDUE', 'UPCOMING'].forEach(b => {
+                const btn = document.getElementById('cl-btn-' + b);
+                if (!btn) return;
+                btn.className = (b === bucket)
+                    ? 'px-3.5 py-1.5 rounded-xl font-semibold bg-slate-900 text-white'
+                    : 'px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200';
+            });
+
+            const container = document.getElementById('calllist-cards-container');
+            container.innerHTML = '<p class="text-xs text-slate-400 col-span-2 py-6 text-center">Loading call queue...</p>';
+
+            try {
+                const res = await fetch(`/api/leads?call_bucket=${encodeURIComponent(bucket)}&page_size=50`);
+                if (!res.ok) throw new Error("Failed to load call list");
+                const data = await res.json();
+                container.innerHTML = '';
+
+                if (!data.items || data.items.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-2 fintech-card p-8 bg-white text-center space-y-1.5">
+                            <p class="text-sm font-bold text-slate-900">No leads in this call queue</p>
+                            <p class="text-xs text-slate-500">All scheduled calls for this bucket are clear.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                data.items.forEach(l => {
+                    const card = document.createElement('div');
+                    card.className = 'fintech-card p-4 bg-white space-y-3 flex flex-col justify-between';
+                    const followStr = l.next_follow_up_at ? formatDateTimeShort(l.next_follow_up_at) : 'New Lead (First Contact Pending)';
+                    card.innerHTML = `
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-mono text-[11px] font-bold text-blue-700">${escapeHtml(l.lead_number)}</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStageBadgeStyle(l.stage)}">${escapeHtml(l.stage)}</span>
+                                </div>
+                                <h4 class="text-sm font-bold text-slate-900 mt-1">${escapeHtml(l.full_name)}</h4>
+                                <p class="text-xs text-slate-600 font-medium">${escapeHtml(l.phone_primary)} • ${escapeHtml(l.product_interest)}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs font-extrabold font-mono text-slate-900">${NuraFinancialEngine.formatMXNFromCents(l.requested_amount_cents)}</p>
+                                <p class="text-[10px] text-amber-700 font-semibold mt-0.5">${escapeHtml(followStr)}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-xs">
+                            <a href="tel:${escapeHtml(l.phone_primary)}" class="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-center">📞 Dial</a>
+                            <button type="button" class="btn-quick-log py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold">Log Call</button>
+                            <button type="button" class="btn-open-lead py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold">Details →</button>
+                        </div>
+                    `;
+                    card.querySelector('.btn-quick-log').onclick = async () => {
+                        await openLeadDetail(l.id);
+                        openLeadInteractionModal();
+                    };
+                    card.querySelector('.btn-open-lead').onclick = () => openLeadDetail(l.id);
+                    container.appendChild(card);
+                });
+            } catch (err) {
+                container.innerHTML = `<p class="text-xs text-red-600 col-span-2">${escapeHtml(err.message)}</p>`;
+            }
+        }
+
+        async function openLeadDetail(leadId) {
+            try {
+                const res = await fetch(`/api/leads/${leadId}`);
+                if (!res.ok) throw new Error("Could not load lead detail");
+                const l = await res.json();
+                currentSelectedLead = l;
+
+                document.getElementById('detail-lead-number-crumb').innerText = l.lead_number;
+                document.getElementById('detail-lead-title').innerText = l.full_name;
+                document.getElementById('detail-lead-stage-badge').innerText = l.stage;
+                document.getElementById('detail-lead-stage-badge').className = `text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border uppercase ${getStageBadgeStyle(l.stage)}`;
+                document.getElementById('detail-lead-priority-badge').innerText = `PRIORITY: ${l.priority}`;
+
+                document.getElementById('ldet-number').innerText = l.lead_number;
+                document.getElementById('ldet-entity').innerText = l.entity_type === 'BUSINESS'
+                    ? `BUSINESS (Rep: ${l.legal_representative_name || 'N/A'})`
+                    : 'INDIVIDUAL';
+                document.getElementById('ldet-product').innerText = l.product_interest;
+                document.getElementById('ldet-amount').innerText = NuraFinancialEngine.formatMXNFromCents(l.requested_amount_cents);
+                document.getElementById('ldet-phone').innerText = l.phone_primary;
+                document.getElementById('ldet-email').innerText = l.email || 'Not Provided';
+                document.getElementById('ldet-source').innerText = l.source;
+                document.getElementById('ldet-followup').innerText = l.next_follow_up_at ? formatDateTimeShort(l.next_follow_up_at) : 'None Scheduled';
+                document.getElementById('ldet-notes').innerText = l.summary_notes || 'No summary notes provided.';
+
+                const isConverted = (l.stage === 'CONVERTED' && l.converted_customer_id);
+                const canWrite = ['OWNER_ADMIN', 'SALES_AGENT', 'CREDIT_ADVISOR'].includes(currentUser?.role);
+                document.getElementById('lead-converted-banner').classList.toggle('hidden', !isConverted);
+                document.getElementById('btn-lead-convert').classList.toggle('hidden', isConverted || !canWrite);
+                document.getElementById('btn-lead-change-stage').classList.toggle('hidden', isConverted || !canWrite);
+                document.getElementById('btn-lead-edit').classList.toggle('hidden', isConverted || !canWrite);
+                document.getElementById('btn-lead-log-call').classList.toggle('hidden', !canWrite);
+
+                if (isConverted) {
+                    document.getElementById('btn-view-converted-customer').onclick = () => {
+                        switchTab('customers');
+                        openCustomerDetail(l.converted_customer_id);
+                    };
+                }
+
+                // Render Stage History
+                const histEl = document.getElementById('ldet-stage-history');
+                histEl.innerHTML = '';
+                (l.stage_history || []).forEach(h => {
+                    const div = document.createElement('div');
+                    div.className = 'p-2.5 rounded-xl bg-slate-50 border border-slate-100';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-slate-800">${escapeHtml(h.from_stage || 'START')} → ${escapeHtml(h.to_stage)}</span>
+                            <span class="text-[10px] text-slate-400">${escapeHtml(formatDateTimeShort(h.changed_at))}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-600 mt-0.5">${escapeHtml(h.reason_or_note || '')} • By ${escapeHtml(h.changed_by_name)}</p>
+                    `;
+                    histEl.appendChild(div);
+                });
+
+                // Render Interactions
+                const intEl = document.getElementById('ldet-interactions-list');
+                intEl.innerHTML = '';
+                if (!l.interactions || l.interactions.length === 0) {
+                    intEl.innerHTML = '<p class="text-slate-400 py-6 text-center">No calls or notes logged yet. Click "+ Add Entry" to record your first interaction.</p>';
+                } else {
+                    l.interactions.forEach(i => {
+                        const item = document.createElement('div');
+                        item.className = 'p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-1';
+                        item.innerHTML = `
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-100 text-blue-800">${escapeHtml(i.interaction_type)}</span>
+                                    ${i.outcome ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">${escapeHtml(i.outcome)}</span>` : ''}
+                                </div>
+                                <span class="text-[10px] text-slate-400">${escapeHtml(formatDateTimeShort(i.created_at))}</span>
+                            </div>
+                            <p class="text-xs text-slate-800 whitespace-pre-wrap pt-1">${escapeHtml(i.content)}</p>
+                            <p class="text-[10px] text-slate-500 pt-1">Logged by <strong>${escapeHtml(i.created_by_name)}</strong> (${escapeHtml(i.created_by_role)})</p>
+                        `;
+                        intEl.appendChild(item);
+                    });
+                }
+
+                document.getElementById('leads-master-view').classList.add('hidden');
+                document.getElementById('lead-detail-view').classList.remove('hidden');
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        function closeLeadDetailView() {
+            document.getElementById('lead-detail-view').classList.add('hidden');
+            document.getElementById('leads-master-view').classList.remove('hidden');
+        }
+
+        function toggleLeadModalEntityFields() {
+            const isBiz = document.getElementById('lf-entity-type').value === 'BUSINESS';
+            document.getElementById('lf-business-group').classList.toggle('hidden', !isBiz);
+        }
+
+        function openLeadFormModal(mode) {
+            leadFormMode = mode;
+            document.getElementById('lead-form-error').classList.add('hidden');
+            document.getElementById('lead-form').reset();
+
+            if (mode === 'edit' && currentSelectedLead) {
+                const l = currentSelectedLead;
+                document.getElementById('lead-modal-title').innerText = `Edit Lead ${l.lead_number}`;
+                document.getElementById('lf-entity-type').value = l.entity_type || 'INDIVIDUAL';
+                document.getElementById('lf-source').value = l.source || 'DIRECT_OUTREACH';
+                document.getElementById('lf-priority').value = l.priority || 'MEDIUM';
+                document.getElementById('lf-full-name').value = l.full_name || '';
+                document.getElementById('lf-legal-rep').value = l.legal_representative_name || '';
+                document.getElementById('lf-trade-name').value = l.trade_name || '';
+                document.getElementById('lf-phone').value = l.phone_primary || '';
+                document.getElementById('lf-email').value = l.email || '';
+                document.getElementById('lf-product').value = l.product_interest || 'Personal Loan';
+                document.getElementById('lf-amount-pesos').value = ((l.requested_amount_cents || 0) / 100).toFixed(2);
+                document.getElementById('lf-rfc').value = l.tax_id_rfc || '';
+                document.getElementById('lf-notes').value = l.summary_notes || '';
+                if (l.next_follow_up_at) {
+                    document.getElementById('lf-followup').value = l.next_follow_up_at.slice(0, 16);
+                }
+            } else {
+                document.getElementById('lead-modal-title').innerText = 'Register New Lead';
+                document.getElementById('lf-amount-pesos').value = '50000';
+            }
+
+            toggleLeadModalEntityFields();
+            document.getElementById('lead-form-modal').classList.remove('hidden');
+        }
+
+        function closeLeadFormModal() {
+            document.getElementById('lead-form-modal').classList.add('hidden');
+        }
+
+        async function handleLeadFormSubmit(e) {
+            e.preventDefault();
+            const errBox = document.getElementById('lead-form-error');
+            const btn = document.getElementById('lf-submit-btn');
+            errBox.classList.add('hidden');
+            btn.disabled = true;
+
+            const payload = {
+                entity_type: document.getElementById('lf-entity-type').value,
+                source: document.getElementById('lf-source').value,
+                priority: document.getElementById('lf-priority').value,
+                full_name: document.getElementById('lf-full-name').value.trim(),
+                legal_representative_name: document.getElementById('lf-legal-rep').value.trim() || null,
+                trade_name: document.getElementById('lf-trade-name').value.trim() || null,
+                phone_primary: document.getElementById('lf-phone').value.trim(),
+                email: document.getElementById('lf-email').value.trim() || null,
+                product_interest: document.getElementById('lf-product').value,
+                requested_amount_pesos: parseFloat(document.getElementById('lf-amount-pesos').value || '0') || 0,
+                next_follow_up_at: document.getElementById('lf-followup').value || null,
+                tax_id_rfc: document.getElementById('lf-rfc').value.trim() || null,
+                summary_notes: document.getElementById('lf-notes').value.trim() || null
+            };
+
+            const isEdit = (leadFormMode === 'edit' && currentSelectedLead);
+            const url = isEdit ? `/api/leads/${currentSelectedLead.id}` : '/api/leads';
+            const method = isEdit ? 'PATCH' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('csrf_token') },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail));
+                closeLeadFormModal();
+                await loadLeads(currentLeadsPage);
+                switchTab('leads');
+                await openLeadDetail(data.id);
+            } catch (err) {
+                errBox.innerText = err.message;
+                errBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function openLeadStageModal() {
+            if (!currentSelectedLead) return;
+            document.getElementById('lead-stage-error').classList.add('hidden');
+            document.getElementById('ls-new-stage').value = currentSelectedLead.stage === 'CONVERTED' ? 'APPROVED' : currentSelectedLead.stage;
+            document.getElementById('ls-lost-reason').value = currentSelectedLead.lost_reason || '';
+            document.getElementById('ls-note').value = '';
+            toggleStageModalRequirements();
+            document.getElementById('lead-stage-modal').classList.remove('hidden');
+        }
+
+        function closeLeadStageModal() {
+            document.getElementById('lead-stage-modal').classList.add('hidden');
+        }
+
+        function toggleStageModalRequirements() {
+            const st = document.getElementById('ls-new-stage').value;
+            document.getElementById('ls-lost-group').classList.toggle('hidden', st !== 'LOST');
+            document.getElementById('ls-followup-group').classList.toggle('hidden', st !== 'NURTURE');
+        }
+
+        async function handleLeadStageSubmit(e) {
+            e.preventDefault();
+            if (!currentSelectedLead) return;
+            const errBox = document.getElementById('lead-stage-error');
+            const btn = document.getElementById('ls-submit-btn');
+            errBox.classList.add('hidden');
+            btn.disabled = true;
+
+            const newStage = document.getElementById('ls-new-stage').value;
+            const payload = {
+                stage: newStage,
+                lost_reason: document.getElementById('ls-lost-reason').value.trim() || null,
+                stage_change_note: document.getElementById('ls-note').value.trim() || null
+            };
+            const followVal = document.getElementById('ls-followup').value;
+            if (followVal) payload.next_follow_up_at = followVal;
+
+            try {
+                const res = await fetch(`/api/leads/${currentSelectedLead.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('csrf_token') },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Failed to update stage");
+                closeLeadStageModal();
+                await loadLeads(currentLeadsPage);
+                await openLeadDetail(currentSelectedLead.id);
+            } catch (err) {
+                errBox.innerText = err.message;
+                errBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function openLeadInteractionModal() {
+            if (!currentSelectedLead) return;
+            document.getElementById('lead-int-error').classList.add('hidden');
+            document.getElementById('li-type').value = 'CALL';
+            document.getElementById('li-outcome').value = 'INTERESTED';
+            document.getElementById('li-followup').value = '';
+            document.getElementById('li-content').value = '';
+            document.getElementById('lead-interaction-modal').classList.remove('hidden');
+        }
+
+        function closeLeadInteractionModal() {
+            document.getElementById('lead-interaction-modal').classList.add('hidden');
+        }
+
+        async function handleLeadInteractionSubmit(e) {
+            e.preventDefault();
+            if (!currentSelectedLead) return;
+            const errBox = document.getElementById('lead-int-error');
+            const btn = document.getElementById('li-submit-btn');
+            errBox.classList.add('hidden');
+            btn.disabled = true;
+
+            const payload = {
+                interaction_type: document.getElementById('li-type').value,
+                direction: 'OUTBOUND',
+                visibility: 'INTERNAL',
+                outcome: document.getElementById('li-outcome').value || null,
+                content: document.getElementById('li-content').value.trim(),
+                next_follow_up_at: document.getElementById('li-followup').value || null
+            };
+
+            try {
+                const res = await fetch(`/api/leads/${currentSelectedLead.id}/interactions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('csrf_token') },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Could not log interaction");
+                closeLeadInteractionModal();
+                await loadLeads(currentLeadsPage);
+                await openLeadDetail(currentSelectedLead.id);
+            } catch (err) {
+                errBox.innerText = err.message;
+                errBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function toggleConvertModalFields() {
+            const isBiz = document.getElementById('lc-entity-type').value === 'BUSINESS';
+            document.getElementById('lc-business-group').classList.toggle('hidden', !isBiz);
+            document.getElementById('lc-legal-rep').required = isBiz;
+        }
+
+        function openLeadConvertModal() {
+            if (!currentSelectedLead) return;
+            document.getElementById('lead-convert-error').classList.add('hidden');
+            document.getElementById('lc-entity-type').value = currentSelectedLead.entity_type || 'INDIVIDUAL';
+            document.getElementById('lc-legal-rep').value = currentSelectedLead.legal_representative_name || '';
+            document.getElementById('lc-trade-name').value = currentSelectedLead.trade_name || '';
+            document.getElementById('lc-rfc').value = currentSelectedLead.tax_id_rfc || '';
+            document.getElementById('lc-address').value = '';
+            document.getElementById('lc-notes').value = '';
+            toggleConvertModalFields();
+            document.getElementById('lead-convert-modal').classList.remove('hidden');
+        }
+
+        function closeLeadConvertModal() {
+            document.getElementById('lead-convert-modal').classList.add('hidden');
+        }
+
+        async function handleLeadConvertSubmit(e) {
+            e.preventDefault();
+            if (!currentSelectedLead) return;
+            const errBox = document.getElementById('lead-convert-error');
+            const btn = document.getElementById('lc-submit-btn');
+            errBox.classList.add('hidden');
+            btn.disabled = true;
+
+            const payload = {
+                entity_type: document.getElementById('lc-entity-type').value,
+                legal_representative_name: document.getElementById('lc-legal-rep').value.trim() || null,
+                trade_name: document.getElementById('lc-trade-name').value.trim() || null,
+                tax_id_rfc: document.getElementById('lc-rfc').value.trim() || null,
+                address_full: document.getElementById('lc-address').value.trim() || null,
+                notes: document.getElementById('lc-notes').value.trim() || null
+            };
+
+            try {
+                const res = await fetch(`/api/leads/${currentSelectedLead.id}/convert`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('csrf_token') },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Conversion failed");
+                closeLeadConvertModal();
+                await Promise.all([loadLeads(currentLeadsPage), loadCustomers(1)]);
+                switchTab('customers');
+                await openCustomerDetail(data.customer.id);
+            } catch (err) {
+                errBox.innerText = err.message;
+                errBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        /* =========================================================================
+           4. STAGE 1 & 2 LIVE CUSTOMERS MODULE (DIRECTORY, PROFILE & NOTES TAB D)
            ========================================================================= */
         function debounceCustomerSearch() {
             clearTimeout(customerSearchTimer);
@@ -1500,7 +2552,7 @@
                             <td colspan="8" class="py-12 px-6 text-center">
                                 <div class="max-w-md mx-auto space-y-2">
                                     <p class="text-sm font-bold text-slate-900">No customers found</p>
-                                    <p class="text-xs text-slate-500">Click "+ New Customer" to register your first borrower in PostgreSQL.</p>
+                                    <p class="text-xs text-slate-500">Click "+ New Customer" or convert a qualified Lead.</p>
                                 </div>
                             </td>
                         </tr>
@@ -1516,28 +2568,22 @@
                             : (c.status === 'INACTIVE' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-amber-50 text-amber-800 border-amber-200');
 
                         tr.innerHTML = `
-                            <td class="py-3.5 px-4 font-mono font-bold text-blue-700"></td>
+                            <td class="py-3.5 px-4 font-mono font-bold text-blue-700">${escapeHtml(c.customer_number)}</td>
                             <td class="py-3.5 px-4">
-                                <p class="font-bold text-slate-900 cust-name-cell"></p>
-                                <p class="text-[10px] text-slate-500 cust-sub-cell"></p>
+                                <p class="font-bold text-slate-900">${escapeHtml(c.full_legal_name)}</p>
+                                <p class="text-[10px] text-slate-500">${c.entity_type === 'BUSINESS' ? `Business • Rep: ${escapeHtml(c.legal_representative_name || 'N/A')}` : `Individual • ${escapeHtml(c.email || 'No email')}`}</p>
                             </td>
-                            <td class="py-3.5 px-4 font-medium text-slate-700 cust-phone-cell"></td>
+                            <td class="py-3.5 px-4 font-medium text-slate-700">${escapeHtml(c.phone_primary)}</td>
                             <td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-900">$0.00 MXN</td>
                             <td class="py-3.5 px-4 text-center font-bold text-slate-700">0</td>
                             <td class="py-3.5 px-4">
-                                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${statusBadgeClass}">${c.status}</span>
+                                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${statusBadgeClass}">${escapeHtml(c.status)}</span>
                             </td>
                             <td class="py-3.5 px-4 text-slate-400">N/A</td>
                             <td class="py-3.5 px-4 text-right">
                                 <button type="button" class="text-xs font-bold text-blue-600 hover:underline">View Profile →</button>
                             </td>
                         `;
-                        tr.children[0].innerText = c.customer_number;
-                        tr.querySelector('.cust-name-cell').innerText = c.full_legal_name;
-                        tr.querySelector('.cust-sub-cell').innerText = c.entity_type === 'BUSINESS'
-                            ? `Business • Rep: ${c.legal_representative_name || 'N/A'}`
-                            : `Individual • ${c.email || 'No email'}`;
-                        tr.querySelector('.cust-phone-cell').innerText = c.phone_primary;
                         tbody.appendChild(tr);
                     });
                 }
@@ -1548,7 +2594,7 @@
                 document.getElementById('cust-prev-btn').disabled = page <= 1;
                 document.getElementById('cust-next-btn').disabled = endIdx >= currentCustomersTotal;
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-red-600">${err.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-red-600">${escapeHtml(err.message)}</td></tr>`;
             }
         }
 
@@ -1598,8 +2644,82 @@
                 document.getElementById('customers-master-view').classList.add('hidden');
                 document.getElementById('customer-detail-view').classList.remove('hidden');
                 switchCustomerProfileTab('personal');
+                await loadCustomerInteractions(customerId);
             } catch (err) {
                 alert(err.message);
+            }
+        }
+
+        async function loadCustomerInteractions(customerId) {
+            const listEl = document.getElementById('customer-interactions-list');
+            listEl.innerHTML = '<p class="text-slate-400 py-4 text-center">Loading customer interactions...</p>';
+            try {
+                const res = await fetch(`/api/customers/${customerId}/interactions`);
+                if (!res.ok) throw new Error("Failed to load interactions");
+                const items = await res.json();
+                listEl.innerHTML = '';
+                if (!items || items.length === 0) {
+                    listEl.innerHTML = '<p class="text-slate-400 py-6 text-center">No interactions or notes recorded for this customer yet.</p>';
+                    return;
+                }
+                items.forEach(i => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-1';
+                    const inheritedBadge = i.lead_id
+                        ? '<span class="text-[9px] font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-800">Inherited from Lead</span>'
+                        : '';
+                    div.innerHTML = `
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-100 text-blue-800">${escapeHtml(i.interaction_type)}</span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">${escapeHtml(i.visibility)}</span>
+                                ${i.outcome ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">${escapeHtml(i.outcome)}</span>` : ''}
+                                ${inheritedBadge}
+                            </div>
+                            <span class="text-[10px] text-slate-400">${escapeHtml(formatDateTimeShort(i.created_at))}</span>
+                        </div>
+                        <p class="text-xs text-slate-800 whitespace-pre-wrap pt-1">${escapeHtml(i.content)}</p>
+                        <p class="text-[10px] text-slate-500 pt-1">Recorded by <strong>${escapeHtml(i.created_by_name)}</strong> (${escapeHtml(i.created_by_role)})</p>
+                    `;
+                    listEl.appendChild(div);
+                });
+            } catch (err) {
+                listEl.innerHTML = `<p class="text-red-600">${escapeHtml(err.message)}</p>`;
+            }
+        }
+
+        async function handleCustomerInteractionSubmit(e) {
+            e.preventDefault();
+            if (!currentSelectedCustomer) return;
+            const errBox = document.getElementById('cust-interaction-error');
+            const btn = document.getElementById('ci-submit-btn');
+            errBox.classList.add('hidden');
+            btn.disabled = true;
+
+            const payload = {
+                interaction_type: document.getElementById('ci-type').value,
+                direction: 'OUTBOUND',
+                visibility: document.getElementById('ci-visibility').value,
+                outcome: document.getElementById('ci-outcome').value || null,
+                content: document.getElementById('ci-content').value.trim()
+            };
+
+            try {
+                const res = await fetch(`/api/customers/${currentSelectedCustomer.id}/interactions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('csrf_token') },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Could not save interaction");
+                document.getElementById('ci-content').value = '';
+                document.getElementById('ci-outcome').value = '';
+                await loadCustomerInteractions(currentSelectedCustomer.id);
+            } catch (err) {
+                errBox.innerText = err.message;
+                errBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
             }
         }
 
@@ -1689,10 +2809,7 @@
             try {
                 const res = await fetch(url, {
                     method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': getCookie('csrf_token')
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('csrf_token') },
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
@@ -1713,7 +2830,7 @@
         }
 
         /* =========================================================================
-           4. NAVIGATION & SUB-VIEWS
+           5. NAVIGATION & SUB-VIEWS
            ========================================================================= */
         function switchTab(tabId) {
             const targetTab = document.getElementById('tab-' + tabId);
@@ -1760,9 +2877,22 @@
         }
 
         function switchLeadsSubView(subView) {
+            closeLeadDetailView();
             const isPipeline = subView !== 'call-list';
             document.getElementById('leads-pipeline-view').classList.toggle('hidden', !isPipeline);
             document.getElementById('leads-calllist-view').classList.toggle('hidden', isPipeline);
+
+            const pipeBtn = document.getElementById('seg-pipeline-btn');
+            const callBtn = document.getElementById('seg-calllist-btn');
+            if (isPipeline) {
+                pipeBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm';
+                callBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all text-slate-500 hover:text-slate-800';
+                loadLeads(currentLeadsPage);
+            } else {
+                callBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm';
+                pipeBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all text-slate-500 hover:text-slate-800';
+                setCallListBucketFilter(activeCallListBucket);
+            }
         }
 
         function switchCustomerProfileTab(tabKey) {
@@ -1792,7 +2922,7 @@
         }
 
         /* =========================================================================
-           5. LOAN SIMULATOR CONTROLLER & PRINT
+           6. LOAN SIMULATOR CONTROLLER & PRINT
            ========================================================================= */
         function generateSimulationId() {
             const rnd = Math.floor(1000 + Math.random() * 9000);
@@ -1919,7 +3049,7 @@
             savedComparisonScenarios.forEach(s => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="py-2 px-3 font-bold text-slate-900">${s.simulationId} (${s.product})</td>
+                    <td class="py-2 px-3 font-bold text-slate-900">${escapeHtml(s.simulationId)} (${escapeHtml(s.product)})</td>
                     <td class="py-2 px-3 text-right font-mono">${NuraFinancialEngine.formatMXNFromCents(s.principalCents)}</td>
                     <td class="py-2 px-3 text-right font-mono">${s.monthlyRatePercent.toFixed(2)}%</td>
                     <td class="py-2 px-3 text-center">${s.installmentsCount} wks / ${s.monthsCount} mo</td>
@@ -1941,7 +3071,7 @@
         }
 
         /* =========================================================================
-           6. PRIVACY, TEAM MANAGEMENT, AUDIT LOGS & NURA CHAT
+           7. PRIVACY, TEAM MANAGEMENT, AUDIT LOGS & NURA CHAT
            ========================================================================= */
         function togglePrivacy() {
             isPrivacyOn = !isPrivacyOn;
@@ -2013,15 +3143,15 @@
                     row.className = 'p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between';
                     row.innerHTML = `
                         <div class="min-w-0 pr-2">
-                            <p class="font-bold text-slate-900 truncate">${u.full_name || u.email}</p>
-                            <p class="text-[10px] text-slate-500 truncate">${u.email}</p>
+                            <p class="font-bold text-slate-900 truncate">${escapeHtml(u.full_name || u.email)}</p>
+                            <p class="text-[10px] text-slate-500 truncate">${escapeHtml(u.email)}</p>
                         </div>
-                        <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 shrink-0">${u.role}</span>
+                        <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 shrink-0">${escapeHtml(u.role)}</span>
                     `;
                     listEl.appendChild(row);
                 });
             } catch (err) {
-                listEl.innerHTML = `<p class="text-red-600">${err.message}</p>`;
+                listEl.innerHTML = `<p class="text-red-600">${escapeHtml(err.message)}</p>`;
             }
         }
 
@@ -2075,15 +3205,15 @@
                     item.className = 'p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2';
                     item.innerHTML = `
                         <div class="min-w-0">
-                            <p class="font-bold text-slate-900">${l.event_type} <span class="text-[10px] font-normal text-slate-500">(${l.resource_type}: ${l.resource_id || 'N/A'})</span></p>
-                            <p class="text-[10px] text-slate-500 truncate">Actor ID: ${l.actor_user_id || 'System'} • Role: ${l.actor_role || 'N/A'} • ${l.created_at}</p>
+                            <p class="font-bold text-slate-900">${escapeHtml(l.event_type)} <span class="text-[10px] font-normal text-slate-500">(${escapeHtml(l.resource_type)}: ${escapeHtml(l.resource_id || 'N/A')})</span></p>
+                            <p class="text-[10px] text-slate-500 truncate">Actor ID: ${escapeHtml(l.actor_user_id || 'System')} • Role: ${escapeHtml(l.actor_role || 'N/A')} • ${escapeHtml(l.created_at)}</p>
                         </div>
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${l.outcome === 'SUCCESS' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'} shrink-0">${l.outcome}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${l.outcome === 'SUCCESS' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'} shrink-0">${escapeHtml(l.outcome)}</span>
                     `;
                     listEl.appendChild(item);
                 });
             } catch (err) {
-                listEl.innerHTML = `<p class="text-red-600">${err.message}</p>`;
+                listEl.innerHTML = `<p class="text-red-600">${escapeHtml(err.message)}</p>`;
             }
         }
 
@@ -2236,9 +3366,9 @@
                 titleEl.innerText = 'Personal Information';
                 bodyEl.innerHTML = `
                     <div class="space-y-2.5">
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Email</p><p class="text-xs font-bold text-slate-900 mt-0.5">${email}</p></div>
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Name</p><p class="text-xs font-bold text-slate-900 mt-0.5">${displayName}</p></div>
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Role</p><p class="text-xs font-bold text-blue-700 mt-0.5">${roleName}</p></div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Email</p><p class="text-xs font-bold text-slate-900 mt-0.5">${escapeHtml(email)}</p></div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Name</p><p class="text-xs font-bold text-slate-900 mt-0.5">${escapeHtml(displayName)}</p></div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Role</p><p class="text-xs font-bold text-blue-700 mt-0.5">${escapeHtml(roleName)}</p></div>
                     </div>
                 `;
             } else {
