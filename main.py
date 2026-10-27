@@ -198,7 +198,7 @@ class CustomerModel(Base):
         nullable=False
     )
 
-    loans = relationship("LoanModel", back_populates="customer", cascade="all, delete-restore")
+    loans = relationship("LoanModel", back_populates="customer", cascade="all, delete-orphan")
 
 
 class LeadModel(Base):
@@ -328,7 +328,7 @@ class LoanModel(Base):
     )
 
     customer = relationship("CustomerModel", back_populates="loans")
-    installments = relationship("LoanInstallmentModel", back_populates="loan", cascade="all, delete-restore", order_by="LoanInstallmentModel.installment_number")
+    installments = relationship("LoanInstallmentModel", back_populates="loan", cascade="all, delete-orphan", order_by="LoanInstallmentModel.installment_number")
 
 
 class LoanInstallmentModel(Base):
