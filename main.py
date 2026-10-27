@@ -7,7 +7,7 @@ import logging
 import secrets
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta, date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Optional, List
 from contextlib import asynccontextmanager
 from zoneinfo import ZoneInfo
@@ -18,7 +18,7 @@ from pydantic import BaseModel, EmailStr, Field
 import google.generativeai as genai
 from sqlalchemy import (
     create_engine, Column, Integer, BigInteger, String, Text,
-    DateTime, Date, Boolean, ForeignKey, CheckConstraint, event, text, or_
+    DateTime, Date, Boolean, ForeignKey, CheckConstraint, event, text, or_, inspect
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from passlib.context import CryptContext
@@ -56,10 +56,10 @@ def hash_token(token: str) -> str:
 
 # --- ROLES, PRODUCTS & CRM CATALOGS ---
 VALID_ROLES = {
-    "OWNER_ADMIN",         # Owners (You, your wife, brother-in-law, sister-in-law)
-    "SALES_AGENT",         # Future Salespersons / Vendedores
-    "CREDIT_ADVISOR",      # Future Credit Analysts
-    "OPERATIONS_OFFICER"   # Future Collections / Operations
+    "OWNER_ADMIN",         # Owners
+    "SALES_AGENT",         # Salespersons / Vendedores
+    "CREDIT_ADVISOR",      # Credit Analysts
+    "OPERATIONS_OFFICER"   # Collections / Operations
 }
 
 SUPPORTED_PRODUCTS = ["Personal Loan", "Business Loan"]
@@ -69,33 +69,18 @@ VALID_CUSTOMER_STATUSES = {"ACTIVE", "INACTIVE", "PENDING_VERIFICATION"}
 VALID_VERIFICATION_STATUSES = {"NOT_PROVIDED", "PENDING_VERIFICATION", "VERIFIED"}
 
 VALID_LEAD_STAGES = {
-    "NEW",
-    "CONTACT_ATTEMPTED",
-    "CONTACTED",
-    "QUALIFIED",
-    "APPLICATION_STARTED",
-    "UNDER_REVIEW",
-    "APPROVED",
-    "CONVERTED",
-    "NURTURE",
-    "LOST"
+    "NEW", "CONTACT_ATTEMPTED", "CONTACTED", "QUALIFIED",
+    "APPLICATION_STARTED", "UNDER_REVIEW", "APPROVED",
+    "CONVERTED", "NURTURE", "LOST"
 }
 
 QUALIFIED_OR_LATER_STAGES = {
-    "QUALIFIED",
-    "APPLICATION_STARTED",
-    "UNDER_REVIEW",
-    "APPROVED"
+    "QUALIFIED", "APPLICATION_STARTED", "UNDER_REVIEW", "APPROVED"
 }
 
 VALID_LEAD_SOURCES = {
-    "REFERRAL",
-    "INBOUND_CALL",
-    "CAMPAIGN",
-    "DIRECT_OUTREACH",
-    "WEBSITE",
-    "REPEAT_BORROWER",
-    "OTHER"
+    "REFERRAL", "INBOUND_CALL", "CAMPAIGN", "DIRECT_OUTREACH",
+    "WEBSITE", "REPEAT_BORROWER", "OTHER"
 }
 
 VALID_LEAD_PRIORITIES = {"LOW", "MEDIUM", "HIGH"}
@@ -105,15 +90,12 @@ VALID_INTERACTION_DIRECTIONS = {"OUTBOUND", "INBOUND", "INTERNAL"}
 VALID_INTERACTION_VISIBILITIES = {"INTERNAL", "CUSTOMER_FACING"}
 
 VALID_CALL_OUTCOMES = {
-    "ANSWERED",
-    "NO_ANSWER",
-    "VOICEMAIL",
-    "REQUESTED_CALLBACK",
-    "INTERESTED",
-    "NOT_INTERESTED",
-    "FOLLOW_UP_REQUIRED",
-    "WRONG_NUMBER"
+    "ANSWERED", "NO_ANSWER", "VOICEMAIL", "REQUESTED_CALLBACK",
+    "INTERESTED", "NOT_INTERESTED", "FOLLOW_UP_REQUIRED", "WRONG_NUMBER"
 }
+
+VALID_LOAN_STATUSES = {"DRAFT", "APPROVED", "ACTIVE", "PAID_OFF", "CANCELLED", "DEFAULTED"}
+VALID_DISBURSEMENT_METHODS = {"SPEI_TRANSFER", "BANK_DEPOSIT", "CHECK", "CASH_RECEIPT"}
 
 
 # --- SQLALCHEMY MODELS ---
@@ -216,6 +198,8 @@ class CustomerModel(Base):
         nullable=False
     )
 
+    loans = relationship("LoanModel", back_populates="customer", cascade="all, delete-restore")
+
 
 class LeadModel(Base):
     __tablename__ = "leads"
@@ -286,6 +270,88 @@ class InteractionModel(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True, nullable=False)
 
 
+class LoanModel(Base):
+    __tablename__ = "loans"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    loan_number = Column(String(24), unique=True, index=True, nullable=False)
+    idempotency_key = Column(String(64), unique=True, nullable=False)
+    request_payload_hash = Column(String(64), nullable=False)
+    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="RESTRICT"), index=True, nullable=False)
+    source_lead_id = Column(Integer, ForeignKey("leads.id", ondelete="RESTRICT"), index=True, nullable=True)
+    status = Column(String(25), default="DRAFT", index=True, nullable=False)
+    product_name = Column(String(60), nullable=False)
+    product_version = Column(String(20), default="v1.0", nullable=False)
+    currency = Column(String(3), default="MXN", nullable=False)
+    principal_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    monthly_interest_rate_bps = Column(Integer, nullable=False)
+    interest_calculation_method = Column(String(40), default="FLAT_ORIGINAL_PRINCIPAL", nullable=False)
+    interest_basis = Column(String(40), default="ORIGINAL_PRINCIPAL", nullable=False)
+    interest_accrual_convention = Column(String(40), default="ON_INSTALLMENT_DUE_DATE", nullable=False)
+    assumed_interest_months = Column(Integer, nullable=False)
+    payment_frequency = Column(String(20), default="WEEKLY", nullable=False)
+    term_installments_count = Column(Integer, nullable=False)
+    rounding_policy = Column(String(40), default="FLOOR_REGULAR_EXACT_FINAL", nullable=False)
+    contract_rules_json = Column(Text, nullable=False)
+    monthly_interest_amount_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    total_interest_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    total_repayment_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    regular_installment_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    final_installment_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    start_date = Column(Date, nullable=False)
+    first_payment_date = Column(Date, nullable=False)
+    maturity_date = Column(Date, nullable=False)
+    unpaid_principal_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
+    remaining_contractual_interest_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
+    remaining_contract_total_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
+    amount_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
+    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), index=True, nullable=False)
+    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    approved_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    approval_notes = Column(Text, nullable=True)
+    activated_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    activated_at = Column(DateTime(timezone=True), nullable=True)
+    disbursed_at = Column(DateTime(timezone=True), nullable=True)
+    disbursement_method = Column(String(40), nullable=True)
+    disbursement_reference = Column(String(120), nullable=True)
+    disbursement_notes = Column(Text, nullable=True)
+    cancelled_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
+    cancellation_reason = Column(String(255), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+
+    customer = relationship("CustomerModel", back_populates="loans")
+    installments = relationship("LoanInstallmentModel", back_populates="loan", cascade="all, delete-restore", order_by="LoanInstallmentModel.installment_number")
+
+
+class LoanInstallmentModel(Base):
+    __tablename__ = "loan_installments"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    loan_id = Column(Integer, ForeignKey("loans.id", ondelete="RESTRICT"), index=True, nullable=False)
+    installment_number = Column(Integer, nullable=False)
+    due_date = Column(Date, index=True, nullable=False)
+    beginning_principal_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    principal_due_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    interest_due_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    scheduled_payment_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    ending_principal_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    principal_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
+    interest_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
+    amount_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
+    remaining_amount_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    loan = relationship("LoanModel", back_populates="installments")
+
+
 @event.listens_for(AuditLogModel, "before_update")
 def _prevent_audit_update(mapper, connection, target):
     raise RuntimeError("AuditLogModel is append-only: UPDATE is forbidden.")
@@ -296,7 +362,110 @@ def _prevent_audit_delete(mapper, connection, target):
     raise RuntimeError("AuditLogModel is append-only: DELETE is forbidden.")
 
 
-# --- RATE LIMITING, PHONE NORMALIZATION, TIMEZONE & ID HELPERS ---
+# --- AUTHORITATIVE FINANCIAL ENGINE (FLAT_ORIGINAL_PRINCIPAL) ---
+class LoanFinancialEngine:
+    @staticmethod
+    def add_days_iso(iso_date_str: str, days_to_add: int) -> str:
+        parts = [int(p) for p in iso_date_str.split("-")]
+        dt = date(parts[0], parts[1], parts[2]) + timedelta(days=days_to_add)
+        return dt.isoformat()
+
+    @staticmethod
+    def calculate_flat_schedule(
+        principal_pesos: float,
+        monthly_rate_percent: float,
+        assumed_interest_months: int,
+        term_weeks: int,
+        first_payment_date_iso: str
+    ) -> dict:
+        principal_cents = max(0, int(round(Decimal(str(principal_pesos)) * Decimal("100"))))
+        rate_bps = max(0, int(round(Decimal(str(monthly_rate_percent)) * Decimal("100"))))
+        months_count = max(1, int(assumed_interest_months))
+        installments_count = max(1, int(term_weeks))
+
+        monthly_interest_cents = int(((Decimal(principal_cents) * Decimal(rate_bps)) / Decimal("10000")).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+        total_interest_cents = monthly_interest_cents * months_count
+        total_repayment_cents = principal_cents + total_interest_cents
+
+        regular_principal_cents = principal_cents // installments_count
+        regular_interest_cents = total_interest_cents // installments_count
+
+        schedule = []
+        remaining_principal_cents = principal_cents
+        accumulated_principal_cents = 0
+        accumulated_interest_cents = 0
+
+        for i in range(1, installments_count + 1):
+            is_final = (i == installments_count)
+            due_date_str = LoanFinancialEngine.add_days_iso(first_payment_date_iso, (i - 1) * 7)
+            due_date_obj = date.fromisoformat(due_date_str)
+            beginning_principal_cents = remaining_principal_cents
+
+            principal_component_cents = (principal_cents - accumulated_principal_cents) if is_final else regular_principal_cents
+            interest_component_cents = (total_interest_cents - accumulated_interest_cents) if is_final else regular_interest_cents
+            scheduled_payment_cents = principal_component_cents + interest_component_cents
+            ending_principal_cents = beginning_principal_cents - principal_component_cents
+
+            accumulated_principal_cents += principal_component_cents
+            accumulated_interest_cents += interest_component_cents
+            remaining_principal_cents = ending_principal_cents
+
+            schedule.append({
+                "installment_number": i,
+                "due_date": due_date_obj,
+                "beginning_principal_cents": beginning_principal_cents,
+                "principal_due_cents": principal_component_cents,
+                "interest_due_cents": interest_component_cents,
+                "scheduled_payment_cents": scheduled_payment_cents,
+                "ending_principal_cents": ending_principal_cents
+            })
+
+        return {
+            "principal_cents": principal_cents,
+            "monthly_rate_percent": float(monthly_rate_percent),
+            "monthly_interest_rate_bps": rate_bps,
+            "monthly_interest_amount_cents": monthly_interest_cents,
+            "months_count": months_count,
+            "installments_count": installments_count,
+            "total_interest_cents": total_interest_cents,
+            "total_repayment_cents": total_repayment_cents,
+            "regular_installment_cents": schedule[0]["scheduled_payment_cents"],
+            "final_installment_cents": schedule[-1]["scheduled_payment_cents"],
+            "first_payment_date": date.fromisoformat(first_payment_date_iso),
+            "maturity_date": schedule[-1]["due_date"],
+            "schedule": schedule
+        }
+
+
+# --- STARTUP SCHEMA GUARD ---
+def verify_database_schema_compatibility(db_engine):
+    if not IS_PRODUCTION and "sqlite" in str(db_engine.url):
+        return  # SQLite dev DB trusts test fixtures / alembic
+    try:
+        inspector = inspect(db_engine)
+        tables = set(inspector.get_table_names())
+        required_tables = {
+            "users", "sessions", "conversations", "chat_messages", "audit_logs",
+            "customers", "leads", "lead_stage_history", "interactions", "loans", "loan_installments"
+        }
+        if not required_tables.issubset(tables):
+            missing = required_tables - tables
+            raise RuntimeError(f"Database schema is missing required tables: {missing}")
+
+        with db_engine.connect() as conn:
+            res = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
+            if not res:
+                raise RuntimeError("No alembic_version record found in database.")
+            rev = res[0]
+            pre_stage3 = {"001", "002", "003", "004"}
+            if rev in pre_stage3:
+                raise RuntimeError(f"Database schema is at legacy revision '{rev}'. Migration 005 must be applied first.")
+    except Exception as e:
+        logger.error(f"Schema compatibility guard failed: {e}")
+        raise
+
+
+# --- RATE LIMITING, PHONE NORMALIZATION & ID HELPERS ---
 _RATE_BUCKETS = defaultdict(list)
 
 
@@ -308,16 +477,18 @@ def get_crm_timezone():
         return timezone(timedelta(hours=-7))
 
 
-def get_local_day_bounds_utc() -> tuple[datetime, datetime, datetime]:
+def get_local_day_bounds_utc() -> tuple[datetime, datetime, datetime, date]:
     crm_tz = get_crm_timezone()
     now_local = datetime.now(crm_tz)
+    today_local = now_local.date()
     start_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     end_local = now_local.replace(hour=23, minute=59, second=59, microsecond=999999)
     upcoming_end_local = end_local + timedelta(days=7)
     return (
         start_local.astimezone(timezone.utc),
         end_local.astimezone(timezone.utc),
-        upcoming_end_local.astimezone(timezone.utc)
+        upcoming_end_local.astimezone(timezone.utc),
+        today_local
     )
 
 
@@ -424,13 +595,26 @@ def generate_next_lead_number(db: Session) -> str:
         next_seq += 1
 
 
-# --- TRANSACTIONAL & STANDALONE AUDIT SERVICE ---
+def generate_next_loan_number(db: Session) -> str:
+    if db.bind and db.bind.dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(9004001)"))
+    last_loan = db.query(LoanModel.id).order_by(LoanModel.id.desc()).first()
+    next_seq = (last_loan[0] + 1) if last_loan else 1
+    while True:
+        candidate = f"LN-{next_seq:05d}"
+        exists = db.query(LoanModel.id).filter(LoanModel.loan_number == candidate).first()
+        if not exists:
+            return candidate
+        next_seq += 1
+
+
+# --- AUDIT SERVICE ---
 SENSITIVE_AUDIT_KEYS = {
     "password", "password_hash", "token", "session_token",
     "csrf_token", "secret", "bootstrap_secret", "api_key",
     "phone", "phone_primary", "phone_secondary", "address_full",
     "tax_id_rfc", "date_of_birth", "full_legal_name", "full_name",
-    "content", "summary_notes", "reason_or_note"
+    "content", "summary_notes", "reason_or_note", "approval_notes", "disbursement_notes"
 }
 
 
@@ -479,9 +663,10 @@ def record_audit_event(
 # --- LIFESPAN & FASTAPI INIT ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    verify_database_schema_compatibility(engine)
     yield
 
-app = FastAPI(title="NURA CRM | Credit & Pipeline System", version="7.3.0", lifespan=lifespan)
+app = FastAPI(title="NURA CRM | Credit & Pipeline System", version="7.4.0", lifespan=lifespan)
 
 if os.getenv("GEMINI_API_KEY"):
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -521,12 +706,6 @@ class BootstrapAdminRequest(BaseModel):
 class ChatRequest(BaseModel):
     mensaje: str = Field(..., min_length=1, max_length=1500)
     conversation_id: Optional[int] = None
-
-
-class TransaccionInput(BaseModel):
-    descripcion: str
-    monto: float
-    tipo: str
 
 
 class CustomerCreateRequest(BaseModel):
@@ -627,6 +806,37 @@ class LeadConvertRequest(BaseModel):
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
     address_full: Optional[str] = Field(default=None, max_length=1000)
     notes: Optional[str] = Field(default=None, max_length=500)
+
+
+class LoanCreateRequest(BaseModel):
+    idempotency_key: str = Field(..., min_length=10, max_length=64)
+    customer_id: int
+    source_lead_id: Optional[int] = None
+    product_name: str = Field(default="Personal Loan")
+    principal_pesos: Optional[float] = Field(default=None, gt=0)
+    principal_cents: Optional[int] = Field(default=None, gt=0)
+    monthly_interest_rate_percent: float = Field(default=10.0, ge=0)
+    assumed_interest_months: int = Field(default=4, ge=1)
+    term_installments_count: int = Field(default=16, ge=1)
+    start_date: str  # YYYY-MM-DD
+    first_payment_date: str  # YYYY-MM-DD
+    notes: Optional[str] = Field(default=None, max_length=1000)
+
+
+class LoanApproveRequest(BaseModel):
+    approval_notes: Optional[str] = Field(default=None, max_length=1000)
+
+
+class LoanActivateRequest(BaseModel):
+    confirm_disbursement: bool = Field(...)
+    disbursement_method: str = Field(...)
+    disbursement_reference: str = Field(..., min_length=3, max_length=120)
+    disbursed_at: Optional[str] = None  # ISO datetime
+    disbursement_notes: Optional[str] = Field(default=None, max_length=1000)
+
+
+class LoanCancelRequest(BaseModel):
+    cancellation_reason: str = Field(..., min_length=3, max_length=255)
 
 
 # --- CSRF PROTECTION WITH AUDIT ---
@@ -733,6 +943,31 @@ def require_roles(*allowed_roles: str):
             raise HTTPException(status_code=403, detail="Access denied: insufficient permissions.")
         return user
     return role_checker
+
+
+# --- HEALTH CHECK & SCHEMA STATUS ENDPOINTS ---
+@app.get("/api/health")
+def health_check(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "healthy", "database": "connected", "version": "7.4.0"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database unhealthy: {type(e).__name__}")
+
+
+@app.get("/api/admin/schema-status")
+def schema_status(
+    admin: UserModel = Depends(require_roles("OWNER_ADMIN")),
+    db: Session = Depends(get_db)
+):
+    rev = db.execute(text("SELECT version_num FROM alembic_version")).fetchone()
+    inspector = inspect(db.bind)
+    tables = inspector.get_table_names()
+    return {
+        "alembic_version": rev[0] if rev else None,
+        "tables_verified": sorted(tables),
+        "status": "OK"
+    }
 
 
 # --- DECOUPLED AI SERVICE (NURA ASSISTANT) ---
@@ -909,7 +1144,6 @@ def bootstrap_admin(
             ip_address=ip, details={"promoted_role": "OWNER_ADMIN"}, commit=False
         )
         db.commit()
-        logger.info("Bootstrap completed successfully.")
         return {
             "message": "Account promoted to OWNER_ADMIN",
             "email": current_user.email,
@@ -1117,8 +1351,8 @@ def get_audit_logs(
     } for l in logs]
 
 
-# --- STAGE 1 CREDIT CRM: CUSTOMERS ENDPOINTS ---
-def serialize_customer(c: CustomerModel) -> dict:
+# --- STAGE 1 & 2: CUSTOMERS ENDPOINTS ---
+def serialize_customer(c: CustomerModel, active_loans_count: int = 0, unpaid_principal_cents: int = 0) -> dict:
     return {
         "id": c.id,
         "customer_number": c.customer_number,
@@ -1143,8 +1377,8 @@ def serialize_customer(c: CustomerModel) -> dict:
         "customer_since": c.customer_since.isoformat() if c.customer_since else None,
         "created_at": c.created_at.isoformat() if c.created_at else None,
         "updated_at": c.updated_at.isoformat() if c.updated_at else None,
-        "current_outstanding_balance_cents": 0,
-        "active_loans_count": 0,
+        "current_outstanding_balance_cents": unpaid_principal_cents,
+        "active_loans_count": active_loans_count,
         "last_payment_date": None
     }
 
@@ -1214,11 +1448,30 @@ def list_customers(
     offset = (page - 1) * page_size
     items = query.offset(offset).limit(page_size).all()
 
+    # Pre-fetch active loan balances for customers on this page
+    cust_ids = [c.id for c in items]
+    loan_stats = {}
+    if cust_ids:
+        active_loans = (
+            db.query(LoanModel)
+            .filter(LoanModel.customer_id.in_(cust_ids), LoanModel.status == "ACTIVE")
+            .all()
+        )
+        for l in active_loans:
+            st = loan_stats.setdefault(l.customer_id, {"count": 0, "principal": 0})
+            st["count"] += 1
+            st["principal"] += l.unpaid_principal_cents
+
+    serialized_items = []
+    for c in items:
+        st = loan_stats.get(c.id, {"count": 0, "principal": 0})
+        serialized_items.append(serialize_customer(c, active_loans_count=st["count"], unpaid_principal_cents=st["principal"]))
+
     return {
         "total": total,
         "page": page,
         "page_size": page_size,
-        "items": [serialize_customer(c) for c in items]
+        "items": serialized_items
     }
 
 
@@ -1322,7 +1575,7 @@ def create_customer(
         )
         db.commit()
         db.refresh(new_customer)
-        return serialize_customer(new_customer)
+        return serialize_customer(new_customer, active_loans_count=0, unpaid_principal_cents=0)
     except HTTPException:
         db.rollback()
         raise
@@ -1344,18 +1597,53 @@ def get_customer_detail(
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found.")
 
-    data = serialize_customer(customer)
+    active_loans = (
+        db.query(LoanModel)
+        .filter(LoanModel.customer_id == customer.id, LoanModel.status == "ACTIVE")
+        .all()
+    )
+    all_loans = (
+        db.query(LoanModel)
+        .filter(LoanModel.customer_id == customer.id)
+        .order_by(LoanModel.id.desc())
+        .all()
+    )
+
+    total_outstanding_principal = sum(l.unpaid_principal_cents for l in active_loans)
+    total_amount_due = sum(l.remaining_contract_total_cents for l in active_loans)
+
+    _, _, _, today_local = get_local_day_bounds_utc()
+    overdue_amt = 0
+    next_due_date = None
+    remaining_inst_count = 0
+
+    if active_loans:
+        loan_ids = [l.id for l in active_loans]
+        unpaid_insts = (
+            db.query(LoanInstallmentModel)
+            .filter(LoanInstallmentModel.loan_id.in_(loan_ids), LoanInstallmentModel.remaining_amount_cents > 0)
+            .order_by(LoanInstallmentModel.due_date.asc())
+            .all()
+        )
+        remaining_inst_count = len(unpaid_insts)
+        if unpaid_insts:
+            next_due_date = unpaid_insts[0].due_date.isoformat()
+            for inst in unpaid_insts:
+                if inst.due_date < today_local:
+                    overdue_amt += inst.remaining_amount_cents
+
+    data = serialize_customer(customer, active_loans_count=len(active_loans), unpaid_principal_cents=total_outstanding_principal)
     data["credit_summary"] = {
-        "current_outstanding_principal_cents": 0,
-        "total_amount_due_cents": 0,
-        "overdue_amount_cents": 0,
-        "active_loans_count": 0,
-        "total_loans_count": 0,
+        "current_outstanding_principal_cents": total_outstanding_principal,
+        "total_amount_due_cents": total_amount_due,
+        "overdue_amount_cents": overdue_amt,
+        "active_loans_count": len(active_loans),
+        "total_loans_count": len(all_loans),
         "last_payment_date": None,
-        "next_payment_due_date": None,
-        "remaining_installments": 0
+        "next_payment_due_date": next_due_date,
+        "remaining_installments": remaining_inst_count
     }
-    data["loans"] = []
+    data["loans"] = [serialize_loan_summary(l, today_local) for l in all_loans]
     return data
 
 
@@ -1510,7 +1798,9 @@ def update_customer(
         )
         db.commit()
         db.refresh(customer)
-        return serialize_customer(customer)
+        active_loans_count = db.query(LoanModel).filter(LoanModel.customer_id == customer.id, LoanModel.status == "ACTIVE").count()
+        unpaid_principal = sum(l.unpaid_principal_cents for l in customer.loans if l.status == "ACTIVE")
+        return serialize_customer(customer, active_loans_count=active_loans_count, unpaid_principal_cents=unpaid_principal)
     except HTTPException:
         db.rollback()
         raise
@@ -1614,7 +1904,7 @@ def create_customer_interaction(
         raise HTTPException(status_code=500, detail="Could not save customer interaction.")
 
 
-# --- STAGE 2 CREDIT CRM: LEADS, CALL LIST, INTERACTIONS & CONVERSION ---
+# --- STAGE 2: LEADS, CALL LIST & CONVERSION ---
 def compute_call_bucket(lead: LeadModel, today_start_utc: datetime, today_end_utc: datetime) -> Optional[str]:
     if lead.stage in ("CONVERTED", "LOST"):
         return None
@@ -1678,9 +1968,8 @@ def list_leads(
     ),
     db: Session = Depends(get_db)
 ):
-    today_start_utc, today_end_utc, upcoming_end_utc = get_local_day_bounds_utc()
+    today_start_utc, today_end_utc, upcoming_end_utc, _ = get_local_day_bounds_utc()
 
-    # Compute live Call List & Open Lead counters across all active leads
     open_leads_all = (
         db.query(LeadModel)
         .filter(LeadModel.stage.notin_(["CONVERTED", "LOST"]))
@@ -1806,7 +2095,6 @@ def create_lead(
     rfc_clean = payload.tax_id_rfc.strip().upper() if payload.tax_id_rfc and payload.tax_id_rfc.strip() else None
     follow_up_utc = parse_optional_datetime_utc(payload.next_follow_up_at)
 
-    # Prevent duplicate OPEN leads by phone or email
     dup_open_phone = (
         db.query(LeadModel)
         .filter(
@@ -1898,7 +2186,7 @@ def create_lead(
         )
         db.commit()
         db.refresh(new_lead)
-        today_start_utc, today_end_utc, _ = get_local_day_bounds_utc()
+        today_start_utc, today_end_utc, _, _ = get_local_day_bounds_utc()
         return serialize_lead(new_lead, today_start_utc, today_end_utc)
     except HTTPException:
         db.rollback()
@@ -1921,7 +2209,7 @@ def get_lead_detail(
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found.")
 
-    today_start_utc, today_end_utc, _ = get_local_day_bounds_utc()
+    today_start_utc, today_end_utc, _, _ = get_local_day_bounds_utc()
     data = serialize_lead(lead, today_start_utc, today_end_utc)
 
     history_rows = (
@@ -2139,7 +2427,7 @@ def update_lead(
         )
         db.commit()
         db.refresh(lead)
-        today_start_utc, today_end_utc, _ = get_local_day_bounds_utc()
+        today_start_utc, today_end_utc, _, _ = get_local_day_bounds_utc()
         return serialize_lead(lead, today_start_utc, today_end_utc)
     except HTTPException:
         db.rollback()
@@ -2206,7 +2494,6 @@ def create_lead_interaction(
         elif follow_up_utc is not None:
             lead.next_follow_up_at = follow_up_utc
 
-        # Auto-advance stage from NEW on first contact / attempt
         if lead.stage == "NEW" and outcome:
             old_st = lead.stage
             if outcome in ("ANSWERED", "INTERESTED", "REQUESTED_CALLBACK", "FOLLOW_UP_REQUIRED"):
@@ -2301,7 +2588,6 @@ def convert_lead_to_customer(
                 detail="Legal Representative Name is required to convert a Business (Persona Moral) lead."
             )
 
-        # Cross-check existing Customers by normalized phone, email, and RFC
         match_phone = (
             db.query(CustomerModel)
             .filter(CustomerModel.phone_primary_normalized == lead.phone_primary_normalized)
@@ -2356,7 +2642,6 @@ def convert_lead_to_customer(
             db.add(target_customer)
             db.flush()
 
-        # Propagate all historical lead interactions to the customer without duplicating rows
         db.query(InteractionModel).filter(
             InteractionModel.lead_id == lead.id,
             InteractionModel.customer_id.is_(None)
@@ -2407,12 +2692,14 @@ def convert_lead_to_customer(
         )
         db.commit()
         db.refresh(target_customer)
+        active_loans_count = db.query(LoanModel).filter(LoanModel.customer_id == target_customer.id, LoanModel.status == "ACTIVE").count()
+        unpaid_principal = sum(l.unpaid_principal_cents for l in target_customer.loans if l.status == "ACTIVE")
         return {
             "message": "Lead converted successfully",
             "linked_existing": linked_existing,
             "lead_id": lead.id,
             "lead_number": lead.lead_number,
-            "customer": serialize_customer(target_customer)
+            "customer": serialize_customer(target_customer, active_loans_count=active_loans_count, unpaid_principal_cents=unpaid_principal)
         }
     except HTTPException:
         db.rollback()
@@ -2423,7 +2710,560 @@ def convert_lead_to_customer(
         raise HTTPException(status_code=500, detail="Could not complete lead conversion.")
 
 
-# --- CONVERSATIONS & NURA ASSISTANT ENDPOINTS ---
+# --- STAGE 3: LOANS & AMORTIZATION SCHEDULES ---
+def serialize_loan_summary(l: LoanModel, today_local: date) -> dict:
+    is_active = (l.status == "ACTIVE")
+    overdue_amt = 0
+    due_today_amt = 0
+    accrued_int = 0
+    unaccrued_int = l.remaining_contractual_interest_cents
+
+    if is_active and l.installments:
+        for inst in l.installments:
+            if inst.remaining_amount_cents > 0:
+                if inst.due_date < today_local:
+                    overdue_amt += inst.remaining_amount_cents
+                elif inst.due_date == today_local:
+                    due_today_amt += inst.remaining_amount_cents
+
+                if inst.due_date <= today_local:
+                    accrued_int += inst.interest_due_cents
+                    unaccrued_int = max(0, unaccrued_int - inst.interest_due_cents)
+
+    return {
+        "id": l.id,
+        "loan_number": l.loan_number,
+        "customer_id": l.customer_id,
+        "status": l.status,
+        "product_name": l.product_name,
+        "currency": l.currency,
+        "principal_cents": l.principal_cents,
+        "monthly_interest_rate_percent": l.monthly_interest_rate_bps / 100.0,
+        "term_installments_count": l.term_installments_count,
+        "unpaid_principal_cents": l.unpaid_principal_cents,
+        "remaining_contractual_interest_cents": l.remaining_contractual_interest_cents,
+        "remaining_contract_total_cents": l.remaining_contract_total_cents,
+        "accrued_interest_cents": accrued_int,
+        "due_today_cents": due_today_amt,
+        "overdue_amount_cents": overdue_amt,
+        "current_payable_amount_cents": due_today_amt + overdue_amt,
+        "start_date": l.start_date.isoformat(),
+        "first_payment_date": l.first_payment_date.isoformat(),
+        "maturity_date": l.maturity_date.isoformat(),
+        "created_at": l.created_at.isoformat() if l.created_at else None
+    }
+
+
+def serialize_loan_detail(l: LoanModel, today_local: date) -> dict:
+    base = serialize_loan_summary(l, today_local)
+    base.update({
+        "source_lead_id": l.source_lead_id,
+        "product_version": l.product_version,
+        "interest_calculation_method": l.interest_calculation_method,
+        "interest_basis": l.interest_basis,
+        "interest_accrual_convention": l.interest_accrual_convention,
+        "assumed_interest_months": l.assumed_interest_months,
+        "payment_frequency": l.payment_frequency,
+        "rounding_policy": l.rounding_policy,
+        "contract_rules": json.loads(l.contract_rules_json) if l.contract_rules_json else None,
+        "monthly_interest_amount_cents": l.monthly_interest_amount_cents,
+        "total_interest_cents": l.total_interest_cents,
+        "total_repayment_cents": l.total_repayment_cents,
+        "regular_installment_cents": l.regular_installment_cents,
+        "final_installment_cents": l.final_installment_cents,
+        "amount_paid_cents": l.amount_paid_cents,
+        "owner_user_id": l.owner_user_id,
+        "created_by_user_id": l.created_by_user_id,
+        "approved_by_user_id": l.approved_by_user_id,
+        "approved_at": l.approved_at.isoformat() if l.approved_at else None,
+        "approval_notes": l.approval_notes,
+        "activated_by_user_id": l.activated_by_user_id,
+        "activated_at": l.activated_at.isoformat() if l.activated_at else None,
+        "disbursed_at": l.disbursed_at.isoformat() if l.disbursed_at else None,
+        "disbursement_method": l.disbursement_method,
+        "disbursement_reference": l.disbursement_reference,
+        "disbursement_notes": l.disbursement_notes,
+        "cancelled_by_user_id": l.cancelled_by_user_id,
+        "cancelled_at": l.cancelled_at.isoformat() if l.cancelled_at else None,
+        "cancellation_reason": l.cancellation_reason,
+        "notes": l.notes,
+        "installments": [{
+            "id": inst.id,
+            "installment_number": inst.installment_number,
+            "due_date": inst.due_date.isoformat(),
+            "beginning_principal_cents": inst.beginning_principal_cents,
+            "principal_due_cents": inst.principal_due_cents,
+            "interest_due_cents": inst.interest_due_cents,
+            "scheduled_payment_cents": inst.scheduled_payment_cents,
+            "ending_principal_cents": inst.ending_principal_cents,
+            "principal_paid_cents": inst.principal_paid_cents,
+            "interest_paid_cents": inst.interest_paid_cents,
+            "amount_paid_cents": inst.amount_paid_cents,
+            "remaining_amount_cents": inst.remaining_amount_cents,
+            "status": "OVERDUE" if (l.status == "ACTIVE" and inst.due_date < today_local and inst.remaining_amount_cents > 0) else ("DUE_TODAY" if (l.status == "ACTIVE" and inst.due_date == today_local and inst.remaining_amount_cents > 0) else ("PAID" if inst.remaining_amount_cents == 0 else "SCHEDULED"))
+        } for inst in l.installments]
+    })
+    return base
+
+
+@app.get("/api/loans")
+def list_loans(
+    search: Optional[str] = Query(default=None, max_length=120),
+    status: Optional[str] = Query(default=None),
+    customer_id: Optional[int] = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: UserModel = Depends(
+        require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")
+    ),
+    db: Session = Depends(get_db)
+):
+    _, _, _, today_local = get_local_day_bounds_utc()
+    query = db.query(LoanModel)
+
+    if status and status != "ALL":
+        query = query.filter(LoanModel.status == status)
+
+    if customer_id:
+        query = query.filter(LoanModel.customer_id == customer_id)
+
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.filter(or_(
+            LoanModel.loan_number.ilike(term),
+            LoanModel.product_name.ilike(term)
+        ))
+
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(LoanModel.id.desc()).offset(offset).limit(page_size).all()
+
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "items": [serialize_loan_summary(l, today_local) for l in items]
+    }
+
+
+@app.post("/api/loans", dependencies=[Depends(verify_csrf)])
+def create_loan(
+    payload: LoanCreateRequest,
+    request: Request,
+    current_user: UserModel = Depends(
+        require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR")
+    ),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    if payload.product_name not in SUPPORTED_PRODUCTS:
+        raise HTTPException(status_code=422, detail=f"Supported products: {', '.join(SUPPORTED_PRODUCTS)}")
+
+    customer = db.query(CustomerModel).filter(CustomerModel.id == payload.customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found.")
+    if customer.status != "ACTIVE":
+        raise HTTPException(status_code=400, detail="Cannot originate a loan for a non-active customer.")
+
+    if payload.source_lead_id:
+        lead = db.query(LeadModel).filter(LeadModel.id == payload.source_lead_id).first()
+        if not lead:
+            raise HTTPException(status_code=404, detail="Source lead not found.")
+
+    principal_cents = parse_pesos_to_cents(payload.principal_pesos, payload.principal_cents)
+    if principal_cents <= 0:
+        raise HTTPException(status_code=422, detail="Loan principal amount must be greater than zero.")
+
+    try:
+        start_dt = date.fromisoformat(payload.start_date)
+        first_pay_dt = date.fromisoformat(payload.first_payment_date)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD.")
+
+    if first_pay_dt < start_dt:
+        raise HTTPException(status_code=422, detail="First payment date cannot be earlier than start date.")
+
+    # Calculate deterministic schedule on server
+    calc = LoanFinancialEngine.calculate_flat_schedule(
+        principal_pesos=principal_cents / 100.0,
+        monthly_rate_percent=payload.monthly_interest_rate_percent,
+        assumed_interest_months=payload.assumed_interest_months,
+        term_weeks=payload.term_installments_count,
+        first_payment_date_iso=payload.first_payment_date
+    )
+
+    canonical_payload = {
+        "customer_id": payload.customer_id,
+        "source_lead_id": payload.source_lead_id,
+        "product_name": payload.product_name,
+        "principal_cents": calc["principal_cents"],
+        "monthly_interest_rate_bps": calc["monthly_interest_rate_bps"],
+        "assumed_interest_months": calc["months_count"],
+        "term_installments_count": calc["installments_count"],
+        "start_date": payload.start_date,
+        "first_payment_date": payload.first_payment_date
+    }
+    payload_json = json.dumps(canonical_payload, sort_keys=True)
+    payload_hash = hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
+
+    existing = db.query(LoanModel).filter(LoanModel.idempotency_key == payload.idempotency_key).first()
+    if existing:
+        if existing.request_payload_hash == payload_hash:
+            _, _, _, today_local = get_local_day_bounds_utc()
+            return {"idempotent_replay": True, "loan": serialize_loan_detail(existing, today_local)}
+        else:
+            raise HTTPException(status_code=409, detail="Idempotency key was already used with different loan parameters.")
+
+    try:
+        if db.bind and db.bind.dialect.name == "postgresql":
+            db.execute(text("SELECT pg_advisory_xact_lock(9004001)"))
+
+        # Double check after lock
+        existing_locked = db.query(LoanModel).filter(LoanModel.idempotency_key == payload.idempotency_key).first()
+        if existing_locked:
+            if existing_locked.request_payload_hash == payload_hash:
+                db.rollback()
+                _, _, _, today_local = get_local_day_bounds_utc()
+                return {"idempotent_replay": True, "loan": serialize_loan_detail(existing_locked, today_local)}
+            else:
+                db.rollback()
+                raise HTTPException(status_code=409, detail="Idempotency key conflict under concurrency.")
+
+        loan_number = generate_next_loan_number(db)
+
+        contract_rules = {
+            "engine_version": "1.0.0",
+            "interest_calculation_method": "FLAT_ORIGINAL_PRINCIPAL",
+            "interest_basis": "ORIGINAL_PRINCIPAL",
+            "interest_accrual_convention": "ON_INSTALLMENT_DUE_DATE",
+            "assumed_interest_months": calc["months_count"],
+            "term_installments_count": calc["installments_count"],
+            "payment_frequency": "WEEKLY",
+            "rounding_policy": "FLOOR_REGULAR_EXACT_FINAL",
+            "partial_period_prorating_rule": "NOT_DEFINED_EXPLICIT_MONTHS_USED",
+            "early_payoff_rebate_rule": "NOT_DEFINED_PENDING_POLICY",
+            "late_fee_moratory_rule": "NOT_DEFINED_PENDING_POLICY"
+        }
+
+        new_loan = LoanModel(
+            loan_number=loan_number,
+            idempotency_key=payload.idempotency_key,
+            request_payload_hash=payload_hash,
+            customer_id=payload.customer_id,
+            source_lead_id=payload.source_lead_id,
+            status="DRAFT",
+            product_name=payload.product_name,
+            product_version="v1.0",
+            currency="MXN",
+            principal_cents=calc["principal_cents"],
+            monthly_interest_rate_bps=calc["monthly_interest_rate_bps"],
+            interest_calculation_method="FLAT_ORIGINAL_PRINCIPAL",
+            interest_basis="ORIGINAL_PRINCIPAL",
+            interest_accrual_convention="ON_INSTALLMENT_DUE_DATE",
+            assumed_interest_months=calc["months_count"],
+            payment_frequency="WEEKLY",
+            term_installments_count=calc["installments_count"],
+            rounding_policy="FLOOR_REGULAR_EXACT_FINAL",
+            contract_rules_json=json.dumps(contract_rules),
+            monthly_interest_amount_cents=calc["monthly_interest_amount_cents"],
+            total_interest_cents=calc["total_interest_cents"],
+            total_repayment_cents=calc["total_repayment_cents"],
+            regular_installment_cents=calc["regular_installment_cents"],
+            final_installment_cents=calc["final_installment_cents"],
+            start_date=start_dt,
+            first_payment_date=calc["first_payment_date"],
+            maturity_date=calc["maturity_date"],
+            unpaid_principal_cents=0,
+            remaining_contractual_interest_cents=0,
+            remaining_contract_total_cents=0,
+            amount_paid_cents=0,
+            owner_user_id=customer.owner_user_id,
+            created_by_user_id=current_user.id,
+            notes=payload.notes.strip() if payload.notes else None
+        )
+        db.add(new_loan)
+        db.flush()
+
+        for inst in calc["schedule"]:
+            db.add(LoanInstallmentModel(
+                loan_id=new_loan.id,
+                installment_number=inst["installment_number"],
+                due_date=inst["due_date"],
+                beginning_principal_cents=inst["beginning_principal_cents"],
+                principal_due_cents=inst["principal_due_cents"],
+                interest_due_cents=inst["interest_due_cents"],
+                scheduled_payment_cents=inst["scheduled_payment_cents"],
+                ending_principal_cents=inst["ending_principal_cents"],
+                principal_paid_cents=0,
+                interest_paid_cents=0,
+                amount_paid_cents=0,
+                remaining_amount_cents=inst["scheduled_payment_cents"]
+            ))
+
+        record_audit_event(
+            db, "LOAN_DRAFT_CREATED", "loan", "SUCCESS",
+            actor=current_user, resource_id=new_loan.loan_number, ip_address=ip,
+            details={
+                "loan_number": new_loan.loan_number,
+                "customer_id": new_loan.customer_id,
+                "principal_cents": new_loan.principal_cents
+            },
+            commit=False
+        )
+        db.commit()
+        db.refresh(new_loan)
+        _, _, _, today_local = get_local_day_bounds_utc()
+        return {"idempotent_replay": False, "loan": serialize_loan_detail(new_loan, today_local)}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception("Failed to create loan draft")
+        raise HTTPException(status_code=500, detail=f"Could not create loan draft: {type(e).__name__}")
+
+
+@app.get("/api/loans/{loan_id}")
+def get_loan_detail(
+    loan_id: int,
+    current_user: UserModel = Depends(
+        require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")
+    ),
+    db: Session = Depends(get_db)
+):
+    loan = db.query(LoanModel).filter(LoanModel.id == loan_id).first()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found.")
+    _, _, _, today_local = get_local_day_bounds_utc()
+    return serialize_loan_detail(loan, today_local)
+
+
+@app.post("/api/loans/{loan_id}/approve", dependencies=[Depends(verify_csrf)])
+def approve_loan(
+    loan_id: int,
+    payload: LoanApproveRequest,
+    request: Request,
+    current_user: UserModel = Depends(
+        require_roles("OWNER_ADMIN", "CREDIT_ADVISOR")
+    ),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    try:
+        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found.")
+        if loan.status != "DRAFT":
+            raise HTTPException(status_code=409, detail=f"Only DRAFT loans can be approved. Current status: {loan.status}")
+
+        now_utc = datetime.now(timezone.utc)
+        loan.status = "APPROVED"
+        loan.approved_by_user_id = current_user.id
+        loan.approved_at = now_utc
+        if payload.approval_notes:
+            loan.approval_notes = payload.approval_notes.strip()
+        loan.updated_at = now_utc
+
+        record_audit_event(
+            db, "LOAN_APPROVED", "loan", "SUCCESS",
+            actor=current_user, resource_id=loan.loan_number, ip_address=ip,
+            details={"loan_number": loan.loan_number}, commit=False
+        )
+        db.commit()
+        db.refresh(loan)
+        _, _, _, today_local = get_local_day_bounds_utc()
+        return serialize_loan_detail(loan, today_local)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception("Failed to approve loan")
+        raise HTTPException(status_code=500, detail=f"Could not approve loan: {type(e).__name__}")
+
+
+@app.post("/api/loans/{loan_id}/activate", dependencies=[Depends(verify_csrf)])
+def activate_loan(
+    loan_id: int,
+    payload: LoanActivateRequest,
+    request: Request,
+    current_user: UserModel = Depends(
+        require_roles("OWNER_ADMIN", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")
+    ),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    if not payload.confirm_disbursement:
+        raise HTTPException(status_code=422, detail="Disbursement confirmation is required to activate a loan.")
+    if payload.disbursement_method not in VALID_DISBURSEMENT_METHODS:
+        raise HTTPException(status_code=422, detail=f"Invalid disbursement method. Allowed: {', '.join(sorted(VALID_DISBURSEMENT_METHODS))}")
+
+    disbursed_at_dt = parse_optional_datetime_utc(payload.disbursed_at) or datetime.now(timezone.utc)
+    if disbursed_at_dt > datetime.now(timezone.utc) + timedelta(minutes=5):
+        raise HTTPException(status_code=422, detail="Disbursement time cannot be in the future.")
+
+    try:
+        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found.")
+
+        if loan.status == "ACTIVE":
+            record_audit_event(
+                db, "LOAN_ACTIVATION_DUPLICATE_BLOCKED", "loan", "DENIED",
+                actor=current_user, resource_id=loan.loan_number, ip_address=ip,
+                details={"reason": "Already active"}, commit=True
+            )
+            raise HTTPException(status_code=409, detail=f"Loan {loan.loan_number} is already active.")
+        if loan.status == "CANCELLED":
+            raise HTTPException(status_code=409, detail=f"Cannot activate loan {loan.loan_number} because it was cancelled.")
+        if loan.status != "APPROVED":
+            raise HTTPException(status_code=409, detail=f"Loan must be in APPROVED status before activation. Current: {loan.status}")
+
+        now_utc = datetime.now(timezone.utc)
+        loan.status = "ACTIVE"
+        loan.activated_by_user_id = current_user.id
+        loan.activated_at = now_utc
+        loan.disbursed_at = disbursed_at_dt
+        loan.disbursement_method = payload.disbursement_method
+        loan.disbursement_reference = payload.disbursement_reference.strip()
+        if payload.disbursement_notes:
+            loan.disbursement_notes = payload.disbursement_notes.strip()
+
+        # Initialize operational balances
+        loan.unpaid_principal_cents = loan.principal_cents
+        loan.remaining_contractual_interest_cents = loan.total_interest_cents
+        loan.remaining_contract_total_cents = loan.total_repayment_cents
+        loan.amount_paid_cents = 0
+        loan.updated_at = now_utc
+
+        record_audit_event(
+            db, "LOAN_ACTIVATED_DISBURSED", "loan", "SUCCESS",
+            actor=current_user, resource_id=loan.loan_number, ip_address=ip,
+            details={
+                "loan_number": loan.loan_number,
+                "method": loan.disbursement_method,
+                "reference": loan.disbursement_reference
+            },
+            commit=False
+        )
+        db.commit()
+        db.refresh(loan)
+        _, _, _, today_local = get_local_day_bounds_utc()
+        return serialize_loan_detail(loan, today_local)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception("Failed to activate loan")
+        raise HTTPException(status_code=500, detail=f"Could not activate loan: {type(e).__name__}")
+
+
+@app.post("/api/loans/{loan_id}/cancel", dependencies=[Depends(verify_csrf)])
+def cancel_loan(
+    loan_id: int,
+    payload: LoanCancelRequest,
+    request: Request,
+    current_user: UserModel = Depends(
+        require_roles("OWNER_ADMIN", "CREDIT_ADVISOR")
+    ),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    reason = payload.cancellation_reason.strip()
+    if len(reason) < 3:
+        raise HTTPException(status_code=422, detail="Cancellation reason must be at least 3 characters.")
+
+    try:
+        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found.")
+        if loan.status == "ACTIVE":
+            raise HTTPException(status_code=409, detail="Active disbursed loans cannot be cancelled.")
+        if loan.status == "CANCELLED":
+            raise HTTPException(status_code=409, detail="Loan is already cancelled.")
+        if loan.status not in ("DRAFT", "APPROVED"):
+            raise HTTPException(status_code=409, detail=f"Loans in status {loan.status} cannot be cancelled.")
+
+        now_utc = datetime.now(timezone.utc)
+        loan.status = "CANCELLED"
+        loan.cancelled_by_user_id = current_user.id
+        loan.cancelled_at = now_utc
+        loan.cancellation_reason = reason
+        loan.unpaid_principal_cents = 0
+        loan.remaining_contractual_interest_cents = 0
+        loan.remaining_contract_total_cents = 0
+        loan.amount_paid_cents = 0
+        loan.updated_at = now_utc
+
+        record_audit_event(
+            db, "LOAN_CANCELLED", "loan", "SUCCESS",
+            actor=current_user, resource_id=loan.loan_number, ip_address=ip,
+            details={"loan_number": loan.loan_number, "reason": reason},
+            commit=False
+        )
+        db.commit()
+        db.refresh(loan)
+        _, _, _, today_local = get_local_day_bounds_utc()
+        return serialize_loan_detail(loan, today_local)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception("Failed to cancel loan")
+        raise HTTPException(status_code=500, detail=f"Could not cancel loan: {type(e).__name__}")
+
+
+@app.get("/api/dashboard/summary")
+def get_dashboard_summary(
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    _, _, _, today_local = get_local_day_bounds_utc()
+    active_loans = db.query(LoanModel).filter(LoanModel.status == "ACTIVE").all()
+
+    active_portfolio_cents = sum(l.unpaid_principal_cents for l in active_loans)
+    total_outstanding_principal_cents = active_portfolio_cents
+    total_contract_due_cents = sum(l.remaining_contract_total_cents for l in active_loans)
+
+    due_today_cents = 0
+    overdue_amount_cents = 0
+
+    if active_loans:
+        loan_ids = [l.id for l in active_loans]
+        unpaid_insts = (
+            db.query(LoanInstallmentModel)
+            .filter(LoanInstallmentModel.loan_id.in_(loan_ids), LoanInstallmentModel.remaining_amount_cents > 0)
+            .all()
+        )
+        for inst in unpaid_insts:
+            if inst.due_date == today_local:
+                due_today_cents += inst.remaining_amount_cents
+            elif inst.due_date < today_local:
+                overdue_amount_cents += inst.remaining_amount_cents
+
+    customers_count = db.query(CustomerModel).count()
+    open_leads_count = db.query(LeadModel).filter(LeadModel.stage.notin_(["CONVERTED", "LOST"])).count()
+    active_loans_count = len(active_loans)
+
+    return {
+        "active_loan_portfolio_cents": active_portfolio_cents,
+        "due_today_cents": due_today_cents,
+        "overdue_amount_cents": overdue_amount_cents,
+        "total_outstanding_principal_cents": total_outstanding_principal_cents,
+        "total_amount_due_cents": total_contract_due_cents,
+        "collected_this_week_enabled": False,
+        "collected_this_week_cents": None,
+        "counts": {
+            "active_loans": active_loans_count,
+            "customers": customers_count,
+            "open_leads": open_leads_count
+        }
+    }
+
+
+# --- CONVERSATIONS & NURA ASSISTANT ---
 @app.get("/api/conversations")
 def listar_conversaciones(current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
     convs = (
