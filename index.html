@@ -243,6 +243,7 @@
                                 </button>
                             </div>
                         </div>
+                        <div id="dashboard-summary-error" class="hidden p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl"></div>
 
                         <!-- 5 CORE ACCOUNTING KPI CARDS (A, B, C, D, E) -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -264,7 +265,7 @@
                                         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">B. Due Today</span>
                                         <span class="h-2 w-2 rounded-full bg-amber-500"></span>
                                     </div>
-                                    <p class="privacy-metric text-xl font-extrabold text-slate-900 mt-2" data-real-value="$0.00 MXN">$0.00 MXN</p>
+                                    <p id="dash-due-today-val" class="privacy-metric text-xl font-extrabold text-slate-900 mt-2" data-real-value="$0.00 MXN">$0.00 MXN</p>
                                     <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Scheduled installments maturing today still pending collection (0 due).</p>
                                 </div>
                                 <span class="text-[10px] font-bold text-blue-600 group-hover:underline mt-3 inline-block">View Current Schedule →</span>
@@ -276,7 +277,7 @@
                                         <span class="text-[10px] font-bold uppercase tracking-wider text-red-600">C. Overdue Payments</span>
                                         <span class="h-2 w-2 rounded-full bg-red-600"></span>
                                     </div>
-                                    <p class="privacy-metric text-xl font-extrabold text-red-600 mt-2" data-real-value="$0.00 MXN">$0.00 MXN</p>
+                                    <p id="dash-overdue-val" class="privacy-metric text-xl font-extrabold text-red-600 mt-2" data-real-value="$0.00 MXN">$0.00 MXN</p>
                                     <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">0 past-due installments across 0 affected loans.</p>
                                 </div>
                                 <span class="text-[10px] font-bold text-red-600 group-hover:underline mt-3 inline-block">Filter Overdue Loans →</span>
@@ -288,8 +289,8 @@
                                         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">D. Total Outstanding</span>
                                         <span class="h-2 w-2 rounded-full bg-indigo-600"></span>
                                     </div>
-                                    <p class="privacy-metric text-xl font-extrabold text-slate-900 mt-2" data-real-value="$0.00 MXN">$0.00 MXN</p>
-                                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Principal pending recovery (Total contractual installments due: <span class="privacy-metric font-semibold" data-real-value="$0.00 MXN">$0.00 MXN</span>).</p>
+                                    <p id="dash-outstanding-principal-val" class="privacy-metric text-xl font-extrabold text-slate-900 mt-2" data-real-value="$0.00 MXN">$0.00 MXN</p>
+                                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Principal pending recovery (Total contractual installments due: <span id="dash-total-amount-due-val" class="privacy-metric font-semibold" data-real-value="$0.00 MXN">$0.00 MXN</span>).</p>
                                 </div>
                                 <span class="text-[10px] font-bold text-blue-600 group-hover:underline mt-3 inline-block">Inspect All Loans →</span>
                             </button>
@@ -300,7 +301,7 @@
                                         <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">E. Collected This Week</span>
                                         <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
                                     </div>
-                                    <p class="privacy-metric text-xl font-extrabold text-emerald-700 mt-2" data-real-value="$0.00 MXN">$0.00 MXN</p>
+                                    <p id="dash-collected-week-val" class="text-xl font-extrabold text-slate-400 mt-2">Pending Stage 4</p>
                                     <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Confirmed payments received Mon–Sun of current ISO week (0 payments).</p>
                                 </div>
                                 <span class="text-[10px] font-bold text-emerald-700 group-hover:underline mt-3 inline-block">View Payment Ledger →</span>
@@ -314,13 +315,13 @@
                                         <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Portfolio Distribution by Loan Status</h3>
                                         <p class="text-[11px] text-slate-500">Derived strictly from schedule dates and confirmed payments</p>
                                     </div>
-                                    <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-full">0 Live Loans</span>
+                                    <span id="dash-live-loans-badge" class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-full">0 Live Loans</span>
                                 </div>
 
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                     <button type="button" onclick="navigateToLoansFilter('active')" class="p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 text-left transition">
                                         <p class="text-[10px] font-bold text-slate-500 uppercase">Active Loans</p>
-                                        <p class="text-xl font-extrabold text-slate-900 mt-1">0</p>
+                                        <p id="dash-active-loans-count" class="text-xl font-extrabold text-slate-900 mt-1">0</p>
                                         <p class="text-[10px] text-slate-400 mt-0.5">Unliquidated obligations</p>
                                     </button>
                                     <button type="button" onclick="navigateToLoansFilter('current')" class="p-3.5 rounded-2xl bg-slate-50 hover:bg-emerald-50/50 border border-slate-200/80 text-left transition">
@@ -1928,7 +1929,7 @@
 
                     document.getElementById('auth-view').classList.add('hidden');
                     document.getElementById('app-view').classList.remove('hidden');
-                    await Promise.all([cargarConversaciones(), loadCustomers(1), loadLeads(1)]);
+                    await Promise.all([loadDashboardSummary(), cargarConversaciones(), loadCustomers(1), loadLeads(1)]);
                 } else {
                     mostrarAuthView();
                 }
@@ -2524,6 +2525,120 @@
             clearTimeout(customerSearchTimer);
             customerSearchTimer = setTimeout(() => loadCustomers(1), 280);
         }
+
+let isDashboardSummaryLoading = false;
+
+function setDashboardPrivacyMetric(elementId, centsValue) {
+    const el = document.getElementById(elementId);
+
+    if (!el || !Number.isFinite(centsValue)) return;
+
+    const formatted = NuraFinancialEngine.formatMXNFromCents(centsValue);
+    el.setAttribute('data-real-value', formatted);
+    el.innerText = isPrivacyOn ? '••••••••' : formatted;
+}
+
+async function loadDashboardSummary() {
+    if (isDashboardSummaryLoading) return;
+
+    isDashboardSummaryLoading = true;
+
+    try {
+        const res = await fetch('/api/dashboard/summary');
+
+        if (res.status === 401) {
+            mostrarAuthView();
+            return;
+        }
+
+        if (res.status === 403) {
+            throw new Error('Insufficient permissions to view dashboard metrics.');
+        }
+
+        if (!res.ok) {
+            throw new Error(`Dashboard request failed (HTTP ${res.status}).`);
+        }
+
+        const data = await res.json();
+
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+            throw new Error('Invalid dashboard response.');
+        }
+
+        const amountFields = [
+            ['active_loan_portfolio_cents', 'saldo-val'],
+            ['due_today_cents', 'dash-due-today-val'],
+            ['overdue_amount_cents', 'dash-overdue-val'],
+            ['total_outstanding_principal_cents', 'dash-outstanding-principal-val'],
+            ['total_amount_due_cents', 'dash-total-amount-due-val']
+        ];
+
+        for (const [field, elementId] of amountFields) {
+            if (Number.isFinite(data[field])) {
+                setDashboardPrivacyMetric(elementId, data[field]);
+            }
+        }
+
+        const collectedEl = document.getElementById('dash-collected-week-val');
+
+        if (
+            collectedEl &&
+            data.collected_this_week_enabled === true &&
+            Number.isFinite(data.collected_this_week_cents)
+        ) {
+            collectedEl.classList.add('privacy-metric', 'text-emerald-700');
+            collectedEl.classList.remove('text-slate-400');
+
+            setDashboardPrivacyMetric(
+                'dash-collected-week-val',
+                data.collected_this_week_cents
+            );
+        } else if (collectedEl) {
+            collectedEl.classList.remove('privacy-metric', 'text-emerald-700');
+            collectedEl.classList.add('text-slate-400');
+            collectedEl.removeAttribute('data-real-value');
+            collectedEl.innerText = 'Pending Stage 4';
+        }
+
+        const counts = data.counts;
+
+        if (counts && typeof counts === 'object' && !Array.isArray(counts)) {
+            const activeLoans = counts.active_loans;
+            const countEl = document.getElementById('dash-active-loans-count');
+            const badgeEl = document.getElementById('dash-live-loans-badge');
+
+            if (Number.isSafeInteger(activeLoans) && activeLoans >= 0) {
+                if (countEl) countEl.innerText = String(activeLoans);
+
+                if (badgeEl) {
+                    badgeEl.innerText =
+                        `${activeLoans} Live ${activeLoans === 1 ? 'Loan' : 'Loans'}`;
+                }
+            } else {
+                if (countEl) countEl.innerText = 'N/A';
+                if (badgeEl) badgeEl.innerText = 'N/A Live Loans';
+            }
+        } else {
+            const countEl = document.getElementById('dash-active-loans-count');
+            const badgeEl = document.getElementById('dash-live-loans-badge');
+
+            if (countEl) countEl.innerText = 'N/A';
+            if (badgeEl) badgeEl.innerText = 'N/A Live Loans';
+        }
+
+    } catch (err) {
+        console.error('Dashboard summary error:', err);
+
+        const errBox = document.getElementById('dashboard-summary-error');
+
+        if (errBox) {
+            errBox.innerText = 'Unable to refresh dashboard metrics. Please try again.';
+            errBox.classList.remove('hidden');
+        }
+    } finally {
+        isDashboardSummaryLoading = false;
+    }
+}
 
         async function loadCustomers(page = 1) {
             currentCustomersPage = page;
