@@ -796,40 +796,79 @@
 
                             <!-- TAB B: CREDIT SUMMARY -->
                             <div id="ctab-panel-summary" class="hidden fintech-card p-5 bg-white space-y-4">
-                                <div class="border-b border-slate-100 pb-3">
-                                    <h3 class="text-sm font-bold text-slate-900">Aggregated Customer Credit Summary</h3>
-                                    <p class="text-[11px] text-slate-500">Aggregates all active loans for this customer</p>
+                                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                                    <div>
+                                        <h3 class="text-sm font-bold text-slate-900">Aggregated Customer Credit Summary</h3>
+                                        <p class="text-[11px] text-slate-500">Aggregates all active loans for this customer from PostgreSQL</p>
+                                    </div>
+                                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Live PostgreSQL</span>
                                 </div>
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                                     <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Current Outstanding Principal</p>
-                                        <p class="text-base font-extrabold text-slate-900 mt-1">$0.00 MXN</p>
+                                        <p id="csum-outstanding-principal" class="text-base font-extrabold font-mono text-slate-900 mt-1">$0.00 MXN</p>
                                     </div>
                                     <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Total Amount Due</p>
-                                        <p class="text-base font-extrabold text-slate-900 mt-1">$0.00 MXN</p>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Total Contractual Amount Due</p>
+                                        <p id="csum-total-due" class="text-base font-extrabold font-mono text-slate-900 mt-1">$0.00 MXN</p>
                                     </div>
                                     <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-red-600 uppercase">Overdue Amount</p>
-                                        <p class="text-base font-extrabold text-red-600 mt-1">$0.00 MXN</p>
+                                        <p id="csum-overdue-amount" class="text-base font-extrabold font-mono text-red-600 mt-1">$0.00 MXN</p>
                                     </div>
                                     <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Active Loans / Total Loans</p>
-                                        <p class="text-base font-extrabold text-slate-900 mt-1">0 / 0</p>
+                                        <p id="csum-loans-ratio" class="text-base font-extrabold text-slate-900 mt-1">0 / 0</p>
+                                    </div>
+                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Next Installment Due Date</p>
+                                        <p id="csum-next-due-date" class="text-xs font-bold font-mono text-slate-800 mt-1">None scheduled</p>
+                                    </div>
+                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Remaining Installments</p>
+                                        <p id="csum-remaining-installments" class="text-xs font-bold text-slate-800 mt-1">0</p>
+                                    </div>
+                                    <div class="sm:col-span-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Last Payment Date</p>
+                                        <p id="csum-last-payment-date" class="text-xs font-semibold text-slate-500 mt-1">Pending Stage 4</p>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- TAB C: CUSTOMER LOANS -->
                             <div id="ctab-panel-loans" class="hidden fintech-card bg-white overflow-hidden">
-                                <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-                                    <h3 class="text-sm font-bold text-slate-900">Associated Customer Loans</h3>
+                                <div class="p-4 border-b border-slate-100 flex items-center justify-between gap-2">
+                                    <div>
+                                        <h3 class="text-sm font-bold text-slate-900">Associated Customer Loans</h3>
+                                        <p class="text-[11px] text-slate-500">All loan records linked to this borrower in PostgreSQL</p>
+                                    </div>
                                     <button type="button" onclick="switchTab('simulator')" class="text-xs font-semibold text-blue-600 hover:underline">Simulate Loan Offer →</button>
                                 </div>
-                                <div class="p-8 text-center text-xs text-slate-500">
-                                    No active loans associated with this customer yet. Formal loan origination will be enabled in Stage 3.
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="bg-slate-50/90 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                                <th class="py-3 px-4">Loan Number</th>
+                                                <th class="py-3 px-4">Product</th>
+                                                <th class="py-3 px-4">Status</th>
+                                                <th class="py-3 px-4 text-right">Original Principal</th>
+                                                <th class="py-3 px-4 text-right">Unpaid Principal</th>
+                                                <th class="py-3 px-4 text-right">Rem. Interest</th>
+                                                <th class="py-3 px-4 text-right">Rem. Contract Total</th>
+                                                <th class="py-3 px-4 text-right">Current Payable</th>
+                                                <th class="py-3 px-4">Maturity Date</th>
+                                                <th class="py-3 px-4 text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="customer-loans-tbody" class="divide-y divide-slate-100">
+                                            <tr>
+                                                <td colspan="10" class="py-8 text-center text-slate-400">No loans associated with this customer yet.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
+
 
                             <!-- TAB D: LIVE INTERACTIONS & NOTES (CONNECTED TO POSTGRESQL) -->
                             <div id="ctab-panel-interactions" class="hidden fintech-card p-5 bg-white space-y-5">
@@ -2640,7 +2679,7 @@ async function loadDashboardSummary() {
     }
 }
 
-        async function loadCustomers(page = 1) {
+                async function loadCustomers(page = 1) {
             currentCustomersPage = page;
             const search = document.getElementById('customer-search-input')?.value.trim() || '';
             const status = document.getElementById('customer-status-filter')?.value || 'ALL';
@@ -2653,6 +2692,13 @@ async function loadDashboardSummary() {
 
             try {
                 const res = await fetch(`/api/customers?${params.toString()}`);
+                if (res.status === 401) {
+                    mostrarAuthView();
+                    return;
+                }
+                if (res.status === 403) {
+                    throw new Error("Insufficient permissions to view customers.");
+                }
                 if (!res.ok) throw new Error("Could not load customers");
                 const data = await res.json();
                 currentCustomersTotal = data.total || 0;
@@ -2682,6 +2728,14 @@ async function loadDashboardSummary() {
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : (c.status === 'INACTIVE' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-amber-50 text-amber-800 border-amber-200');
 
+                        const balanceText = Number.isFinite(c.current_outstanding_balance_cents)
+                            ? NuraFinancialEngine.formatMXNFromCents(c.current_outstanding_balance_cents)
+                            : 'N/A';
+                        const activeLoansText = (Number.isSafeInteger(c.active_loans_count) && c.active_loans_count >= 0)
+                            ? String(c.active_loans_count)
+                            : 'N/A';
+                        const lastPayText = c.last_payment_date ? escapeHtml(c.last_payment_date) : 'N/A';
+
                         tr.innerHTML = `
                             <td class="py-3.5 px-4 font-mono font-bold text-blue-700">${escapeHtml(c.customer_number)}</td>
                             <td class="py-3.5 px-4">
@@ -2689,12 +2743,12 @@ async function loadDashboardSummary() {
                                 <p class="text-[10px] text-slate-500">${c.entity_type === 'BUSINESS' ? `Business • Rep: ${escapeHtml(c.legal_representative_name || 'N/A')}` : `Individual • ${escapeHtml(c.email || 'No email')}`}</p>
                             </td>
                             <td class="py-3.5 px-4 font-medium text-slate-700">${escapeHtml(c.phone_primary)}</td>
-                            <td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-900">$0.00 MXN</td>
-                            <td class="py-3.5 px-4 text-center font-bold text-slate-700">0</td>
+                            <td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-900">${escapeHtml(balanceText)}</td>
+                            <td class="py-3.5 px-4 text-center font-bold text-slate-700">${escapeHtml(activeLoansText)}</td>
                             <td class="py-3.5 px-4">
                                 <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${statusBadgeClass}">${escapeHtml(c.status)}</span>
                             </td>
-                            <td class="py-3.5 px-4 text-slate-400">N/A</td>
+                            <td class="py-3.5 px-4 text-slate-400">${lastPayText}</td>
                             <td class="py-3.5 px-4 text-right">
                                 <button type="button" class="text-xs font-bold text-blue-600 hover:underline">View Profile →</button>
                             </td>
@@ -2718,9 +2772,28 @@ async function loadDashboardSummary() {
             if (next >= 1) loadCustomers(next);
         }
 
+        function getLoanStatusBadgeStyle(status) {
+            const styles = {
+                DRAFT: 'bg-amber-50 text-amber-800 border-amber-200',
+                APPROVED: 'bg-blue-50 text-blue-700 border-blue-200',
+                ACTIVE: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                PAID_OFF: 'bg-slate-100 text-slate-700 border-slate-200',
+                CANCELLED: 'bg-red-50 text-red-700 border-red-200',
+                DEFAULTED: 'bg-red-100 text-red-900 border-red-300'
+            };
+            return styles[status] || 'bg-slate-100 text-slate-700 border-slate-200';
+        }
+
         async function openCustomerDetail(customerId) {
             try {
                 const res = await fetch(`/api/customers/${customerId}`);
+                if (res.status === 401) {
+                    mostrarAuthView();
+                    return;
+                }
+                if (res.status === 403) {
+                    throw new Error("Insufficient permissions to view this customer profile.");
+                }
                 if (!res.ok) throw new Error("Could not load customer profile");
                 const c = await res.json();
                 currentSelectedCustomer = c;
@@ -2756,6 +2829,109 @@ async function loadDashboardSummary() {
                     bizBlock.classList.add('hidden');
                 }
 
+                // Populate Tab B: Credit Summary (c.credit_summary)
+                const cs = (c.credit_summary && typeof c.credit_summary === 'object') ? c.credit_summary : {};
+                const outPrincipalEl = document.getElementById('csum-outstanding-principal');
+                const totalDueEl = document.getElementById('csum-total-due');
+                const overdueEl = document.getElementById('csum-overdue-amount');
+                const ratioEl = document.getElementById('csum-loans-ratio');
+                const nextDueEl = document.getElementById('csum-next-due-date');
+                const remInstEl = document.getElementById('csum-remaining-installments');
+                const lastPayEl = document.getElementById('csum-last-payment-date');
+
+                if (outPrincipalEl) {
+                    outPrincipalEl.innerText = Number.isFinite(cs.current_outstanding_principal_cents)
+                        ? NuraFinancialEngine.formatMXNFromCents(cs.current_outstanding_principal_cents)
+                        : 'N/A';
+                }
+                if (totalDueEl) {
+                    totalDueEl.innerText = Number.isFinite(cs.total_amount_due_cents)
+                        ? NuraFinancialEngine.formatMXNFromCents(cs.total_amount_due_cents)
+                        : 'N/A';
+                }
+                if (overdueEl) {
+                    overdueEl.innerText = Number.isFinite(cs.overdue_amount_cents)
+                        ? NuraFinancialEngine.formatMXNFromCents(cs.overdue_amount_cents)
+                        : 'N/A';
+                }
+                if (ratioEl) {
+                    const actCount = Number.isSafeInteger(cs.active_loans_count) ? cs.active_loans_count : 'N/A';
+                    const totCount = Number.isSafeInteger(cs.total_loans_count) ? cs.total_loans_count : 'N/A';
+                    ratioEl.innerText = `${actCount} / ${totCount}`;
+                }
+                if (nextDueEl) {
+                    nextDueEl.innerText = cs.next_payment_due_date ? String(cs.next_payment_due_date) : 'None scheduled';
+                }
+                if (remInstEl) {
+                    remInstEl.innerText = Number.isSafeInteger(cs.remaining_installments)
+                        ? String(cs.remaining_installments)
+                        : 'N/A';
+                }
+                if (lastPayEl) {
+                    lastPayEl.innerText = cs.last_payment_date ? String(cs.last_payment_date) : 'Pending Stage 4';
+                }
+
+                // Populate Tab C: Associated Customer Loans (c.loans)
+                const loansList = Array.isArray(c.loans) ? c.loans : [];
+                const loansTabBtn = document.getElementById('ctab-btn-loans');
+                if (loansTabBtn) {
+                    loansTabBtn.innerText = `C. Loans (${loansList.length})`;
+                }
+
+                const loansTbody = document.getElementById('customer-loans-tbody');
+                if (loansTbody) {
+                    loansTbody.innerHTML = '';
+                    if (loansList.length === 0) {
+                        loansTbody.innerHTML = `
+                            <tr>
+                                <td colspan="10" class="py-8 text-center text-slate-400">
+                                    No loans associated with this customer yet.
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        loansList.forEach(l => {
+                            const tr = document.createElement('tr');
+                            tr.className = 'hover:bg-slate-50/90 transition cursor-pointer';
+                            tr.onclick = () => {
+                                if (typeof openLoanDetail === 'function') {
+                                    switchTab('loans');
+                                    openLoanDetail(l.id);
+                                } else {
+                                    switchTab('loans');
+                                    openLoanDetailBlueprint();
+                                }
+                            };
+
+                            const badgeClass = getLoanStatusBadgeStyle(l.status);
+                            const origPrincipal = Number.isFinite(l.principal_cents) ? NuraFinancialEngine.formatMXNFromCents(l.principal_cents) : 'N/A';
+                            const unpaidPrincipal = Number.isFinite(l.unpaid_principal_cents) ? NuraFinancialEngine.formatMXNFromCents(l.unpaid_principal_cents) : 'N/A';
+                            const remInterest = Number.isFinite(l.remaining_contractual_interest_cents) ? NuraFinancialEngine.formatMXNFromCents(l.remaining_contractual_interest_cents) : 'N/A';
+                            const remTotal = Number.isFinite(l.remaining_contract_total_cents) ? NuraFinancialEngine.formatMXNFromCents(l.remaining_contract_total_cents) : 'N/A';
+                            const payableToday = Number.isFinite(l.current_payable_amount_cents) ? NuraFinancialEngine.formatMXNFromCents(l.current_payable_amount_cents) : 'N/A';
+                            const hasOverdue = Number.isFinite(l.overdue_amount_cents) && l.overdue_amount_cents > 0;
+
+                            tr.innerHTML = `
+                                <td class="py-3 px-4 font-mono font-bold text-blue-700">${escapeHtml(l.loan_number)}</td>
+                                <td class="py-3 px-4 font-semibold text-slate-800">${escapeHtml(l.product_name)}</td>
+                                <td class="py-3 px-4">
+                                    <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${badgeClass}">${escapeHtml(l.status)}</span>
+                                </td>
+                                <td class="py-3 px-4 text-right font-mono text-slate-800">${escapeHtml(origPrincipal)}</td>
+                                <td class="py-3 px-4 text-right font-mono font-bold text-slate-900">${escapeHtml(unpaidPrincipal)}</td>
+                                <td class="py-3 px-4 text-right font-mono text-amber-700">${escapeHtml(remInterest)}</td>
+                                <td class="py-3 px-4 text-right font-mono font-bold text-blue-900">${escapeHtml(remTotal)}</td>
+                                <td class="py-3 px-4 text-right font-mono font-bold ${hasOverdue ? 'text-red-600' : 'text-slate-800'}">${escapeHtml(payableToday)}</td>
+                                <td class="py-3 px-4 font-mono text-slate-600">${escapeHtml(l.maturity_date || '—')}</td>
+                                <td class="py-3 px-4 text-right">
+                                    <button type="button" class="text-xs font-bold text-blue-600 hover:underline">Inspect →</button>
+                                </td>
+                            `;
+                            loansTbody.appendChild(tr);
+                        });
+                    }
+                }
+
                 document.getElementById('customers-master-view').classList.add('hidden');
                 document.getElementById('customer-detail-view').classList.remove('hidden');
                 switchCustomerProfileTab('personal');
@@ -2764,6 +2940,7 @@ async function loadDashboardSummary() {
                 alert(err.message);
             }
         }
+
 
         async function loadCustomerInteractions(customerId) {
             const listEl = document.getElementById('customer-interactions-list');
