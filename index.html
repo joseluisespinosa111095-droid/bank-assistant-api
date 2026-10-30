@@ -1134,15 +1134,89 @@
                                 </div>
                             </div>
 
-                            <!-- PLACEHOLDER CONTAINER: 8 FINANCIAL METRICS (BLOCK C) -->
-                            <div id="loan-financial-metrics-container" class="fintech-card p-5 bg-white space-y-2 border border-slate-200">
-                                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">8-Metric Financial Accounting Summary</h3>
-                                    <span class="text-[10px] font-semibold text-slate-400 bg-slate-50 px-2.5 py-0.5 rounded-full border border-slate-200">Reserved for Block C</span>
+                            <!-- ========================================================= -->
+                            <!-- SECTION: LOAN FINANCIAL POSITION & ACCOUNTING SUMMARY     -->
+                            <!-- ========================================================= -->
+                            <div id="loan-financial-metrics-container" class="fintech-card p-5 bg-white space-y-5">
+                                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                                    <div>
+                                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Loan Financial Position & Accounting Summary</h3>
+                                        <p class="text-[11px] text-slate-500">Live PostgreSQL balance derivation • Values displayed in exact MXN cents without frontend recalculation</p>
+                                    </div>
+                                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Live Accounting Ledger</span>
                                 </div>
-                                <p class="text-xs text-slate-500 py-3 text-center">Financial accounting metrics will be integrated in Block C.</p>
-                            </div>
 
+                                <!-- GROUP 1: POSICIÓN CONTRACTUAL GLOBAL -->
+                                <div class="space-y-2.5">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-700">1. Global Contractual Position (Total Lifecycle Obligations)</h4>
+                                        <span class="text-[10px] text-slate-400 font-medium">Contract-wide Balances</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">1. Original Principal</p>
+                                            <p id="ld-metric-principal" class="privacy-metric text-base font-extrabold font-mono text-slate-900 mt-1">—</p>
+                                            <p class="text-[10px] text-slate-500 mt-1 leading-snug">Approved loan contract baseline.</p>
+                                        </div>
+                                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">2. Unpaid Principal</p>
+                                            <p id="ld-metric-unpaid-principal" class="privacy-metric text-base font-extrabold font-mono text-blue-900 mt-1">—</p>
+                                            <p class="text-[10px] text-slate-500 mt-1 leading-snug">Disbursed principal pending repayment.</p>
+                                        </div>
+                                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">3. Remaining Contract Interest</p>
+                                            <p id="ld-metric-rem-interest" class="privacy-metric text-base font-extrabold font-mono text-amber-800 mt-1">—</p>
+                                            <p class="text-[10px] text-slate-500 mt-1 leading-snug">Total interest across all unpaid installments.</p>
+                                        </div>
+                                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">4. Remaining Contract Total</p>
+                                            <p id="ld-metric-rem-total" class="privacy-metric text-base font-extrabold font-mono text-slate-900 mt-1">—</p>
+                                            <p class="text-[10px] text-slate-500 mt-1 leading-snug">Total obligation to fully settle loan.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- GROUP 2: DEVENGO Y EXIGIBILIDAD -->
+                                <div class="space-y-2.5 pt-2 border-t border-slate-100">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-700">2. Accrual & Immediate Enforceability (Devengo y Exigibilidad al Día de Hoy)</h4>
+                                        <span class="text-[10px] text-slate-400 font-medium">As of Current Date</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                        <div class="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-200/70">
+                                            <p class="text-[10px] font-bold text-indigo-900 uppercase">5. Accrued Interest</p>
+                                            <p id="ld-metric-accrued-interest" class="privacy-metric text-base font-extrabold font-mono text-indigo-950 mt-1">—</p>
+                                            <p class="text-[10px] text-indigo-800/80 mt-1 leading-snug">Earned interest on matured installments.</p>
+                                        </div>
+                                        <div class="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/70">
+                                            <p class="text-[10px] font-bold text-amber-900 uppercase">6. Due Today</p>
+                                            <p id="ld-metric-due-today" class="privacy-metric text-base font-extrabold font-mono text-amber-950 mt-1">—</p>
+                                            <p class="text-[10px] text-amber-800/80 mt-1 leading-snug">Installments maturing today (due_date == today).</p>
+                                        </div>
+                                        <div class="p-3.5 rounded-2xl bg-red-50/60 border border-red-200/80">
+                                            <p class="text-[10px] font-bold text-red-700 uppercase">7. Overdue Amount</p>
+                                            <p id="ld-metric-overdue" class="privacy-metric text-base font-extrabold font-mono text-red-600 mt-1">—</p>
+                                            <p class="text-[10px] text-red-700/80 mt-1 leading-snug">Past-due installments (due_date &lt; today).</p>
+                                        </div>
+                                        <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80">
+                                            <p class="text-[10px] font-bold text-emerald-800 uppercase">8. Current Payable Amount</p>
+                                            <p id="ld-metric-current-payable" class="privacy-metric text-base font-extrabold font-mono text-emerald-900 mt-1">—</p>
+                                            <p class="text-[10px] text-emerald-800/80 mt-1 leading-snug">Total strictly payable today (Due Today + Overdue).</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- INFORMATIVE NOTE: ON_INSTALLMENT_DUE_DATE -->
+                                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600 space-y-1 leading-relaxed">
+                                    <p class="font-bold text-slate-800 flex items-center gap-1.5">
+                                        <span>ℹ️</span>
+                                        <span>Accounting Accrual Convention: ON_INSTALLMENT_DUE_DATE</span>
+                                    </p>
+                                    <p>
+                                        Under the authoritative <code>ON_INSTALLMENT_DUE_DATE</code> convention executed in PostgreSQL, contractual interest is recognized as earned (Accrued Interest) strictly when an installment's due date arrives (<code>due_date &le; today</code>). Future scheduled installments (<code>due_date &gt; today</code>) do not accrue unearned interest prematurely. Therefore, Remaining Contractual Interest represents the unamortized contractual interest of the entire agreement, while Accrued Interest represents solely the earned interest payable to date.
+                                    </p>
+                                </div>
+                            </div>
                             <!-- PLACEHOLDER CONTAINER: AMORTIZATION SCHEDULE (BLOCK D) -->
                             <div id="loan-schedule-container" class="fintech-card p-5 bg-white space-y-2 border border-slate-200">
                                 <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -3656,9 +3730,48 @@ async function loadDashboardSummary() {
             closeLoanDetailView();
         }
 
+        function resetLoanFinancialMetricsUI() {
+            const metricIds = [
+                'ld-metric-principal',
+                'ld-metric-unpaid-principal',
+                'ld-metric-rem-interest',
+                'ld-metric-rem-total',
+                'ld-metric-accrued-interest',
+                'ld-metric-due-today',
+                'ld-metric-overdue',
+                'ld-metric-current-payable'
+            ];
+            metricIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.remove('privacy-metric');
+                el.removeAttribute('data-real-value');
+                el.innerText = '—';
+            });
+        }
+
+        function setLoanFinancialMetric(elementId, centsValue) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+
+            if (Number.isSafeInteger(centsValue)) {
+                const formatted = NuraFinancialEngine.formatMXNFromCents(centsValue);
+                el.classList.add('privacy-metric');
+                el.setAttribute('data-real-value', formatted);
+                el.innerText = isPrivacyOn ? '••••••••' : formatted;
+            } else {
+                el.classList.remove('privacy-metric');
+                el.removeAttribute('data-real-value');
+                el.innerText = 'N/A';
+            }
+        }
+
         async function openLoanDetailFull(loanId) {
             if (!Number.isSafeInteger(loanId) || loanId <= 0) return;
             const thisReqId = ++loanDetailRequestSeq;
+
+            // Reset financial metrics immediately to avoid stale data leakage
+            resetLoanFinancialMetricsUI();
 
             const errBox = document.getElementById('loan-detail-error');
             if (errBox) errBox.classList.add('hidden');
@@ -3733,6 +3846,18 @@ async function loadDashboardSummary() {
                 setVal('ld-term-first-payment', data.first_payment_date);
                 setVal('ld-term-maturity', data.maturity_date);
                 setVal('ld-term-notes', data.notes || 'No contractual notes recorded.');
+
+                // Populate Block C: 8-Metric Financial Accounting Summary (Backend Direct Values)
+                setLoanFinancialMetric('ld-metric-principal', data.principal_cents);
+                setLoanFinancialMetric('ld-metric-unpaid-principal', data.unpaid_principal_cents);
+                setLoanFinancialMetric('ld-metric-rem-interest', data.remaining_contractual_interest_cents);
+                setLoanFinancialMetric('ld-metric-rem-total', data.remaining_contract_total_cents);
+                setLoanFinancialMetric('ld-metric-accrued-interest', data.accrued_interest_cents);
+                setLoanFinancialMetric('ld-metric-due-today', data.due_today_cents);
+                setLoanFinancialMetric('ld-metric-overdue', data.overdue_amount_cents);
+                setLoanFinancialMetric('ld-metric-current-payable', data.current_payable_amount_cents);
+
+                // 3. Section 2: Operational Lifecycle & Audit Traceability
 
                 // 3. Section 2: Operational Lifecycle & Audit Traceability
                 // 3A. Underwriting Approval
