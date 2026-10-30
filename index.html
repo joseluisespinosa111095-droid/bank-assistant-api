@@ -3820,8 +3820,6 @@ async function loadDashboardSummary() {
         }
 
         function switchLeadsSubView(subView) {
-
-        function switchLeadsSubView(subView) {
             closeLeadDetailView();
             const isPipeline = subView !== 'call-list';
             document.getElementById('leads-pipeline-view').classList.toggle('hidden', !isPipeline);
