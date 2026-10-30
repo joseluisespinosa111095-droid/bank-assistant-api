@@ -1036,11 +1036,173 @@
                             </div>
                         </div>
 
-                        <div id="loan-detail-view" class="hidden space-y-4">
-                            <button type="button" onclick="closeLoanDetailBlueprint()" class="text-xs text-blue-600 hover:underline font-semibold">← Back to Loans Table</button>
-                            <div class="fintech-card p-6 bg-white text-xs text-slate-600">
-                                <p class="font-bold text-slate-900 text-sm mb-2">10-Section Loan Servicing Blueprint Ready</p>
-                                <p>Includes Credit Summary, Linked Customer, Immutable Approved Terms, 16-Week Amortization Schedule, Payment Ledger, Pending/Overdue Installments, Documents, Notes, and Audit Trail.</p>
+                        <!-- ========================================================= -->
+                        <!-- INDIVIDUAL LOAN DETAIL VIEW (#loan-detail-view)           -->
+                        <!-- ========================================================= -->
+                        <div id="loan-detail-view" class="hidden space-y-5">
+                            <!-- BREADCRUMB & HEADER ACTIONS -->
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-2 text-xs text-slate-500">
+                                        <button type="button" onclick="closeLoanDetailView()" class="text-blue-600 hover:underline font-semibold flex items-center gap-1">
+                                            <span>← Back to Loans Table</span>
+                                        </button>
+                                        <span>/</span>
+                                        <span id="ld-number-crumb" class="font-bold font-mono text-slate-800">LN-00000</span>
+                                    </div>
+                                    <div class="flex items-center gap-2.5 flex-wrap">
+                                        <h2 id="ld-title" class="text-xl font-extrabold text-slate-900 tracking-tight">Loan File</h2>
+                                        <span id="ld-status-badge" class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border uppercase bg-slate-100 text-slate-700 border-slate-200">DRAFT</span>
+                                        <span id="ld-product-badge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Personal Loan</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" id="ld-btn-customer" class="btn-primary py-2 px-3.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
+                                        <span>Open Customer Profile →</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="loan-detail-error" class="hidden p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                            <!-- SECTION 1: IMMUTABLE APPROVED CONTRACTUAL TERMS -->
+                            <div class="fintech-card p-5 bg-white space-y-4">
+                                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                                    <div>
+                                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Approved Contractual Terms (Immutable Specifications)</h3>
+                                        <p class="text-[11px] text-slate-500">Fixed at origination • Parameter baseline for amortization schedule and servicing calculations</p>
+                                    </div>
+                                    <span class="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-bold px-2 py-0.5 rounded">Contract Snapshot</span>
+                                </div>
+
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Product & Version</p>
+                                        <p id="ld-term-product" class="font-bold text-slate-900 mt-1">—</p>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Monthly Flat Rate</p>
+                                        <p id="ld-term-rate" class="font-extrabold text-slate-900 mt-1">—</p>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Contractual Term</p>
+                                        <p id="ld-term-weeks" class="font-bold text-slate-900 mt-1">—</p>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Assumed Interest Months</p>
+                                        <p id="ld-term-months" class="font-bold text-slate-900 mt-1">—</p>
+                                    </div>
+
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Interest Method</p>
+                                        <p id="ld-term-method" class="font-semibold text-slate-800 mt-1 truncate">—</p>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Interest Basis</p>
+                                        <p id="ld-term-basis" class="font-semibold text-slate-800 mt-1 truncate">—</p>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Accrual Convention</p>
+                                        <p id="ld-term-accrual" class="font-semibold text-slate-800 mt-1 truncate">—</p>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Rounding Policy</p>
+                                        <p id="ld-term-rounding" class="font-semibold text-slate-800 mt-1 truncate">—</p>
+                                    </div>
+
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Contract Start Date</p>
+                                        <p id="ld-term-start" class="font-mono font-bold text-slate-800 mt-1">—</p>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">First Payment Due</p>
+                                        <p id="ld-term-first-payment" class="font-mono font-bold text-slate-800 mt-1">—</p>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Contract Maturity Date</p>
+                                        <p id="ld-term-maturity" class="font-mono font-bold text-emerald-700 mt-1">—</p>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Currency Standard</p>
+                                        <p class="font-bold text-slate-800 mt-1">MXN (Exact Cents)</p>
+                                    </div>
+
+                                    <div class="col-span-2 sm:col-span-4 p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Origination File Notes</p>
+                                        <p id="ld-term-notes" class="text-slate-700 mt-1 whitespace-pre-wrap leading-relaxed">—</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PLACEHOLDER CONTAINER: 8 FINANCIAL METRICS (BLOCK C) -->
+                            <div id="loan-financial-metrics-container" class="fintech-card p-5 bg-white space-y-2 border border-slate-200">
+                                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">8-Metric Financial Accounting Summary</h3>
+                                    <span class="text-[10px] font-semibold text-slate-400 bg-slate-50 px-2.5 py-0.5 rounded-full border border-slate-200">Reserved for Block C</span>
+                                </div>
+                                <p class="text-xs text-slate-500 py-3 text-center">Financial accounting metrics will be integrated in Block C.</p>
+                            </div>
+
+                            <!-- PLACEHOLDER CONTAINER: AMORTIZATION SCHEDULE (BLOCK D) -->
+                            <div id="loan-schedule-container" class="fintech-card p-5 bg-white space-y-2 border border-slate-200">
+                                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">16-Week Amortization Schedule & Payment Ledger</h3>
+                                    <span class="text-[10px] font-semibold text-slate-400 bg-slate-50 px-2.5 py-0.5 rounded-full border border-slate-200">Reserved for Block D</span>
+                                </div>
+                                <p class="text-xs text-slate-500 py-3 text-center">16-installment schedule table and payment statuses will be integrated in Block D.</p>
+                            </div>
+
+                            <!-- SECTION 2: OPERATIONAL LIFECYCLE & SERVICING AUDIT -->
+                            <div class="fintech-card p-5 bg-white space-y-4">
+                                <div class="border-b border-slate-100 pb-3">
+                                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Operational Lifecycle & Servicing Audit</h3>
+                                    <p class="text-[11px] text-slate-500">Immutable audit timestamps and actor traceability recorded in PostgreSQL</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                    <!-- UNDERWRITING APPROVAL AUDIT -->
+                                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">1. Credit Underwriting Approval</span>
+                                            <span id="ld-app-status" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">PENDING</span>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <p class="text-[11px] text-slate-600">Approval Date: <strong id="ld-app-date" class="text-slate-800">Not available</strong></p>
+                                            <p class="text-[11px] text-slate-600">Approving User: <strong id="ld-app-user" class="text-slate-800">Not available</strong></p>
+                                            <div class="mt-2 pt-2 border-t border-slate-200/60">
+                                                <p class="text-[10px] font-semibold text-slate-400 uppercase">Underwriter Notes</p>
+                                                <p id="ld-app-notes" class="text-slate-700 mt-0.5 whitespace-pre-wrap italic">—</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- DISBURSEMENT & ACTIVATION AUDIT -->
+                                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">2. Activation & Bank Disbursement</span>
+                                            <span id="ld-disb-status" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">PENDING</span>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <p class="text-[11px] text-slate-600">Disbursement Date: <strong id="ld-disb-date" class="text-slate-800">Not available</strong></p>
+                                            <p class="text-[11px] text-slate-600">Method: <strong id="ld-disb-method" class="text-slate-800">Not available</strong></p>
+                                            <p class="text-[11px] text-slate-600">Bank Reference: <strong id="ld-disb-ref" class="text-slate-800 font-mono">Not available</strong></p>
+                                            <div class="mt-2 pt-2 border-t border-slate-200/60">
+                                                <p class="text-[10px] font-semibold text-slate-400 uppercase">Disbursement Notes</p>
+                                                <p id="ld-disb-notes" class="text-slate-700 mt-0.5 whitespace-pre-wrap italic">—</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- CANCELLATION AUDIT (HIDDEN BY DEFAULT UNLESS CANCELLED) -->
+                                    <div id="ld-canc-container" class="hidden md:col-span-2 p-4 rounded-2xl bg-red-50/70 border border-red-200 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[10px] font-bold text-red-700 uppercase tracking-wider">3. Cancellation Audit Record</span>
+                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-800">CANCELLED</span>
+                                        </div>
+                                        <p class="text-[11px] text-red-900">Cancelled Date: <strong id="ld-canc-date">Not available</strong></p>
+                                        <p class="text-[11px] text-red-900">Cancellation Reason: <strong id="ld-canc-reason">Not specified</strong></p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -3471,14 +3633,193 @@ async function loadDashboardSummary() {
             if (next >= 1) loadLoans(next);
         }
 
-        async function openLoanDetail(loanId) {
+        let currentSelectedLoan = null;
+        let loanDetailRequestSeq = 0;
+
+        function closeLoanDetailView() {
+            const detailView = document.getElementById('loan-detail-view');
+            const masterView = document.getElementById('loans-master-view');
+            const errBox = document.getElementById('loan-detail-error');
+            if (errBox) errBox.classList.add('hidden');
+            if (detailView) detailView.classList.add('hidden');
+            if (masterView) masterView.classList.remove('hidden');
+        }
+
+        function openLoanDetailBlueprint() {
+            const masterView = document.getElementById('loans-master-view');
+            const detailView = document.getElementById('loan-detail-view');
+            if (masterView) masterView.classList.add('hidden');
+            if (detailView) detailView.classList.remove('hidden');
+        }
+
+        function closeLoanDetailBlueprint() {
+            closeLoanDetailView();
+        }
+
+        async function openLoanDetailFull(loanId) {
             if (!Number.isSafeInteger(loanId) || loanId <= 0) return;
-            if (typeof openLoanDetailFull === 'function') {
-                await openLoanDetailFull(loanId);
-            } else {
+            const thisReqId = ++loanDetailRequestSeq;
+
+            const errBox = document.getElementById('loan-detail-error');
+            if (errBox) errBox.classList.add('hidden');
+
+            try {
+                const res = await fetch(`/api/loans/${loanId}`);
+                if (thisReqId !== loanDetailRequestSeq) return;
+
+                if (res.status === 401) {
+                    mostrarAuthView();
+                    return;
+                }
+                if (res.status === 403) {
+                    throw new Error("Insufficient permissions to inspect loan file.");
+                }
+                if (!res.ok) {
+                    throw new Error(`Failed to load loan file (HTTP ${res.status}).`);
+                }
+
+                const data = await res.json();
+                if (thisReqId !== loanDetailRequestSeq) return;
+                if (!data || typeof data !== 'object') {
+                    throw new Error("Invalid loan record structure received.");
+                }
+
+                currentSelectedLoan = data;
+
+                // 1. Header & Navigation
+                const crumbEl = document.getElementById('ld-number-crumb');
+                const titleEl = document.getElementById('ld-title');
+                const badgeEl = document.getElementById('ld-status-badge');
+                const prodBadgeEl = document.getElementById('ld-product-badge');
+                const custBtn = document.getElementById('ld-btn-customer');
+
+                if (crumbEl) crumbEl.innerText = data.loan_number || 'LN-00000';
+                if (titleEl) titleEl.innerText = `${data.loan_number || 'Loan'} — ${data.product_name || 'Credit File'}`;
+                if (badgeEl) {
+                    badgeEl.innerText = data.status || 'UNKNOWN';
+                    badgeEl.className = `text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border uppercase ${getLoanStatusBadgeStyle(data.status)}`;
+                }
+                if (prodBadgeEl) prodBadgeEl.innerText = data.product_name || 'Personal Loan';
+
+                if (custBtn) {
+                    if (Number.isSafeInteger(data.customer_id) && data.customer_id > 0) {
+                        custBtn.onclick = () => {
+                            switchTab('customers');
+                            openCustomerDetail(data.customer_id);
+                        };
+                        custBtn.classList.remove('hidden');
+                    } else {
+                        custBtn.onclick = null;
+                        custBtn.classList.add('hidden');
+                    }
+                }
+
+                // 2. Section 1: Immutable Approved Contractual Terms
+                const setVal = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerText = (val !== null && val !== undefined && String(val).trim()) ? String(val) : 'Not available';
+                };
+
+                const prodVer = data.product_version ? ` (${data.product_version})` : '';
+                setVal('ld-term-product', `${data.product_name || 'Personal Loan'}${prodVer}`);
+                setVal('ld-term-rate', Number.isFinite(data.monthly_interest_rate_percent) ? `${data.monthly_interest_rate_percent.toFixed(2)}% / month` : 'Not available');
+                setVal('ld-term-weeks', Number.isSafeInteger(data.term_installments_count) ? `${data.term_installments_count} weekly installments` : 'Not available');
+                setVal('ld-term-months', Number.isSafeInteger(data.assumed_interest_months) ? `${data.assumed_interest_months} monthly periods` : 'Not available');
+                setVal('ld-term-method', data.interest_calculation_method);
+                setVal('ld-term-basis', data.interest_basis);
+                setVal('ld-term-accrual', data.interest_accrual_convention);
+                setVal('ld-term-rounding', data.rounding_policy);
+                setVal('ld-term-start', data.start_date);
+                setVal('ld-term-first-payment', data.first_payment_date);
+                setVal('ld-term-maturity', data.maturity_date);
+                setVal('ld-term-notes', data.notes || 'No contractual notes recorded.');
+
+                // 3. Section 2: Operational Lifecycle & Audit Traceability
+                // 3A. Underwriting Approval
+                const appStatusEl = document.getElementById('ld-app-status');
+                const appDateEl = document.getElementById('ld-app-date');
+                const appUserEl = document.getElementById('ld-app-user');
+                const appNotesEl = document.getElementById('ld-app-notes');
+
+                if (data.approved_at) {
+                    if (appStatusEl) {
+                        appStatusEl.innerText = 'APPROVED';
+                        appStatusEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+                    }
+                    if (appDateEl) appDateEl.innerText = formatDateTimeShort(data.approved_at);
+                    if (appUserEl) appUserEl.innerText = data.approved_by_user_id ? `User #${data.approved_by_user_id}` : 'Not available';
+                    if (appNotesEl) appNotesEl.innerText = data.approval_notes || 'No approval notes recorded.';
+                } else {
+                    if (appStatusEl) {
+                        appStatusEl.innerText = 'PENDING';
+                        appStatusEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600';
+                    }
+                    if (appDateEl) appDateEl.innerText = 'Not available';
+                    if (appUserEl) appUserEl.innerText = 'Not available';
+                    if (appNotesEl) appNotesEl.innerText = 'Approval not yet granted.';
+                }
+
+                // 3B. Bank Disbursement & Activation
+                const disbStatusEl = document.getElementById('ld-disb-status');
+                const disbDateEl = document.getElementById('ld-disb-date');
+                const disbMethodEl = document.getElementById('ld-disb-method');
+                const disbRefEl = document.getElementById('ld-disb-ref');
+                const disbNotesEl = document.getElementById('ld-disb-notes');
+
+                if (data.activated_at || data.disbursed_at) {
+                    if (disbStatusEl) {
+                        disbStatusEl.innerText = 'ACTIVE / DISBURSED';
+                        disbStatusEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+                    }
+                    if (disbDateEl) disbDateEl.innerText = formatDateTimeShort(data.disbursed_at || data.activated_at);
+                    if (disbMethodEl) disbMethodEl.innerText = data.disbursement_method || 'Not available';
+                    if (disbRefEl) disbRefEl.innerText = data.disbursement_reference || 'Not available';
+                    if (disbNotesEl) disbNotesEl.innerText = data.disbursement_notes || 'No disbursement notes recorded.';
+                } else {
+                    if (disbStatusEl) {
+                        disbStatusEl.innerText = 'PENDING';
+                        disbStatusEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600';
+                    }
+                    if (disbDateEl) disbDateEl.innerText = 'Not available';
+                    if (disbMethodEl) disbMethodEl.innerText = 'Not available';
+                    if (disbRefEl) disbRefEl.innerText = 'Not available';
+                    if (disbNotesEl) disbNotesEl.innerText = 'Disbursement not yet executed.';
+                }
+
+                // 3C. Cancellation
+                const cancBox = document.getElementById('ld-canc-container');
+                const cancDateEl = document.getElementById('ld-canc-date');
+                const cancReasonEl = document.getElementById('ld-canc-reason');
+
+                if (data.status === 'CANCELLED' || data.cancelled_at) {
+                    if (cancBox) cancBox.classList.remove('hidden');
+                    if (cancDateEl) cancDateEl.innerText = formatDateTimeShort(data.cancelled_at);
+                    if (cancReasonEl) cancReasonEl.innerText = data.cancellation_reason || 'Not specified';
+                } else {
+                    if (cancBox) cancBox.classList.add('hidden');
+                }
+
+                // Display detail view
                 openLoanDetailBlueprint();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (err) {
+                if (thisReqId !== loanDetailRequestSeq) return;
+                if (errBox) {
+                    errBox.innerText = `Error: ${err.message}`;
+                    errBox.classList.remove('hidden');
+                    openLoanDetailBlueprint();
+                } else {
+                    alert(err.message);
+                }
             }
         }
+
+        async function openLoanDetail(loanId) {
+            if (!Number.isSafeInteger(loanId) || loanId <= 0) return;
+            await openLoanDetailFull(loanId);
+        }
+
+        function switchLeadsSubView(subView) {
 
         function switchLeadsSubView(subView) {
             closeLeadDetailView();
