@@ -1217,14 +1217,61 @@
                                     </p>
                                 </div>
                             </div>
-                            <!-- PLACEHOLDER CONTAINER: AMORTIZATION SCHEDULE (BLOCK D) -->
-                            <div id="loan-schedule-container" class="fintech-card p-5 bg-white space-y-2 border border-slate-200">
-                                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">16-Week Amortization Schedule & Payment Ledger</h3>
-                                    <span class="text-[10px] font-semibold text-slate-400 bg-slate-50 px-2.5 py-0.5 rounded-full border border-slate-200">Reserved for Block D</span>
+                            <!-- ========================================================= -->
+                            <!-- SECTION: AMORTIZATION SCHEDULE & PAYMENT LEDGER           -->
+                            <!-- ========================================================= -->
+                            <div id="loan-schedule-container" class="fintech-card p-5 bg-white space-y-4 border border-slate-200">
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
+                                    <div>
+                                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Contractual Amortization Schedule & Payment Ledger</h3>
+                                        <p class="text-[11px] text-slate-500">Authoritative installment breakdown • Exact MXN cents • Direct contractual dates without timezone shift</p>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">SCHEDULED</span>
+                                        <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">DUE_TODAY</span>
+                                        <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200">OVERDUE</span>
+                                        <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">PARTIALLY_PAID</span>
+                                        <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">PAID</span>
+                                    </div>
                                 </div>
-                                <p class="text-xs text-slate-500 py-3 text-center">16-installment schedule table and payment statuses will be integrated in Block D.</p>
+
+                                <!-- AMORTIZATION SCHEDULE TABLE -->
+                                <div class="overflow-x-auto rounded-xl border border-slate-200/80">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                <th class="py-2.5 px-3">#</th>
+                                                <th class="py-2.5 px-3">Due Date</th>
+                                                <th class="py-2.5 px-3 text-right">Principal Due</th>
+                                                <th class="py-2.5 px-3 text-right">Interest Due</th>
+                                                <th class="py-2.5 px-3 text-right">Total Due</th>
+                                                <th class="py-2.5 px-3 text-right">Amount Paid</th>
+                                                <th class="py-2.5 px-3 text-right">Remaining Balance</th>
+                                                <th class="py-2.5 px-3 text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ld-schedule-tbody" class="divide-y divide-slate-100 text-xs bg-white">
+                                            <tr>
+                                                <td colspan="8" class="py-8 px-4 text-center text-slate-400">
+                                                    Select a loan record to inspect its amortization schedule.
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- INSTALLMENT LEDGER AUDIT FOOTNOTE (NON-ARITHMETIC) -->
+                                <div id="ld-schedule-summary" class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] text-slate-600">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-slate-800">Schedule Audit Record:</span>
+                                        <span id="ld-schedule-count-label">No installments loaded</span>
+                                    </div>
+                                    <div id="ld-schedule-paid-timestamps" class="text-[10px] text-slate-500 font-mono">
+                                        —
+                                    </div>
+                                </div>
                             </div>
+
 
                             <!-- SECTION 2: OPERATIONAL LIFECYCLE & SERVICING AUDIT -->
                             <div class="fintech-card p-5 bg-white space-y-4">
