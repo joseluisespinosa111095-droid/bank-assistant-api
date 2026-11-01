@@ -3750,7 +3750,7 @@ async function loadDashboardSummary() {
             });
         }
 
-        function setLoanFinancialMetric(elementId, centsValue) {
+                function setLoanFinancialMetric(elementId, centsValue) {
             const el = document.getElementById(elementId);
             if (!el) return;
 
@@ -3766,15 +3766,205 @@ async function loadDashboardSummary() {
             }
         }
 
+        function formatScheduleDueDateRaw(isoDateStr) {
+            if (typeof isoDateStr !== 'string') return 'N/A';
+            const trimmed = isoDateStr.trim();
+            if (!trimmed) return 'N/A';
+            // Preserve exact YYYY-MM-DD contractual date string without Date() timezone conversion
+            const match = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+            return match ? match[1] : escapeHtml(trimmed);
+        }
+
+        function renderScheduleMoneyCellHTML(centsValue, extraClasses = 'text-slate-800') {
+            if (Number.isSafeInteger(centsValue) && centsValue >= 0) {
+                const formatted = NuraFinancialEngine.formatMXNFromCents(centsValue);
+                const visibleText = isPrivacyOn ? '••••••••' : formatted;
+                return `<td class="py-2.5 px-3 text-right font-mono ${extraClasses}"><span class="privacy-metric" data-real-value="${escapeHtml(formatted)}">${escapeHtml(visibleText)}</span></td>`;
+            }
+            return `<td class="py-2.5 px-3 text-right font-mono text-slate-400">N/A</td>`;
+        }
+
+        function getInstallmentStatusBadgeHTML(inst) {
+            const rawStatus = (inst && typeof inst.status === 'string' && inst.status.trim())
+                ? inst.status.trim().toUpperCase()
+                : 'N/A';
+
+            const styleMap = {
+                'SCHEDULED': 'bg-slate-100 text-slate-700 border-slate-200',
+                'DUE_TODAY': 'bg-amber-100 text-amber-800 border-amber-200',
+                'OVERDUE': 'bg-red-100 text-red-800 border-red-200',
+                'PARTIALLY_PAID': 'bg-blue-100 text-blue-800 border-blue-200',
+                'PAID': 'bg-emerald-100 text-emerald-800 border-emerald-200'
+            };
+
+            const badgeClass = styleMap[rawStatus] || 'bg-slate-100 text-slate-500 border-slate-200';
+            let html = `<span class="inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full border uppercase ${badgeClass}">${escapeHtml(rawStatus)}</span>`;
+
+            // Secondary partial payment indicator without overriding authoritative backend status
+            const hasPartialPayment = inst
+                && Number.isSafeInteger(inst.total_paid_cents) && inst.total_paid_cents > 0
+                && Number.isSafeInteger(inst.remaining_amount_cents) && inst.remaining_amount_cents > 0;
+
+            if (hasPartialPayment && rawStatus !== 'PARTIALLY_PAID') {
+                html += `<div class="mt-1"><span class="inline-block text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 uppercase">PARTIAL PAYMENT</span></div>`;
+            }
+
+            if (rawStatus === 'PAID' && inst && typeof inst.paid_at === 'string' && inst.paid_at.trim()) {
+                html += `<div class="mt-0.5 text-[9px] text-slate-400 font-mono">${escapeHtml(formatDateTimeShort(inst.paid_at))}</div>`;
+            }
+
+            return html;
+        }
+
+        function resetLoanScheduleUI() {
+            const tbody = document.getElementById('ld-schedule-tbody');
+            const countLabel = document.getElementById('ld-schedule-count-label');
+            const paidTimestamps = document.getElementById('ld-schedule-paid-timestamps');
+
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="py-8 px-4 text-center text-slate-400">
+                            Loading amortization schedule...
+                        </td>
+                    </tr>`;
+            }
+            if (countLabel) countLabel.innerText = 'Loading schedule...';
+            if (paidTimestamps) paidTimestamps.innerText = '—';
+        }
+
+        function setLoanScheduleErrorUI() {
+            const tbody = document.getElementById('ld-schedule-tbody');
+            const countLabel = document.getElementById('ld-schedule-count-label');
+            const paidTimestamps = document.getElementById('ld-schedule-paid-timestamps');
+
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="py-8 px-4 text-center text-red-600 font-medium">
+                            Unable to load amortization schedule.
+                        </td>
+                    </tr>`;
+            }
+            if (countLabel) countLabel.innerText = 'Schedule unavailable';
+            if (paidTimestamps) paidTimestamps.innerText = '—';
+        }
+
+        function renderLoanScheduleTable(installmentsInput) {
+            const tbody = document.getElementById('ld-schedule-tbody');
+            const countLabel = document.getElementById('ld-schedule-count-label');
+            const paidTimestamps = document.getElementById('ld-schedule-paid-timestamps');
+            if (!tbody) return;
+
+            if (!Array.isArray(installmentsInput)) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="py-8 px-4 text-center text-red-600 font-medium">
+                            Invalid amortization schedule format received from server.
+                        </td>
+                    </tr>`;
+                if (countLabel) countLabel.innerText = 'Schedule unavailable (invalid format)';
+                if (paidTimestamps) paidTimestamps.innerText = 'N/A';
+                return;
+            }
+
+            if (installmentsInput.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="py-8 px-4 text-center text-slate-500">
+                            No amortization installments generated for this loan record.
+                        </td>
+                    </tr>`;
+                if (countLabel) countLabel.innerText = '0 installments recorded';
+                if (paidTimestamps) paidTimestamps.innerText = 'No settlement timestamps recorded';
+                return;
+            }
+
+            let rowsHtml = '';
+            let latestPaidAt = null;
+            let latestPaidAtTimeMs = -Infinity;
+            let firstDueDate = null;
+            let lastDueDate = null;
+
+            installmentsInput.forEach((inst, idx) => {
+                if (!inst || typeof inst !== 'object') {
+                    rowsHtml += `
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                            <td class="py-2.5 px-3 font-mono text-slate-400">N/A</td>
+                            <td class="py-2.5 px-3 font-mono text-slate-400">N/A</td>
+                            <td class="py-2.5 px-3 text-right font-mono text-slate-400">N/A</td>
+                            <td class="py-2.5 px-3 text-right font-mono text-slate-400">N/A</td>
+                            <td class="py-2.5 px-3 text-right font-mono text-slate-400">N/A</td>
+                            <td class="py-2.5 px-3 text-right font-mono text-slate-400">N/A</td>
+                            <td class="py-2.5 px-3 text-right font-mono text-slate-400">N/A</td>
+                            <td class="py-2.5 px-3 text-center"><span class="text-[10px] font-bold text-slate-400">N/A</span></td>
+                        </tr>`;
+                    return;
+                }
+
+                const numDisplay = Number.isSafeInteger(inst.installment_number) && inst.installment_number > 0
+                    ? `#${inst.installment_number}`
+                    : 'N/A';
+                const dueDateDisplay = formatScheduleDueDateRaw(inst.due_date);
+
+                if (idx === 0 && dueDateDisplay !== 'N/A') firstDueDate = dueDateDisplay;
+                if (idx === installmentsInput.length - 1 && dueDateDisplay !== 'N/A') lastDueDate = dueDateDisplay;
+
+                if (typeof inst.paid_at === 'string' && inst.paid_at.trim()) {
+                    const candidateStr = inst.paid_at.trim();
+                    const parsedTimeMs = Date.parse(candidateStr);
+                    if (Number.isFinite(parsedTimeMs) && parsedTimeMs > latestPaidAtTimeMs) {
+                        latestPaidAtTimeMs = parsedTimeMs;
+                        latestPaidAt = candidateStr;
+                    }
+                }
+
+                const rawStatus = (typeof inst.status === 'string') ? inst.status.trim().toUpperCase() : '';
+                const rowBgClass = rawStatus === 'OVERDUE'
+                    ? 'bg-red-50/30 hover:bg-red-50/60'
+                    : (rawStatus === 'DUE_TODAY' ? 'bg-amber-50/30 hover:bg-amber-50/60' : 'hover:bg-slate-50/80');
+
+                const remClass = (Number.isSafeInteger(inst.remaining_amount_cents) && inst.remaining_amount_cents > 0)
+                    ? (rawStatus === 'OVERDUE' ? 'font-bold text-red-700' : 'font-bold text-slate-900')
+                    : 'text-slate-500';
+
+                rowsHtml += `
+                    <tr class="${rowBgClass} transition-colors">
+                        <td class="py-2.5 px-3 font-mono font-bold text-slate-700">${escapeHtml(numDisplay)}</td>
+                        <td class="py-2.5 px-3 font-mono font-semibold text-slate-800">${dueDateDisplay}</td>
+                        ${renderScheduleMoneyCellHTML(inst.principal_due_cents, 'text-slate-700')}
+                        ${renderScheduleMoneyCellHTML(inst.interest_due_cents, 'text-slate-700')}
+                        ${renderScheduleMoneyCellHTML(inst.total_due_cents, 'font-bold text-slate-900')}
+                        ${renderScheduleMoneyCellHTML(inst.total_paid_cents, 'font-semibold text-emerald-700')}
+                        ${renderScheduleMoneyCellHTML(inst.remaining_amount_cents, remClass)}
+                        <td class="py-2.5 px-3 text-center align-middle">${getInstallmentStatusBadgeHTML(inst)}</td>
+                    </tr>`;
+            });
+
+            tbody.innerHTML = rowsHtml;
+
+            if (countLabel) {
+                const rangeText = (firstDueDate && lastDueDate) ? ` (${firstDueDate} → ${lastDueDate})` : '';
+                countLabel.innerText = `${installmentsInput.length} contractual installments listed${rangeText}`;
+            }
+            if (paidTimestamps) {
+                paidTimestamps.innerText = latestPaidAt
+                    ? `Latest recorded settlement timestamp: ${formatDateTimeShort(latestPaidAt)}`
+                    : 'No full installment settlements recorded yet';
+            }
+        }
+
         async function openLoanDetailFull(loanId) {
             if (!Number.isSafeInteger(loanId) || loanId <= 0) return;
             const thisReqId = ++loanDetailRequestSeq;
 
-            // Reset financial metrics immediately to avoid stale data leakage
+            // Reset financial metrics and amortization schedule immediately to avoid stale data leakage
             resetLoanFinancialMetricsUI();
+            resetLoanScheduleUI();
 
             const errBox = document.getElementById('loan-detail-error');
             if (errBox) errBox.classList.add('hidden');
+
 
             try {
                 const res = await fetch(`/api/loans/${loanId}`);
@@ -3857,9 +4047,12 @@ async function loadDashboardSummary() {
                 setLoanFinancialMetric('ld-metric-overdue', data.overdue_amount_cents);
                 setLoanFinancialMetric('ld-metric-current-payable', data.current_payable_amount_cents);
 
-                // 3. Section 2: Operational Lifecycle & Audit Traceability
+                // Populate Block D: 16-Week Amortization Schedule & Payment Ledger
+                renderLoanScheduleTable(data.installments);
 
                 // 3. Section 2: Operational Lifecycle & Audit Traceability
+
+                
                 // 3A. Underwriting Approval
                 const appStatusEl = document.getElementById('ld-app-status');
                 const appDateEl = document.getElementById('ld-app-date');
@@ -3929,6 +4122,7 @@ async function loadDashboardSummary() {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } catch (err) {
                 if (thisReqId !== loanDetailRequestSeq) return;
+                setLoanScheduleErrorUI();
                 if (errBox) {
                     errBox.innerText = `Error: ${err.message}`;
                     errBox.classList.remove('hidden');
@@ -3938,6 +4132,7 @@ async function loadDashboardSummary() {
                 }
             }
         }
+
 
         async function openLoanDetail(loanId) {
             if (!Number.isSafeInteger(loanId) || loanId <= 0) return;
