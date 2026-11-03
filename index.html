@@ -3847,9 +3847,13 @@ async function loadDashboardSummary() {
             const badgeClass = styleMap[rawStatus] || 'bg-slate-100 text-slate-500 border-slate-200';
             let html = `<span class="inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full border uppercase ${badgeClass}">${escapeHtml(rawStatus)}</span>`;
 
+            const resolvedPaidCents = inst
+                ? (Number.isSafeInteger(inst.total_paid_cents) ? inst.total_paid_cents : inst.amount_paid_cents)
+                : null;
+
             // Secondary partial payment indicator without overriding authoritative backend status
             const hasPartialPayment = inst
-                && Number.isSafeInteger(inst.total_paid_cents) && inst.total_paid_cents > 0
+                && Number.isSafeInteger(resolvedPaidCents) && resolvedPaidCents > 0
                 && Number.isSafeInteger(inst.remaining_amount_cents) && inst.remaining_amount_cents > 0;
 
             if (hasPartialPayment && rawStatus !== 'PARTIALLY_PAID') {
@@ -3975,14 +3979,21 @@ async function loadDashboardSummary() {
                     ? (rawStatus === 'OVERDUE' ? 'font-bold text-red-700' : 'font-bold text-slate-900')
                     : 'text-slate-500';
 
+                const resolvedTotalDueCents = Number.isSafeInteger(inst.total_due_cents)
+                    ? inst.total_due_cents
+                    : inst.scheduled_payment_cents;
+                const resolvedTotalPaidCents = Number.isSafeInteger(inst.total_paid_cents)
+                    ? inst.total_paid_cents
+                    : inst.amount_paid_cents;
+
                 rowsHtml += `
                     <tr class="${rowBgClass} transition-colors">
                         <td class="py-2.5 px-3 font-mono font-bold text-slate-700">${escapeHtml(numDisplay)}</td>
                         <td class="py-2.5 px-3 font-mono font-semibold text-slate-800">${dueDateDisplay}</td>
                         ${renderScheduleMoneyCellHTML(inst.principal_due_cents, 'text-slate-700')}
                         ${renderScheduleMoneyCellHTML(inst.interest_due_cents, 'text-slate-700')}
-                        ${renderScheduleMoneyCellHTML(inst.total_due_cents, 'font-bold text-slate-900')}
-                        ${renderScheduleMoneyCellHTML(inst.total_paid_cents, 'font-semibold text-emerald-700')}
+                        ${renderScheduleMoneyCellHTML(resolvedTotalDueCents, 'font-bold text-slate-900')}
+                        ${renderScheduleMoneyCellHTML(resolvedTotalPaidCents, 'font-semibold text-emerald-700')}
                         ${renderScheduleMoneyCellHTML(inst.remaining_amount_cents, remClass)}
                         <td class="py-2.5 px-3 text-center align-middle">${getInstallmentStatusBadgeHTML(inst)}</td>
                     </tr>`;
