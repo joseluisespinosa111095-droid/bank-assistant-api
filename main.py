@@ -813,11 +813,11 @@ class LoanCreateRequest(BaseModel):
     customer_id: int
     source_lead_id: Optional[int] = None
     product_name: str = Field(default="Personal Loan")
-    principal_pesos: Optional[float] = Field(default=None, gt=0)
-    principal_cents: Optional[int] = Field(default=None, gt=0)
-    monthly_interest_rate_percent: float = Field(default=10.0, ge=0)
-    assumed_interest_months: int = Field(default=4, ge=1)
-    term_installments_count: int = Field(default=16, ge=1)
+    principal_pesos: Optional[float] = Field(default=None, gt=0, le=10000000)
+    principal_cents: Optional[int] = Field(default=None, gt=0, le=1000000000)
+    monthly_interest_rate_percent: float = Field(default=10.0, ge=0, le=100.0)
+    assumed_interest_months: int = Field(default=4, ge=1, le=36)
+    term_installments_count: int = Field(default=16, ge=1, le=104)
     start_date: str  # YYYY-MM-DD
     first_payment_date: str  # YYYY-MM-DD
     notes: Optional[str] = Field(default=None, max_length=1000)
@@ -2859,26 +2859,57 @@ def create_loan(
     if payload.product_name not in SUPPORTED_PRODUCTS:
         raise HTTPException(status_code=422, detail=f"Supported products: {', '.join(SUPPORTED_PRODUCTS)}")
 
+    if payload.term_installments_count < 1 or payload.term_installments_count > 104:
+        raise HTTPException(status_code=422, detail="Loan term must be between 1 and 104 weekly installments.")
+
+    if payload.assumed_interest_months < 1 or payload.assumed_interest_months > 36:
+        raise HTTPException(status_code=422, detail="Assumed interest months must be between 1 and 36.")
+
     customer = db.query(CustomerModel).filter(CustomerModel.id == payload.customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found.")
     if customer.status != "ACTIVE":
         raise HTTPException(status_code=400, detail="Cannot originate a loan for a non-active customer.")
 
-    if payload.source_lead_id:
+    if payload.source_lead_id is not None:
         lead = db.query(LeadModel).filter(LeadModel.id == payload.source_lead_id).first()
         if not lead:
             raise HTTPException(status_code=404, detail="Source lead not found.")
+        if lead.stage != "CONVERTED" or lead.converted_customer_id != customer.id:
+            raise HTTPException(
+                status_code=400,
+                detail="Source lead must be in CONVERTED stage and linked to the selected customer."
+            )
+
+    if payload.principal_pesos is not None and payload.principal_cents is not None:
+        pesos_in_cents = parse_pesos_to_cents(payload.principal_pesos, None)
+        if pesos_in_cents != int(payload.principal_cents):
+            raise HTTPException(
+                status_code=422,
+                detail="Conflicting principal_pesos and principal_cents values provided."
+            )
 
     principal_cents = parse_pesos_to_cents(payload.principal_pesos, payload.principal_cents)
     if principal_cents <= 0:
         raise HTTPException(status_code=422, detail="Loan principal amount must be greater than zero.")
+    if principal_cents > 1_000_000_000:
+        raise HTTPException(
+            status_code=422,
+            detail="Loan principal amount cannot exceed $10,000,000.00 MXN."
+        )
 
     try:
         start_dt = date.fromisoformat(payload.start_date)
         first_pay_dt = date.fromisoformat(payload.first_payment_date)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD.")
+
+    _, _, _, today_local = get_local_day_bounds_utc()
+    if start_dt < today_local:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Contract start date ({start_dt.isoformat()}) cannot be earlier than current local date ({today_local.isoformat()})."
+        )
 
     if first_pay_dt < start_dt:
         raise HTTPException(status_code=422, detail="First payment date cannot be earlier than start date.")
