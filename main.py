@@ -2619,7 +2619,31 @@ def convert_lead_to_customer(
         linked_existing = False
 
         if len(matched_customers) == 1:
-            target_customer = list(matched_customers.values())[0]
+            existing_cust = list(matched_customers.values())[0]
+            lead_name_norm = re.sub(r"\s+", " ", (lead.full_name or "").strip()).upper()
+            cust_name_norm = re.sub(r"\s+", " ", (existing_cust.full_legal_name or "").strip()).upper()
+
+            if existing_cust.entity_type != entity_type or lead_name_norm != cust_name_norm:
+                conflict_fields = []
+                if match_phone and match_phone.id == existing_cust.id:
+                    conflict_fields.append("primary phone")
+                if match_email and match_email.id == existing_cust.id:
+                    conflict_fields.append("email")
+                if match_rfc and match_rfc.id == existing_cust.id:
+                    conflict_fields.append("RFC")
+                fields_str = ", ".join(conflict_fields) or "contact data"
+
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"Cannot link lead '{lead.full_name}' ({entity_type}) to existing customer "
+                        f"{existing_cust.customer_number} ('{existing_cust.full_legal_name}', {existing_cust.entity_type}) "
+                        f"because their name or entity type does not match (shared {fields_str}). "
+                        f"Please update the duplicate {fields_str} on the lead before converting."
+                    )
+                )
+
+            target_customer = existing_cust
             linked_existing = True
         else:
             cust_number = generate_next_customer_number(db)
