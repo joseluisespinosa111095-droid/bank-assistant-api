@@ -3461,12 +3461,10 @@ async function loadDashboardSummary() {
                             const tr = document.createElement('tr');
                             tr.className = 'hover:bg-slate-50/90 transition cursor-pointer';
                             tr.onclick = () => {
+                                switchTab('loans');
+                                openLoanDetailBlueprint();
                                 if (typeof openLoanDetail === 'function') {
-                                    switchTab('loans');
                                     openLoanDetail(l.id);
-                                } else {
-                                    switchTab('loans');
-                                    openLoanDetailBlueprint();
                                 }
                             };
 
