@@ -837,12 +837,15 @@
 
                             <!-- TAB C: CUSTOMER LOANS -->
                             <div id="ctab-panel-loans" class="hidden fintech-card bg-white overflow-hidden">
-                                <div class="p-4 border-b border-slate-100 flex items-center justify-between gap-2">
+                                <div class="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
                                     <div>
                                         <h3 class="text-sm font-bold text-slate-900">Associated Customer Loans</h3>
                                         <p class="text-[11px] text-slate-500">All loan records linked to this borrower in PostgreSQL</p>
                                     </div>
-                                    <button type="button" onclick="switchTab('simulator')" class="text-xs font-semibold text-blue-600 hover:underline">Simulate Loan Offer →</button>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick="switchTab('simulator')" class="text-xs font-semibold text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition">Simulate Offer</button>
+                                        <button type="button" id="btn-customer-new-loan" onclick="openLoanOriginationModal(currentSelectedCustomer ? currentSelectedCustomer.id : null)" class="btn-primary py-1.5 px-3.5 rounded-xl text-xs shadow-sm">+ Originate Loan</button>
+                                    </div>
                                 </div>
                                 <div class="overflow-x-auto">
                                     <table class="w-full text-left border-collapse text-xs">
@@ -945,12 +948,15 @@
                                     </div>
                                     <p class="text-xs text-slate-500 mt-0.5">Authoritative loan accounting, schedule status derivation, and portfolio servicing</p>
                                 </div>
-                                <div class="flex items-center gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <button type="button" onclick="loadLoans(1)" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
                                         Refresh
                                     </button>
-                                    <button type="button" onclick="switchTab('simulator')" class="btn-primary py-2.5 px-4 rounded-xl text-xs shadow-sm">
-                                        Simulate New Loan
+                                    <button type="button" onclick="switchTab('simulator')" class="py-2.5 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
+                                        Loan Simulator
+                                    </button>
+                                    <button type="button" id="btn-new-loan" onclick="openLoanOriginationModal()" class="btn-primary py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
+                                        <span>+ New Loan</span>
                                     </button>
                                 </div>
                             </div>
@@ -1753,12 +1759,224 @@
                     </div>
 
                     <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                        <button type="button" onclick="closeLeadFormModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs">Cancel</button>
-                        <button type="submit" id="lf-submit-btn" class="btn-primary py-2.5 px-5 rounded-xl text-xs">Save Lead</button>
+                        <button type="button" onclick="closeCustomerFormModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs">Cancel</button>
+                        <button type="submit" id="cf-submit-btn" class="btn-primary py-2.5 px-5 rounded-xl text-xs">Save Customer</button>
                     </div>
                 </form>
             </div>
         </div>
+
+        <!-- ================================================================= -->
+        <!-- STAGE 4 (BLOCK E): LOAN ORIGINATION MODAL                         -->
+        <!-- ================================================================= -->
+        <div id="loan-origination-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-3 sm:p-4 no-print">
+            <div class="bg-white rounded-3xl p-5 sm:p-6 w-full max-w-[920px] max-h-[92vh] overflow-y-auto shadow-2xl space-y-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-extrabold text-slate-900 text-base">Originate New Loan Contract</h3>
+                            <span class="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">Initial Status: DRAFT</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Select an active customer, configure contractual terms, and inspect the schedule preview before creating the loan record in PostgreSQL</p>
+                    </div>
+                    <button type="button" onclick="closeLoanOriginationModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">✕</button>
+                </div>
+
+                <div id="loan-origination-error" class="hidden p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <form id="loan-origination-form" onsubmit="handleLoanOriginationSubmit(event)" class="space-y-5 text-xs">
+                    <!-- STEP 1: BORROWER SELECTION (ACTIVE CUSTOMERS ONLY) -->
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">1. Select Registered Active Borrower *</span>
+                            <span id="lo-customer-status-hint" class="text-[10px] font-semibold text-slate-400">Requires ACTIVE customer status</span>
+                        </div>
+
+                        <!-- Search Box (Shown when no customer is selected) -->
+                        <div id="lo-customer-picker-box" class="space-y-2.5">
+                            <div class="flex gap-2">
+                                <input type="text" id="lo-customer-search" oninput="debounceLoanCustomerSearch()" placeholder="Search customer by CUST-XXXXX, Full Legal Name, Phone, or RFC..." class="flex-1 fintech-input bg-white rounded-xl px-3.5 py-2.5 text-xs">
+                                <button type="button" onclick="searchLoanOriginationCustomers()" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold text-xs">Search</button>
+                            </div>
+                            <div id="lo-customer-results" class="max-h-[190px] overflow-y-auto divide-y divide-slate-100 bg-white rounded-xl border border-slate-200/80">
+                                <p class="py-4 px-3 text-center text-slate-400 text-xs">Loading active customers...</p>
+                            </div>
+                        </div>
+
+                        <!-- Selected Customer Summary Card -->
+                        <div id="lo-selected-customer-card" class="hidden p-3.5 rounded-2xl bg-white border border-blue-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span id="lo-sel-cust-number" class="font-mono font-extrabold text-blue-700 text-xs">CUST-00000</span>
+                                    <span id="lo-sel-cust-entity" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">INDIVIDUAL</span>
+                                    <span id="lo-sel-cust-status" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">ACTIVE</span>
+                                    <span id="lo-sel-cust-kyc" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800">PENDING_VERIFICATION</span>
+                                </div>
+                                <p id="lo-sel-cust-name" class="text-sm font-extrabold text-slate-900">Borrower Name</p>
+                                <p id="lo-sel-cust-meta" class="text-[11px] text-slate-500">Phone: — • Active Loans: 0 • Current Unpaid Principal: $0.00 MXN</p>
+                            </div>
+                            <button type="button" onclick="clearLoanOriginationCustomer()" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs shrink-0 self-start sm:self-center">
+                                Change Customer
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: CONTRACTUAL TERMS & SCHEDULE CONFIGURATION -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                        <div class="lg:col-span-6 p-4 rounded-2xl bg-white border border-slate-200 space-y-3.5">
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                                <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">2. Contractual Loan Parameters</span>
+                                <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">MXN • Weekly Flat</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div class="sm:col-span-2">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Credit Product *</label>
+                                    <select id="lo-product" onchange="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                        <option value="Personal Loan">Personal Loan</option>
+                                        <option value="Business Loan">Business Loan</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Principal Amount (MXN) *</label>
+                                    <input type="number" id="lo-principal" required min="1" max="10000000" step="0.01" value="50000" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-extrabold font-mono">
+                                    <span class="text-[10px] text-slate-400 mt-0.5 block">Max: $10,000,000.00 MXN</span>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Monthly Flat Rate (%) *</label>
+                                    <input type="number" id="lo-rate" required min="0" max="100" step="0.01" value="10" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-extrabold font-mono">
+                                    <span class="text-[10px] text-slate-400 mt-0.5 block">0% to 100% per month</span>
+                                </div>
+
+                                <div class="sm:col-span-2 space-y-1.5">
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Quick Term Presets (Weeks / Interest Months)</label>
+                                        <span class="text-[10px] text-blue-600 font-semibold">16 Weeks Preferred</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                                        <button type="button" onclick="applyLoanOriginationTermPreset(4, 1)" class="py-1.5 px-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-700">4w / 1m</button>
+                                        <button type="button" onclick="applyLoanOriginationTermPreset(8, 2)" class="py-1.5 px-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-700">8w / 2m</button>
+                                        <button type="button" onclick="applyLoanOriginationTermPreset(12, 3)" class="py-1.5 px-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-700">12w / 3m</button>
+                                        <button type="button" onclick="applyLoanOriginationTermPreset(16, 4)" class="py-1.5 px-2 rounded-lg border border-blue-300 bg-blue-50 hover:bg-blue-100 text-[10px] font-extrabold text-blue-700">16w / 4m</button>
+                                        <button type="button" onclick="applyLoanOriginationTermPreset(24, 6)" class="py-1.5 px-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-700">24w / 6m</button>
+                                        <button type="button" onclick="applyLoanOriginationTermPreset(52, 12)" class="py-1.5 px-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-700">52w / 12m</button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Term (Weekly Installments) *</label>
+                                    <input type="number" id="lo-term-weeks" required min="1" max="104" step="1" value="16" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold font-mono">
+                                    <span class="text-[10px] text-slate-400 mt-0.5 block">Allowed: 1 to 104 weeks</span>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Assumed Interest Months *</label>
+                                    <input type="number" id="lo-interest-months" required min="1" max="36" step="1" value="4" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold font-mono border-amber-300 bg-amber-50/40">
+                                    <span class="text-[10px] text-slate-400 mt-0.5 block">Allowed: 1 to 36 months</span>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Contract Start Date *</label>
+                                    <input type="date" id="lo-start-date" required onchange="handleLoanOriginationStartDateChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono">
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">First Payment Due Date *</label>
+                                    <input type="date" id="lo-first-payment-date" required onchange="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono">
+                                </div>
+
+                                <div class="sm:col-span-2">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Origination File Notes (Optional)</label>
+                                    <textarea id="lo-notes" rows="2" maxlength="1000" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Credit purpose, collateral notes, or special underwriting remarks..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- STEP 3: CONTRACTUAL SUMMARY & NON-BINDING SCHEDULE PREVIEW -->
+                        <div class="lg:col-span-6 p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3.5">
+                            <div class="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
+                                <div>
+                                    <span class="text-[10px] font-bold text-slate-800 uppercase tracking-wider">3. Contractual Summary & Schedule Preview</span>
+                                    <p class="text-[10px] text-slate-500">Preview only • Authoritative schedule generated by backend on submit</p>
+                                </div>
+                                <span id="lo-prev-weekly-badge" class="text-[11px] font-extrabold font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-xl">$4,375.00 MXN / wk</span>
+                            </div>
+
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                                <div class="p-2.5 rounded-xl bg-white border border-slate-200/80">
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase">Original Principal</p>
+                                    <p id="lo-prev-principal" class="font-extrabold font-mono text-slate-900 mt-0.5">$50,000.00 MXN</p>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-white border border-slate-200/80">
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase">Monthly Interest</p>
+                                    <p id="lo-prev-monthly-interest" class="font-bold font-mono text-slate-800 mt-0.5">$5,000.00 MXN</p>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-white border border-slate-200/80">
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase">Total Interest</p>
+                                    <p id="lo-prev-total-interest" class="font-extrabold font-mono text-amber-700 mt-0.5">$20,000.00 MXN</p>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-blue-50/60 border border-blue-200">
+                                    <p class="text-[9px] font-bold text-blue-700 uppercase">Total Repayment</p>
+                                    <p id="lo-prev-total-repayment" class="font-extrabold font-mono text-blue-950 mt-0.5">$70,000.00 MXN</p>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-white border border-slate-200/80">
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase">Final Installment</p>
+                                    <p id="lo-prev-final-payment" class="font-bold font-mono text-slate-800 mt-0.5">$4,375.00 MXN</p>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-white border border-slate-200/80">
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase">Maturity Date</p>
+                                    <p id="lo-prev-maturity" class="font-bold font-mono text-emerald-700 mt-0.5">—</p>
+                                </div>
+                            </div>
+
+                            <!-- Scrollable Installment Preview Table -->
+                            <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                                <div class="px-3 py-2 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between text-[10px] font-bold text-slate-600">
+                                    <span id="lo-prev-table-title">Projected Installments (16 Weeks)</span>
+                                    <span class="font-mono text-[9px] text-slate-500">FLOOR_REGULAR_EXACT_FINAL</span>
+                                </div>
+                                <div class="max-h-[210px] overflow-y-auto">
+                                    <table class="w-full text-left border-collapse text-[11px]">
+                                        <thead>
+                                            <tr class="bg-slate-50 border-b border-slate-200 text-[9px] font-bold uppercase text-slate-400 sticky top-0">
+                                                <th class="py-1.5 px-2.5">#</th>
+                                                <th class="py-1.5 px-2.5">Due Date</th>
+                                                <th class="py-1.5 px-2.5 text-right">Principal</th>
+                                                <th class="py-1.5 px-2.5 text-right">Interest</th>
+                                                <th class="py-1.5 px-2.5 text-right">Total Due</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="lo-preview-schedule-tbody" class="divide-y divide-slate-100 font-mono"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 4: EXPLICIT OPERATOR CONFIRMATION & SUBMIT -->
+                    <div class="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                            <input type="checkbox" id="lo-confirm-check" required class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-[11px] text-amber-950 leading-snug">
+                                <strong>Confirm Loan Origination:</strong> I have verified the selected active customer, principal amount, flat interest rate, term, and payment dates. This action will create an official <code>DRAFT</code> loan contract in PostgreSQL.
+                            </span>
+                        </label>
+                        <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                            <button type="button" onclick="closeLoanOriginationModal()" class="py-2.5 px-4 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold text-xs">
+                                Cancel
+                            </button>
+                            <button type="submit" id="lo-submit-btn" class="btn-primary py-2.5 px-5 rounded-xl text-xs shadow-sm">
+                                Create Draft Loan →
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- PROFILE DETAIL MODAL -->
 
         <!-- LEAD STAGE TRANSITION MODAL -->
         <div id="lead-stage-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
@@ -2313,6 +2531,8 @@
                     document.getElementById('btn-new-lead')?.classList.toggle('hidden', !canWriteOrigination);
                     document.getElementById('top-btn-new-lead')?.classList.toggle('hidden', !canWriteOrigination);
                     document.getElementById('top-btn-new-customer')?.classList.toggle('hidden', !canWriteOrigination);
+                    document.getElementById('btn-new-loan')?.classList.toggle('hidden', !canWriteOrigination);
+                    document.getElementById('btn-customer-new-loan')?.classList.toggle('hidden', !canWriteOrigination);
 
                     document.getElementById('auth-view').classList.add('hidden');
                     document.getElementById('app-view').classList.remove('hidden');
@@ -4195,6 +4415,500 @@ async function loadDashboardSummary() {
         async function openLoanDetail(loanId) {
             if (!Number.isSafeInteger(loanId) || loanId <= 0) return;
             await openLoanDetailFull(loanId);
+        }
+
+        /* =========================================================================
+           4C. STAGE 4 (BLOCK E): LOAN ORIGINATION CONTROLLER
+           ========================================================================= */
+        let selectedOriginationCustomer = null;
+        let loanCustomerSearchTimer = null;
+        let loanCustomerSearchSeq = 0;
+        let currentOriginationIdempotencyKey = null;
+        let isSubmittingLoanOrigination = false;
+
+        function getLocalTodayISO() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function generateFreshLoanIdempotencyKey() {
+            const bytes = new Uint8Array(12);
+            if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+                window.crypto.getRandomValues(bytes);
+            } else {
+                for (let i = 0; i < bytes.length; i++) {
+                    bytes[i] = Math.floor(Math.random() * 256);
+                }
+            }
+            const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+            return `LO-${Date.now().toString(36).toUpperCase()}-${hex}`.slice(0, 64);
+        }
+
+        function invalidateLoanOriginationIdempotencyKey() {
+            currentOriginationIdempotencyKey = null;
+        }
+
+        async function openLoanOriginationModal(preselectedCustomerId = null) {
+            const errBox = document.getElementById('loan-origination-error');
+            if (errBox) errBox.classList.add('hidden');
+
+            const form = document.getElementById('loan-origination-form');
+            if (form) form.reset();
+
+            currentOriginationIdempotencyKey = null;
+            isSubmittingLoanOrigination = false;
+
+            const submitBtn = document.getElementById('lo-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Create Draft Loan →';
+            }
+
+            const todayISO = getLocalTodayISO();
+            const firstPayISO = NuraFinancialEngine.addDaysISO(todayISO, 7);
+
+            const startEl = document.getElementById('lo-start-date');
+            const firstEl = document.getElementById('lo-first-payment-date');
+            if (startEl) {
+                startEl.min = todayISO;
+                startEl.value = todayISO;
+            }
+            if (firstEl) {
+                firstEl.min = todayISO;
+                firstEl.value = firstPayISO;
+            }
+
+            document.getElementById('lo-product').value = 'Personal Loan';
+            document.getElementById('lo-principal').value = '50000';
+            document.getElementById('lo-rate').value = '10';
+            document.getElementById('lo-term-weeks').value = '16';
+            document.getElementById('lo-interest-months').value = '4';
+            document.getElementById('lo-notes').value = '';
+            document.getElementById('lo-confirm-check').checked = false;
+
+            clearLoanOriginationCustomer(false);
+            updateLoanOriginationPreview();
+
+            document.getElementById('loan-origination-modal')?.classList.remove('hidden');
+
+            if (Number.isSafeInteger(preselectedCustomerId) && preselectedCustomerId > 0) {
+                if (currentSelectedCustomer && currentSelectedCustomer.id === preselectedCustomerId) {
+                    selectLoanOriginationCustomer(currentSelectedCustomer);
+                    if (currentSelectedCustomer.status !== 'ACTIVE') {
+                        await searchLoanOriginationCustomers('');
+                    }
+                } else {
+                    try {
+                        const res = await fetch(`/api/customers/${preselectedCustomerId}`);
+                        if (res.status === 401) {
+                            closeLoanOriginationModal();
+                            mostrarAuthView();
+                            return;
+                        }
+                        if (res.ok) {
+                            const cust = await res.json();
+                            selectLoanOriginationCustomer(cust);
+                            if (cust.status !== 'ACTIVE') {
+                                await searchLoanOriginationCustomers('');
+                            }
+                        } else {
+                            await searchLoanOriginationCustomers('');
+                        }
+                    } catch (_) {
+                        await searchLoanOriginationCustomers('');
+                    }
+                }
+            } else {
+                await searchLoanOriginationCustomers('');
+            }
+        }
+
+        function closeLoanOriginationModal() {
+            document.getElementById('loan-origination-modal')?.classList.add('hidden');
+        }
+
+        function debounceLoanCustomerSearch() {
+            clearTimeout(loanCustomerSearchTimer);
+            loanCustomerSearchTimer = setTimeout(() => searchLoanOriginationCustomers(), 260);
+        }
+
+        async function searchLoanOriginationCustomers(overrideSearch = null) {
+            const thisSeq = ++loanCustomerSearchSeq;
+            const searchInput = document.getElementById('lo-customer-search');
+            const query = (overrideSearch !== null ? overrideSearch : (searchInput?.value || '')).trim();
+            const resultsBox = document.getElementById('lo-customer-results');
+            if (!resultsBox) return;
+
+            resultsBox.innerHTML = '<p class="py-4 px-3 text-center text-slate-400 text-xs">Searching active customers in PostgreSQL...</p>';
+
+            const params = new URLSearchParams({
+                page: '1',
+                page_size: '25',
+                status: 'ACTIVE',
+                sort: 'CREATED_DESC'
+            });
+            if (query) params.set('search', query);
+
+            try {
+                const res = await fetch(`/api/customers?${params.toString()}`);
+                if (thisSeq !== loanCustomerSearchSeq) return;
+                if (res.status === 401) {
+                    closeLoanOriginationModal();
+                    mostrarAuthView();
+                    return;
+                }
+                if (res.status === 403) {
+                    throw new Error('Insufficient permissions to query active customers.');
+                }
+                if (!res.ok) throw new Error(`Could not load active customers (HTTP ${res.status}).`);
+
+                const data = await res.json();
+                if (thisSeq !== loanCustomerSearchSeq) return;
+
+                const items = (Array.isArray(data.items) ? data.items : []).filter(c => c && c.status === 'ACTIVE');
+                resultsBox.innerHTML = '';
+
+                if (items.length === 0) {
+                    resultsBox.innerHTML = '<p class="py-4 px-3 text-center text-slate-500 text-xs">No ACTIVE customers found matching your search.</p>';
+                    return;
+                }
+
+                items.forEach(c => {
+                    const row = document.createElement('div');
+                    row.className = 'p-2.5 px-3 hover:bg-blue-50/70 transition cursor-pointer flex items-center justify-between gap-2';
+
+                    row.innerHTML = `
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="font-mono font-bold text-blue-700 text-[11px]">${escapeHtml(c.customer_number)}</span>
+                                <span class="font-bold text-slate-900 text-xs truncate">${escapeHtml(c.full_legal_name)}</span>
+                                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">ACTIVE</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 mt-0.5">${escapeHtml(c.entity_type)} • Phone: ${escapeHtml(c.phone_primary)} • Active Loans: ${Number.isSafeInteger(c.active_loans_count) ? c.active_loans_count : 0}</p>
+                        </div>
+                        <button type="button" class="py-1.5 px-3 rounded-lg text-[11px] font-bold shrink-0 bg-blue-600 text-white hover:bg-blue-700">
+                            Select
+                        </button>
+                    `;
+
+                    row.onclick = () => selectLoanOriginationCustomer(c);
+                    resultsBox.appendChild(row);
+                });
+            } catch (err) {
+                if (thisSeq !== loanCustomerSearchSeq) return;
+                resultsBox.innerHTML = `<p class="py-4 px-3 text-center text-red-600 text-xs">${escapeHtml(err.message)}</p>`;
+            }
+        }
+
+        function selectLoanOriginationCustomer(customerObj) {
+            const errBox = document.getElementById('loan-origination-error');
+            if (!customerObj || typeof customerObj !== 'object') return;
+
+            invalidateLoanOriginationIdempotencyKey();
+
+            if (customerObj.status !== 'ACTIVE') {
+                if (errBox) {
+                    errBox.innerText = `Cannot originate a loan for customer ${customerObj.customer_number || ''} (${customerObj.full_legal_name || ''}) because their status is ${customerObj.status}. Only ACTIVE customers are eligible.`;
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (errBox) errBox.classList.add('hidden');
+            selectedOriginationCustomer = customerObj;
+
+            document.getElementById('lo-sel-cust-number').innerText = customerObj.customer_number || `CUST-#${customerObj.id}`;
+            document.getElementById('lo-sel-cust-entity').innerText = customerObj.entity_type || 'INDIVIDUAL';
+            document.getElementById('lo-sel-cust-status').innerText = customerObj.status || 'ACTIVE';
+            document.getElementById('lo-sel-cust-kyc').innerText = `KYC: ${customerObj.verification_status || 'PENDING_VERIFICATION'}`;
+            document.getElementById('lo-sel-cust-name').innerText = customerObj.full_legal_name || 'Selected Borrower';
+
+            const activeCount = Number.isSafeInteger(customerObj.active_loans_count) ? customerObj.active_loans_count : 0;
+            const unpaidBal = Number.isFinite(customerObj.current_outstanding_balance_cents)
+                ? NuraFinancialEngine.formatMXNFromCents(customerObj.current_outstanding_balance_cents)
+                : '$0.00 MXN';
+            document.getElementById('lo-sel-cust-meta').innerText =
+                `Phone: ${customerObj.phone_primary || 'N/A'} • Active Loans: ${activeCount} • Current Unpaid Principal: ${unpaidBal}`;
+
+            document.getElementById('lo-customer-picker-box')?.classList.add('hidden');
+            document.getElementById('lo-selected-customer-card')?.classList.remove('hidden');
+
+            const prodSelect = document.getElementById('lo-product');
+            if (prodSelect && customerObj.entity_type === 'BUSINESS') {
+                prodSelect.value = 'Business Loan';
+            }
+            onLoanOriginationParamChange();
+        }
+
+        function clearLoanOriginationCustomer(triggerSearch = true) {
+            selectedOriginationCustomer = null;
+            invalidateLoanOriginationIdempotencyKey();
+            document.getElementById('lo-selected-customer-card')?.classList.add('hidden');
+            document.getElementById('lo-customer-picker-box')?.classList.remove('hidden');
+            if (triggerSearch) {
+                searchLoanOriginationCustomers();
+            }
+        }
+
+        function applyLoanOriginationTermPreset(weeks, months) {
+            const weeksEl = document.getElementById('lo-term-weeks');
+            const monthsEl = document.getElementById('lo-interest-months');
+            if (weeksEl) weeksEl.value = String(weeks);
+            if (monthsEl) monthsEl.value = String(months);
+            onLoanOriginationParamChange();
+        }
+
+        function handleLoanOriginationStartDateChange() {
+            const startEl = document.getElementById('lo-start-date');
+            const firstEl = document.getElementById('lo-first-payment-date');
+            if (startEl && startEl.value && firstEl) {
+                firstEl.min = startEl.value;
+                if (!firstEl.value || firstEl.value < startEl.value) {
+                    firstEl.value = NuraFinancialEngine.addDaysISO(startEl.value, 7);
+                }
+            }
+            onLoanOriginationParamChange();
+        }
+
+        function onLoanOriginationParamChange() {
+            invalidateLoanOriginationIdempotencyKey();
+            updateLoanOriginationPreview();
+        }
+
+        function updateLoanOriginationPreview() {
+            const principalRaw = Number(document.getElementById('lo-principal')?.value);
+            const rateRaw = Number(document.getElementById('lo-rate')?.value);
+            const weeksRaw = Number(document.getElementById('lo-term-weeks')?.value);
+            const monthsRaw = Number(document.getElementById('lo-interest-months')?.value);
+            const startDateRaw = document.getElementById('lo-start-date')?.value || '';
+            const firstDateRaw = document.getElementById('lo-first-payment-date')?.value || '';
+            const tbody = document.getElementById('lo-preview-schedule-tbody');
+
+            const isPrincipalValid = Number.isFinite(principalRaw) && principalRaw > 0 && principalRaw <= 10000000;
+            const isRateValid = Number.isFinite(rateRaw) && rateRaw >= 0 && rateRaw <= 100;
+            const isWeeksValid = Number.isSafeInteger(weeksRaw) && weeksRaw >= 1 && weeksRaw <= 104;
+            const isMonthsValid = Number.isSafeInteger(monthsRaw) && monthsRaw >= 1 && monthsRaw <= 36;
+            const isDatesValid = /^\d{4}-\d{2}-\d{2}$/.test(firstDateRaw) && (!startDateRaw || firstDateRaw >= startDateRaw);
+
+            if (!isPrincipalValid || !isRateValid || !isWeeksValid || !isMonthsValid || !isDatesValid) {
+                document.getElementById('lo-prev-weekly-badge').innerText = 'Invalid Parameters';
+                document.getElementById('lo-prev-principal').innerText = '—';
+                document.getElementById('lo-prev-monthly-interest').innerText = '—';
+                document.getElementById('lo-prev-total-interest').innerText = '—';
+                document.getElementById('lo-prev-total-repayment').innerText = '—';
+                document.getElementById('lo-prev-final-payment').innerText = '—';
+                document.getElementById('lo-prev-maturity').innerText = '—';
+                document.getElementById('lo-prev-table-title').innerText = 'Schedule Preview Unavailable (Check Input Ranges)';
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="py-6 px-3 text-center text-amber-700 font-sans text-xs">
+                                Enter valid parameters (Principal: $0.01–$10,000,000 MXN, Rate: 0%–100%, Term: 1–104 weeks, Months: 1–36, First Payment &ge; Start Date) to preview schedule.
+                            </td>
+                        </tr>`;
+                }
+                return;
+            }
+
+            const preview = NuraFinancialEngine.calculateFlatSchedule({
+                principalPesos: principalRaw,
+                monthlyRatePercent: rateRaw,
+                assumedInterestMonths: monthsRaw,
+                termWeeks: weeksRaw,
+                firstPaymentDateISO: firstDateRaw
+            });
+
+            document.getElementById('lo-prev-weekly-badge').innerText =
+                `${NuraFinancialEngine.formatMXNFromCents(preview.regularPaymentCents)} / wk`;
+            document.getElementById('lo-prev-principal').innerText =
+                NuraFinancialEngine.formatMXNFromCents(preview.principalCents);
+            document.getElementById('lo-prev-monthly-interest').innerText =
+                NuraFinancialEngine.formatMXNFromCents(preview.monthlyInterestCents);
+            document.getElementById('lo-prev-total-interest').innerText =
+                NuraFinancialEngine.formatMXNFromCents(preview.totalInterestCents);
+            document.getElementById('lo-prev-total-repayment').innerText =
+                NuraFinancialEngine.formatMXNFromCents(preview.totalRepaymentCents);
+            document.getElementById('lo-prev-final-payment').innerText =
+                NuraFinancialEngine.formatMXNFromCents(preview.finalPaymentCents);
+            document.getElementById('lo-prev-maturity').innerText =
+                preview.estimatedPayoffDate || '—';
+            document.getElementById('lo-prev-table-title').innerText =
+                `Projected Installments (${preview.installmentsCount} Weeks / ${preview.monthsCount} Interest Months)`;
+
+            if (!tbody) return;
+
+            let rowsHtml = '';
+            preview.schedule.forEach(row => {
+                rowsHtml += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-1.5 px-2.5 font-bold text-slate-700">#${row.installmentNumber}</td>
+                        <td class="py-1.5 px-2.5 text-slate-700">${escapeHtml(row.dueDate)}</td>
+                        <td class="py-1.5 px-2.5 text-right text-slate-700">${NuraFinancialEngine.formatMXNFromCents(row.principalComponentCents)}</td>
+                        <td class="py-1.5 px-2.5 text-right text-amber-700">${NuraFinancialEngine.formatMXNFromCents(row.interestComponentCents)}</td>
+                        <td class="py-1.5 px-2.5 text-right font-bold text-slate-900">${NuraFinancialEngine.formatMXNFromCents(row.scheduledPaymentCents)}</td>
+                    </tr>`;
+            });
+            tbody.innerHTML = rowsHtml;
+        }
+
+        async function handleLoanOriginationSubmit(e) {
+            e.preventDefault();
+            if (isSubmittingLoanOrigination) return;
+
+            const errBox = document.getElementById('loan-origination-error');
+            const submitBtn = document.getElementById('lo-submit-btn');
+            if (errBox) errBox.classList.add('hidden');
+
+            const showValidationError = (msg) => {
+                if (errBox) {
+                    errBox.innerText = msg;
+                    errBox.classList.remove('hidden');
+                }
+            };
+
+            if (!selectedOriginationCustomer || !Number.isSafeInteger(selectedOriginationCustomer.id)) {
+                showValidationError('Please select an ACTIVE customer before originating a loan.');
+                return;
+            }
+            if (selectedOriginationCustomer.status !== 'ACTIVE') {
+                showValidationError(`Customer ${selectedOriginationCustomer.customer_number} is not ACTIVE and cannot originate a loan.`);
+                return;
+            }
+
+            const productName = document.getElementById('lo-product')?.value || '';
+            if (!['Personal Loan', 'Business Loan'].includes(productName)) {
+                showValidationError('Please select a valid credit product.');
+                return;
+            }
+
+            const principalPesos = Number(document.getElementById('lo-principal')?.value);
+            if (!Number.isFinite(principalPesos) || principalPesos <= 0 || principalPesos > 10000000) {
+                showValidationError('Principal amount must be greater than $0.00 MXN and cannot exceed $10,000,000.00 MXN.');
+                return;
+            }
+            const principalCents = Math.round(principalPesos * 100);
+            if (!Number.isSafeInteger(principalCents) || principalCents <= 0 || principalCents > 1000000000) {
+                showValidationError('Invalid principal amount in cents.');
+                return;
+            }
+
+            const monthlyRatePercent = Number(document.getElementById('lo-rate')?.value);
+            if (!Number.isFinite(monthlyRatePercent) || monthlyRatePercent < 0 || monthlyRatePercent > 100) {
+                showValidationError('Monthly flat interest rate must be between 0% and 100%.');
+                return;
+            }
+
+            const termWeeks = Number(document.getElementById('lo-term-weeks')?.value);
+            if (!Number.isSafeInteger(termWeeks) || termWeeks < 1 || termWeeks > 104) {
+                showValidationError('Loan term must be an integer between 1 and 104 weekly installments.');
+                return;
+            }
+
+            const assumedMonths = Number(document.getElementById('lo-interest-months')?.value);
+            if (!Number.isSafeInteger(assumedMonths) || assumedMonths < 1 || assumedMonths > 36) {
+                showValidationError('Assumed interest months must be an integer between 1 and 36.');
+                return;
+            }
+
+            const startDate = document.getElementById('lo-start-date')?.value || '';
+            const firstPaymentDate = document.getElementById('lo-first-payment-date')?.value || '';
+            const todayISO = getLocalTodayISO();
+
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(firstPaymentDate)) {
+                showValidationError('Please provide valid Contract Start Date and First Payment Due Date (YYYY-MM-DD).');
+                return;
+            }
+            if (startDate < todayISO) {
+                showValidationError(`Contract Start Date (${startDate}) cannot be earlier than today (${todayISO}).`);
+                return;
+            }
+            if (firstPaymentDate < startDate) {
+                showValidationError('First Payment Due Date cannot be earlier than the Contract Start Date.');
+                return;
+            }
+
+            const confirmChecked = document.getElementById('lo-confirm-check')?.checked;
+            if (!confirmChecked) {
+                showValidationError('Please check the confirmation box to verify the contractual terms.');
+                return;
+            }
+
+            const notesVal = document.getElementById('lo-notes')?.value.trim() || null;
+
+            if (!currentOriginationIdempotencyKey) {
+                currentOriginationIdempotencyKey = generateFreshLoanIdempotencyKey();
+            }
+
+            const payload = {
+                idempotency_key: currentOriginationIdempotencyKey,
+                customer_id: selectedOriginationCustomer.id,
+                source_lead_id: null,
+                product_name: productName,
+                principal_cents: principalCents,
+                monthly_interest_rate_percent: monthlyRatePercent,
+                assumed_interest_months: assumedMonths,
+                term_installments_count: termWeeks,
+                start_date: startDate,
+                first_payment_date: firstPaymentDate,
+                notes: notesVal
+            };
+
+            isSubmittingLoanOrigination = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Originating Draft...';
+            }
+
+            try {
+                const res = await fetch('/api/loans', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCookie('csrf_token')
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.status === 401) {
+                    closeLoanOriginationModal();
+                    mostrarAuthView();
+                    return;
+                }
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const detailMsg = typeof data.detail === 'string'
+                        ? data.detail
+                        : (Array.isArray(data.detail) ? data.detail.map(d => d.msg).join('; ') : null);
+                    throw new Error(detailMsg || `Loan origination failed (HTTP ${res.status}).`);
+                }
+
+                const createdLoan = data.loan || data;
+                currentOriginationIdempotencyKey = null;
+                closeLoanOriginationModal();
+
+                await Promise.all([
+                    loadLoans(1),
+                    loadDashboardSummary(),
+                    loadCustomers(currentCustomersPage)
+                ]);
+
+                switchTab('loans');
+                if (createdLoan && Number.isSafeInteger(createdLoan.id)) {
+                    await openLoanDetailFull(createdLoan.id);
+                }
+            } catch (err) {
+                showValidationError(err.message);
+            } finally {
+                isSubmittingLoanOrigination = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Create Draft Loan →';
+                }
+            }
         }
 
         function switchLeadsSubView(subView) {
