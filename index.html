@@ -1061,14 +1061,29 @@
                                         <span id="ld-product-badge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Personal Loan</span>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <button type="button" id="ld-btn-customer" class="btn-primary py-2 px-3.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <div id="ld-lifecycle-actions" class="hidden flex flex-wrap items-center gap-2">
+                                        <button type="button" id="ld-btn-approve" onclick="openLoanApproveModal()" class="hidden py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-sm">
+                                            ✓ Approve Loan
+                                        </button>
+                                        <button type="button" id="ld-btn-activate" onclick="openLoanActivateModal()" class="hidden py-2 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition shadow-sm">
+                                            🏦 Record Disbursement &amp; Activate
+                                        </button>
+                                        <button type="button" id="ld-btn-cancel" onclick="openLoanCancelModal()" class="hidden py-2 px-3.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-semibold text-xs transition">
+                                            ✕ Cancel Loan
+                                        </button>
+                                    </div>
+                                    <button type="button" id="ld-btn-customer" class="py-2 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-sm transition">
                                         <span>Open Customer Profile →</span>
                                     </button>
                                 </div>
                             </div>
 
                             <div id="loan-detail-error" class="hidden p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+                            <div id="loan-detail-success" class="hidden p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between gap-3">
+                                <span id="loan-detail-success-text">Loan lifecycle updated successfully.</span>
+                                <button type="button" onclick="hideLoanDetailSuccessBanner()" class="text-[10px] font-bold uppercase tracking-wider text-emerald-900 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition shrink-0">Dismiss</button>
+                            </div>
 
                             <!-- SECTION 1: IMMUTABLE APPROVED CONTRACTUAL TERMS -->
                             <div class="fintech-card p-5 bg-white space-y-4">
@@ -2227,6 +2242,244 @@
                 </form>
             </div>
         </div>
+
+        <!-- ================================================================= -->
+        <!-- STAGE 4 (BLOCK F): APPROVAL, DISBURSEMENT & CANCELLATION MODALS   -->
+        <!-- ================================================================= -->
+
+        <!-- 1. LOAN APPROVAL MODAL (DRAFT -> APPROVED) -->
+        <div id="loan-approve-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[560px] max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-extrabold text-slate-900 text-base">Approve Credit Underwriting</h3>
+                            <span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">DRAFT → APPROVED</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Authorize contractual terms before bank disbursement and schedule activation</p>
+                    </div>
+                    <button type="button" onclick="closeLoanApproveModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">✕</button>
+                </div>
+
+                <div id="loan-approve-error" class="hidden p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <form id="loan-approve-form" onsubmit="handleLoanApproveSubmit(event)" class="space-y-4 text-xs">
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-200/70 pb-2">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase">Loan &amp; Borrower Identification</p>
+                                <p id="la-loan-header" class="font-extrabold text-slate-900 text-sm mt-0.5">LN-00000 • Personal Loan</p>
+                            </div>
+                            <span id="la-customer-badge" class="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-xl border border-blue-200">Customer #—</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase">Original Principal</p>
+                                <p id="la-principal" class="font-extrabold font-mono text-slate-900 mt-0.5">—</p>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase">Monthly Flat Rate</p>
+                                <p id="la-rate" class="font-extrabold font-mono text-slate-900 mt-0.5">—</p>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase">Term &amp; Periods</p>
+                                <p id="la-term" class="font-bold text-slate-900 mt-0.5">—</p>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase">Total Interest</p>
+                                <p id="la-total-interest" class="font-bold font-mono text-amber-700 mt-0.5">—</p>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-blue-50/50 border border-blue-200">
+                                <p class="text-[9px] font-bold text-blue-700 uppercase">Total Repayment</p>
+                                <p id="la-total-repayment" class="font-extrabold font-mono text-blue-950 mt-0.5">—</p>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase">Weekly Installment</p>
+                                <p id="la-weekly-payment" class="font-bold font-mono text-slate-900 mt-0.5">—</p>
+                            </div>
+                            <div class="col-span-2 sm:col-span-3 p-2.5 rounded-xl bg-white border border-slate-200/70 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                                <span>Start Date: <strong id="la-start-date" class="font-mono text-slate-800">—</strong></span>
+                                <span>First Payment: <strong id="la-first-payment" class="font-mono text-slate-800">—</strong></span>
+                                <span>Maturity: <strong id="la-maturity-date" class="font-mono text-emerald-700">—</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Underwriting Approval Notes (Optional)</label>
+                        <textarea id="la-approval-notes" rows="2" maxlength="1000" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Record credit committee observations, income verification, or approval conditions..."></textarea>
+                    </div>
+
+                    <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200">
+                        <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                            <input type="checkbox" id="la-confirm-check" required class="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                            <span class="text-[11px] text-emerald-950 leading-snug">
+                                <strong>Confirm Credit Approval:</strong> I have reviewed the borrower profile and contractual schedule, and I authorize transitioning this loan from <code>DRAFT</code> to <code>APPROVED</code>.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeLoanApproveModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs">Cancel</button>
+                        <button type="submit" id="la-submit-btn" class="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition">
+                            Confirm Approval →
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 2. LOAN DISBURSEMENT & ACTIVATION MODAL (APPROVED -> ACTIVE) -->
+        <div id="loan-activate-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[600px] max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-extrabold text-slate-900 text-base">Record Disbursement &amp; Activate Loan</h3>
+                            <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">APPROVED → ACTIVE</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Register verified payout details to activate accounting balances and installment collection</p>
+                    </div>
+                    <button type="button" onclick="closeLoanActivateModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">✕</button>
+                </div>
+
+                <div id="loan-activate-error" class="hidden p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <form id="loan-activate-form" onsubmit="handleLoanActivateSubmit(event)" class="space-y-4 text-xs">
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-200/70 pb-2">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase">Approved Loan Contract</p>
+                                <p id="ldisb-loan-header" class="font-extrabold text-slate-900 text-sm mt-0.5">LN-00000 • Personal Loan</p>
+                            </div>
+                            <span id="ldisb-customer-badge" class="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-xl border border-blue-200">Customer #—</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase">Amount to Disburse</p>
+                                <p id="ldisb-principal" class="font-extrabold font-mono text-emerald-700 mt-0.5">—</p>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase">Monthly Rate</p>
+                                <p id="ldisb-rate" class="font-bold font-mono text-slate-900 mt-0.5">—</p>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase">Term</p>
+                                <p id="ldisb-term" class="font-bold text-slate-900 mt-0.5">—</p>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase">Total Contract Due</p>
+                                <p id="ldisb-total-repayment" class="font-extrabold font-mono text-slate-900 mt-0.5">—</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Disbursement Method *</label>
+                            <select id="ldisb-method" required class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="SPEI_TRANSFER">SPEI_TRANSFER (Electronic Transfer)</option>
+                                <option value="BANK_DEPOSIT">BANK_DEPOSIT (Branch / Cash Deposit)</option>
+                                <option value="CHECK">CHECK (Issued Check)</option>
+                                <option value="CASH_RECEIPT">CASH_RECEIPT (Signed Cash Delivery)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Disbursement Date &amp; Time (Optional)</label>
+                            <input type="datetime-local" id="ldisb-date" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono">
+                            <span class="text-[10px] text-slate-400 mt-0.5 block">Defaults to current server time if blank</span>
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Bank Reference / Tracking Key (Clave de Rastreo / Folio) *</label>
+                            <input type="text" id="ldisb-reference" required minlength="3" maxlength="120" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono font-bold" placeholder="e.g., SPEI-20261103-994812 or Receipt #0042 (min. 3 chars)">
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Disbursement Operational Notes (Optional)</label>
+                            <textarea id="ldisb-notes" rows="2" maxlength="1000" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Originating bank account, beneficiary CLABE last digits, or delivery observations..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-2">
+                        <p class="text-[10px] text-amber-900 leading-relaxed">
+                            <strong>Operational Notice:</strong> NURA CRM does not execute automated bank transfers. Recording this action logs the operator's confirmation that funds were disbursed externally and immediately activates the loan's principal and interest balances in PostgreSQL.
+                        </p>
+                        <label class="flex items-start gap-2.5 cursor-pointer select-none pt-1 border-t border-amber-200/70">
+                            <input type="checkbox" id="ldisb-confirm-check" required class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-[11px] text-amber-950 leading-snug">
+                                <strong>Confirm External Disbursement:</strong> I confirm that the principal funds have been actually disbursed to the borrower and the reference above is accurate.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeLoanActivateModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs">Cancel</button>
+                        <button type="submit" id="ldisb-submit-btn" class="btn-primary py-2.5 px-5 rounded-xl text-xs shadow-sm">
+                            Activate &amp; Record Disbursement →
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 3. LOAN CANCELLATION MODAL (DRAFT / APPROVED -> CANCELLED) -->
+        <div id="loan-cancel-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[500px] max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-extrabold text-slate-900 text-base">Cancel Pre-Disbursement Loan</h3>
+                            <span class="bg-red-50 text-red-700 border border-red-200 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">→ CANCELLED</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Permanently void a DRAFT or APPROVED loan prior to disbursement</p>
+                    </div>
+                    <button type="button" onclick="closeLoanCancelModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">✕</button>
+                </div>
+
+                <div id="loan-cancel-error" class="hidden p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <form id="loan-cancel-form" onsubmit="handleLoanCancelSubmit(event)" class="space-y-4 text-xs">
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span id="lcanc-loan-header" class="font-extrabold text-slate-900 text-sm">LN-00000</span>
+                            <span id="lcanc-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">DRAFT</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px] text-slate-600">
+                            <span id="lcanc-customer-label">Customer #—</span>
+                            <span>Principal: <strong id="lcanc-principal" class="font-mono text-slate-900">—</strong></span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-red-700 uppercase mb-1">Mandatory Cancellation Reason *</label>
+                        <textarea id="lcanc-reason" required minlength="3" maxlength="255" rows="3" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="State the reason for cancelling this loan (min. 3 characters, e.g., Borrower withdrew request, Failed KYC verification, Terms renegotiated)..."></textarea>
+                    </div>
+
+                    <div class="p-3.5 rounded-2xl bg-red-50/70 border border-red-200">
+                        <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                            <input type="checkbox" id="lcanc-confirm-check" required class="mt-0.5 h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500">
+                            <span class="text-[11px] text-red-950 leading-snug">
+                                <strong>Confirm Irreversible Cancellation:</strong> I understand this loan will be permanently marked as <code>CANCELLED</code> in PostgreSQL and cannot be approved or disbursed afterward.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeLoanCancelModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs">Back</button>
+                        <button type="submit" id="lcanc-submit-btn" class="py-2.5 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs shadow-sm transition">
+                            Confirm Cancellation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- PROFILE DETAIL MODAL -->
+        <div id="profile-detail-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-end sm:items-center justify-center opacity-0 transition-opacity duration-200 p-4 no-print">
 
         <!-- PROFILE DETAIL MODAL -->
         <div id="profile-detail-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-end sm:items-center justify-center opacity-0 transition-opacity duration-200 p-4 no-print">
@@ -3978,7 +4231,9 @@ async function loadDashboardSummary() {
             const detailView = document.getElementById('loan-detail-view');
             const masterView = document.getElementById('loans-master-view');
             const errBox = document.getElementById('loan-detail-error');
+            const succBox = document.getElementById('loan-detail-success');
             if (errBox) errBox.classList.add('hidden');
+            if (succBox) succBox.classList.add('hidden');
             if (detailView) detailView.classList.add('hidden');
             if (masterView) masterView.classList.remove('hidden');
         }
@@ -4390,6 +4645,11 @@ async function loadDashboardSummary() {
                     if (cancReasonEl) cancReasonEl.innerText = data.cancellation_reason || 'Not specified';
                 } else {
                     if (cancBox) cancBox.classList.add('hidden');
+                }
+
+                // Update Block F lifecycle action buttons based on status and RBAC
+                if (typeof updateLoanLifecycleActionsUI === 'function') {
+                    updateLoanLifecycleActionsUI(data);
                 }
 
                 // Display detail view
@@ -4904,6 +5164,505 @@ async function loadDashboardSummary() {
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerText = 'Create Draft Loan →';
+                }
+            }
+        }
+
+        /* =========================================================================
+           4D. STAGE 4 (BLOCK F): LOAN APPROVAL, DISBURSEMENT & CANCELLATION CONTROLLER
+           ========================================================================= */
+        let isSubmittingLoanLifecycle = false;
+        const loanCustomerLabelCache = {};
+
+        function canUserApproveOrCancelLoan() {
+            const role = currentUser?.role || '';
+            return ['OWNER_ADMIN', 'CREDIT_ADVISOR'].includes(role);
+        }
+
+        function canUserActivateLoan() {
+            const role = currentUser?.role || '';
+            return ['OWNER_ADMIN', 'CREDIT_ADVISOR', 'OPERATIONS_OFFICER'].includes(role);
+        }
+
+        function showLoanDetailSuccessBanner(message) {
+            const box = document.getElementById('loan-detail-success');
+            const textEl = document.getElementById('loan-detail-success-text');
+            if (textEl) textEl.innerText = message || 'Loan updated successfully.';
+            if (box) box.classList.remove('hidden');
+        }
+
+        function hideLoanDetailSuccessBanner() {
+            const box = document.getElementById('loan-detail-success');
+            if (box) box.classList.add('hidden');
+        }
+
+        function updateLoanLifecycleActionsUI(loan) {
+            const container = document.getElementById('ld-lifecycle-actions');
+            const btnApprove = document.getElementById('ld-btn-approve');
+            const btnActivate = document.getElementById('ld-btn-activate');
+            const btnCancel = document.getElementById('ld-btn-cancel');
+            if (!container || !btnApprove || !btnActivate || !btnCancel) return;
+
+            btnApprove.classList.add('hidden');
+            btnActivate.classList.add('hidden');
+            btnCancel.classList.add('hidden');
+            container.classList.add('hidden');
+
+            if (!loan || typeof loan !== 'object') return;
+            const status = String(loan.status || '').toUpperCase();
+
+            let anyVisible = false;
+            if (status === 'DRAFT') {
+                if (canUserApproveOrCancelLoan()) {
+                    btnApprove.classList.remove('hidden');
+                    btnCancel.classList.remove('hidden');
+                    anyVisible = true;
+                }
+            } else if (status === 'APPROVED') {
+                if (canUserActivateLoan()) {
+                    btnActivate.classList.remove('hidden');
+                    anyVisible = true;
+                }
+                if (canUserApproveOrCancelLoan()) {
+                    btnCancel.classList.remove('hidden');
+                    anyVisible = true;
+                }
+            }
+
+            if (anyVisible) {
+                container.classList.remove('hidden');
+            }
+        }
+
+        async function resolveLoanCustomerDisplay(loan) {
+            if (!loan || !Number.isSafeInteger(loan.customer_id)) return 'Customer #N/A';
+            const cid = loan.customer_id;
+
+            if (currentSelectedCustomer && currentSelectedCustomer.id === cid) {
+                const label = `${currentSelectedCustomer.customer_number} • ${currentSelectedCustomer.full_legal_name}`;
+                loanCustomerLabelCache[cid] = label;
+                return label;
+            }
+            if (loanCustomerLabelCache[cid]) {
+                return loanCustomerLabelCache[cid];
+            }
+            try {
+                const res = await fetch(`/api/customers/${cid}`);
+                if (res.ok) {
+                    const c = await res.json();
+                    if (c && c.customer_number && c.full_legal_name) {
+                        const label = `${c.customer_number} • ${c.full_legal_name}`;
+                        loanCustomerLabelCache[cid] = label;
+                        return label;
+                    }
+                }
+            } catch (_) {
+                // Non-blocking fallback to numeric ID
+            }
+            return `Customer #${cid}`;
+        }
+
+        async function applyUpdatedLoanFromLifecycleAction(loanId, successMessage) {
+            await Promise.all([
+                openLoanDetailFull(loanId),
+                loadLoans(currentLoansPage),
+                loadDashboardSummary(),
+                loadCustomers(currentCustomersPage)
+            ]);
+            showLoanDetailSuccessBanner(successMessage);
+        }
+
+        // --- 1. APPROVE LOAN MODAL & SUBMIT (DRAFT -> APPROVED) ---
+        async function openLoanApproveModal() {
+            if (!currentSelectedLoan || currentSelectedLoan.status !== 'DRAFT') return;
+            if (!canUserApproveOrCancelLoan()) return;
+
+            const l = currentSelectedLoan;
+            const errBox = document.getElementById('loan-approve-error');
+            if (errBox) errBox.classList.add('hidden');
+
+            const form = document.getElementById('loan-approve-form');
+            if (form) form.reset();
+
+            const submitBtn = document.getElementById('la-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Confirm Approval →';
+            }
+
+            document.getElementById('la-loan-header').innerText = `${l.loan_number || 'Loan'} • ${l.product_name || 'Personal Loan'}`;
+            document.getElementById('la-customer-badge').innerText = `Customer #${l.customer_id}`;
+            document.getElementById('la-principal').innerText = Number.isSafeInteger(l.principal_cents)
+                ? NuraFinancialEngine.formatMXNFromCents(l.principal_cents)
+                : 'N/A';
+            document.getElementById('la-rate').innerText = Number.isFinite(l.monthly_interest_rate_percent)
+                ? `${l.monthly_interest_rate_percent.toFixed(2)}% / mo`
+                : 'N/A';
+            document.getElementById('la-term').innerText = `${l.term_installments_count || 16} wks (${l.assumed_interest_months || 4} mo)`;
+            document.getElementById('la-total-interest').innerText = Number.isSafeInteger(l.total_interest_cents)
+                ? NuraFinancialEngine.formatMXNFromCents(l.total_interest_cents)
+                : 'N/A';
+            document.getElementById('la-total-repayment').innerText = Number.isSafeInteger(l.total_repayment_cents)
+                ? NuraFinancialEngine.formatMXNFromCents(l.total_repayment_cents)
+                : 'N/A';
+            document.getElementById('la-weekly-payment').innerText = Number.isSafeInteger(l.regular_installment_cents)
+                ? NuraFinancialEngine.formatMXNFromCents(l.regular_installment_cents)
+                : 'N/A';
+            document.getElementById('la-start-date').innerText = l.start_date || '—';
+            document.getElementById('la-first-payment').innerText = l.first_payment_date || '—';
+            document.getElementById('la-maturity-date').innerText = l.maturity_date || '—';
+
+            document.getElementById('loan-approve-modal')?.classList.remove('hidden');
+
+            const resolvedCust = await resolveLoanCustomerDisplay(l);
+            const badgeEl = document.getElementById('la-customer-badge');
+            if (badgeEl) badgeEl.innerText = resolvedCust;
+        }
+
+        function closeLoanApproveModal() {
+            if (isSubmittingLoanLifecycle) return;
+            document.getElementById('loan-approve-modal')?.classList.add('hidden');
+        }
+
+        async function handleLoanApproveSubmit(e) {
+            e.preventDefault();
+            if (isSubmittingLoanLifecycle || !currentSelectedLoan) return;
+
+            const loanId = currentSelectedLoan.id;
+            const loanNumber = currentSelectedLoan.loan_number || `#${loanId}`;
+            const errBox = document.getElementById('loan-approve-error');
+            const submitBtn = document.getElementById('la-submit-btn');
+            if (errBox) errBox.classList.add('hidden');
+
+            const showError = (msg) => {
+                if (errBox) {
+                    errBox.innerText = msg;
+                    errBox.classList.remove('hidden');
+                }
+            };
+
+            if (!document.getElementById('la-confirm-check')?.checked) {
+                showError('Please check the confirmation box before approving this loan.');
+                return;
+            }
+
+            const notesVal = document.getElementById('la-approval-notes')?.value.trim() || null;
+
+            isSubmittingLoanLifecycle = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Approving Loan...';
+            }
+
+            try {
+                const res = await fetch(`/api/loans/${loanId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCookie('csrf_token')
+                    },
+                    body: JSON.stringify({ approval_notes: notesVal })
+                });
+
+                if (res.status === 401) {
+                    isSubmittingLoanLifecycle = false;
+                    document.getElementById('loan-approve-modal')?.classList.add('hidden');
+                    mostrarAuthView();
+                    return;
+                }
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const detailMsg = typeof data.detail === 'string'
+                        ? data.detail
+                        : (Array.isArray(data.detail) ? data.detail.map(d => d.msg).join('; ') : null);
+                    throw new Error(detailMsg || `Failed to approve loan (HTTP ${res.status}).`);
+                }
+
+                isSubmittingLoanLifecycle = false;
+                document.getElementById('loan-approve-modal')?.classList.add('hidden');
+                await applyUpdatedLoanFromLifecycleAction(
+                    loanId,
+                    `✓ Loan ${loanNumber} has been approved and is now ready for disbursement.`
+                );
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                isSubmittingLoanLifecycle = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Confirm Approval →';
+                }
+            }
+        }
+
+        // --- 2. ACTIVATE & DISBURSE LOAN MODAL & SUBMIT (APPROVED -> ACTIVE) ---
+        async function openLoanActivateModal() {
+            if (!currentSelectedLoan || currentSelectedLoan.status !== 'APPROVED') return;
+            if (!canUserActivateLoan()) return;
+
+            const l = currentSelectedLoan;
+            const errBox = document.getElementById('loan-activate-error');
+            if (errBox) errBox.classList.add('hidden');
+
+            const form = document.getElementById('loan-activate-form');
+            if (form) form.reset();
+
+            const submitBtn = document.getElementById('ldisb-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Activate & Record Disbursement →';
+            }
+
+            document.getElementById('ldisb-loan-header').innerText = `${l.loan_number || 'Loan'} • ${l.product_name || 'Personal Loan'}`;
+            document.getElementById('ldisb-customer-badge').innerText = `Customer #${l.customer_id}`;
+            document.getElementById('ldisb-principal').innerText = Number.isSafeInteger(l.principal_cents)
+                ? NuraFinancialEngine.formatMXNFromCents(l.principal_cents)
+                : 'N/A';
+            document.getElementById('ldisb-rate').innerText = Number.isFinite(l.monthly_interest_rate_percent)
+                ? `${l.monthly_interest_rate_percent.toFixed(2)}% / mo`
+                : 'N/A';
+            document.getElementById('ldisb-term').innerText = `${l.term_installments_count || 16} weeks`;
+            document.getElementById('ldisb-total-repayment').innerText = Number.isSafeInteger(l.total_repayment_cents)
+                ? NuraFinancialEngine.formatMXNFromCents(l.total_repayment_cents)
+                : 'N/A';
+
+            document.getElementById('ldisb-method').value = 'SPEI_TRANSFER';
+            document.getElementById('ldisb-date').value = '';
+            document.getElementById('ldisb-reference').value = '';
+            document.getElementById('ldisb-notes').value = '';
+            document.getElementById('ldisb-confirm-check').checked = false;
+
+            document.getElementById('loan-activate-modal')?.classList.remove('hidden');
+
+            const resolvedCust = await resolveLoanCustomerDisplay(l);
+            const badgeEl = document.getElementById('ldisb-customer-badge');
+            if (badgeEl) badgeEl.innerText = resolvedCust;
+        }
+
+        function closeLoanActivateModal() {
+            if (isSubmittingLoanLifecycle) return;
+            document.getElementById('loan-activate-modal')?.classList.add('hidden');
+        }
+
+        async function handleLoanActivateSubmit(e) {
+            e.preventDefault();
+            if (isSubmittingLoanLifecycle || !currentSelectedLoan) return;
+
+            const loanId = currentSelectedLoan.id;
+            const loanNumber = currentSelectedLoan.loan_number || `#${loanId}`;
+            const errBox = document.getElementById('loan-activate-error');
+            const submitBtn = document.getElementById('ldisb-submit-btn');
+            if (errBox) errBox.classList.add('hidden');
+
+            const showError = (msg) => {
+                if (errBox) {
+                    errBox.innerText = msg;
+                    errBox.classList.remove('hidden');
+                }
+            };
+
+            const method = document.getElementById('ldisb-method')?.value || '';
+            if (!['SPEI_TRANSFER', 'BANK_DEPOSIT', 'CHECK', 'CASH_RECEIPT'].includes(method)) {
+                showError('Please select a valid disbursement method.');
+                return;
+            }
+
+            const reference = (document.getElementById('ldisb-reference')?.value || '').trim();
+            if (reference.length < 3 || reference.length > 120) {
+                showError('Disbursement reference must be between 3 and 120 characters.');
+                return;
+            }
+
+            const disbursedAtRaw = (document.getElementById('ldisb-date')?.value || '').trim();
+            if (disbursedAtRaw) {
+                const parsedMs = Date.parse(disbursedAtRaw);
+                if (!Number.isFinite(parsedMs)) {
+                    showError('Invalid disbursement date/time format.');
+                    return;
+                }
+                if (parsedMs > Date.now() + 5 * 60 * 1000) {
+                    showError('Disbursement time cannot be in the future.');
+                    return;
+                }
+            }
+
+            const confirmDisbursement = Boolean(document.getElementById('ldisb-confirm-check')?.checked);
+            if (!confirmDisbursement) {
+                showError('Disbursement confirmation is required to activate a loan.');
+                return;
+            }
+
+            const notesVal = (document.getElementById('ldisb-notes')?.value || '').trim() || null;
+
+            const payload = {
+                confirm_disbursement: true,
+                disbursement_method: method,
+                disbursement_reference: reference,
+                disbursed_at: disbursedAtRaw || null,
+                disbursement_notes: notesVal
+            };
+
+            isSubmittingLoanLifecycle = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Activating Loan...';
+            }
+
+            try {
+                const res = await fetch(`/api/loans/${loanId}/activate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCookie('csrf_token')
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.status === 401) {
+                    isSubmittingLoanLifecycle = false;
+                    document.getElementById('loan-activate-modal')?.classList.add('hidden');
+                    mostrarAuthView();
+                    return;
+                }
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const detailMsg = typeof data.detail === 'string'
+                        ? data.detail
+                        : (Array.isArray(data.detail) ? data.detail.map(d => d.msg).join('; ') : null);
+                    throw new Error(detailMsg || `Failed to activate loan (HTTP ${res.status}).`);
+                }
+
+                isSubmittingLoanLifecycle = false;
+                document.getElementById('loan-activate-modal')?.classList.add('hidden');
+                await applyUpdatedLoanFromLifecycleAction(
+                    loanId,
+                    `✓ Disbursement recorded (${method} • Ref: ${reference}). Loan ${loanNumber} is now ACTIVE.`
+                );
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                isSubmittingLoanLifecycle = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Activate & Record Disbursement →';
+                }
+            }
+        }
+
+        // --- 3. CANCEL LOAN MODAL & SUBMIT (DRAFT / APPROVED -> CANCELLED) ---
+        async function openLoanCancelModal() {
+            if (!currentSelectedLoan || !['DRAFT', 'APPROVED'].includes(currentSelectedLoan.status)) return;
+            if (!canUserApproveOrCancelLoan()) return;
+
+            const l = currentSelectedLoan;
+            const errBox = document.getElementById('loan-cancel-error');
+            if (errBox) errBox.classList.add('hidden');
+
+            const form = document.getElementById('loan-cancel-form');
+            if (form) form.reset();
+
+            const submitBtn = document.getElementById('lcanc-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Confirm Cancellation';
+            }
+
+            document.getElementById('lcanc-loan-header').innerText = `${l.loan_number || 'Loan'} • ${l.product_name || 'Personal Loan'}`;
+            document.getElementById('lcanc-status-badge').innerText = l.status || 'DRAFT';
+            document.getElementById('lcanc-customer-label').innerText = `Customer #${l.customer_id}`;
+            document.getElementById('lcanc-principal').innerText = Number.isSafeInteger(l.principal_cents)
+                ? NuraFinancialEngine.formatMXNFromCents(l.principal_cents)
+                : 'N/A';
+
+            document.getElementById('lcanc-reason').value = '';
+            document.getElementById('lcanc-confirm-check').checked = false;
+
+            document.getElementById('loan-cancel-modal')?.classList.remove('hidden');
+
+            const resolvedCust = await resolveLoanCustomerDisplay(l);
+            const custEl = document.getElementById('lcanc-customer-label');
+            if (custEl) custEl.innerText = resolvedCust;
+        }
+
+        function closeLoanCancelModal() {
+            if (isSubmittingLoanLifecycle) return;
+            document.getElementById('loan-cancel-modal')?.classList.add('hidden');
+        }
+
+        async function handleLoanCancelSubmit(e) {
+            e.preventDefault();
+            if (isSubmittingLoanLifecycle || !currentSelectedLoan) return;
+
+            const loanId = currentSelectedLoan.id;
+            const loanNumber = currentSelectedLoan.loan_number || `#${loanId}`;
+            const errBox = document.getElementById('loan-cancel-error');
+            const submitBtn = document.getElementById('lcanc-submit-btn');
+            if (errBox) errBox.classList.add('hidden');
+
+            const showError = (msg) => {
+                if (errBox) {
+                    errBox.innerText = msg;
+                    errBox.classList.remove('hidden');
+                }
+            };
+
+            const reason = (document.getElementById('lcanc-reason')?.value || '').trim();
+            if (reason.length < 3 || reason.length > 255) {
+                showError('Cancellation reason must be between 3 and 255 characters.');
+                return;
+            }
+
+            if (!document.getElementById('lcanc-confirm-check')?.checked) {
+                showError('Please check the confirmation box to cancel this loan.');
+                return;
+            }
+
+            isSubmittingLoanLifecycle = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Cancelling Loan...';
+            }
+
+            try {
+                const res = await fetch(`/api/loans/${loanId}/cancel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCookie('csrf_token')
+                    },
+                    body: JSON.stringify({ cancellation_reason: reason })
+                });
+
+                if (res.status === 401) {
+                    isSubmittingLoanLifecycle = false;
+                    document.getElementById('loan-cancel-modal')?.classList.add('hidden');
+                    mostrarAuthView();
+                    return;
+                }
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const detailMsg = typeof data.detail === 'string'
+                        ? data.detail
+                        : (Array.isArray(data.detail) ? data.detail.map(d => d.msg).join('; ') : null);
+                    throw new Error(detailMsg || `Failed to cancel loan (HTTP ${res.status}).`);
+                }
+
+                isSubmittingLoanLifecycle = false;
+                document.getElementById('loan-cancel-modal')?.classList.add('hidden');
+                await applyUpdatedLoanFromLifecycleAction(
+                    loanId,
+                    `Loan ${loanNumber} has been marked as CANCELLED.`
+                );
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                isSubmittingLoanLifecycle = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Confirm Cancellation';
                 }
             }
         }
