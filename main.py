@@ -3819,6 +3819,19 @@ def reverse_loan_payment(
             resource_id=target_payment.payment_number, ip_address=ip,
             details={"loan_number": loan.loan_number, "amount_cents": target_payment.amount_cents, "reason": payload.reversal_reason}, commit=False
         )
+        db.commit()
+        db.refresh(target_payment)
+        _, _, _, today_local = get_local_day_bounds_utc()
+        return {"message": "Payment reversed successfully", "payment": serialize_loan_payment(target_payment), "loan": serialize_loan_detail(loan, today_local)}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception("Failed to reverse payment")
+        raise HTTPException(status_code=500, detail=f"Reversal failed: {type(e).__name__}")
+
+
 @app.get("/api/dashboard/summary")
 def get_dashboard_summary(
     current_user: UserModel = Depends(get_current_user),
