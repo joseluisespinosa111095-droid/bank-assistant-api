@@ -16,9 +16,10 @@ from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request, 
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr, Field
 import google.generativeai as genai
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
+from sqlalchemy import (
     create_engine, Column, Integer, BigInteger, String, Text,
-    DateTime, Date, Boolean, ForeignKey, CheckConstraint, event, text, or_, inspect
+    DateTime, Date, Boolean, ForeignKey, UniqueConstraint,
+    CheckConstraint, event, text, or_, inspect
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from passlib.context import CryptContext
