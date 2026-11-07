@@ -96,6 +96,8 @@ VALID_CALL_OUTCOMES = {
 
 VALID_LOAN_STATUSES = {"DRAFT", "APPROVED", "ACTIVE", "PAID_OFF", "CANCELLED", "DEFAULTED"}
 VALID_DISBURSEMENT_METHODS = {"SPEI_TRANSFER", "BANK_DEPOSIT", "CHECK", "CASH_RECEIPT"}
+VALID_PAYMENT_STATUSES = {"POSTED", "REVERSED"}
+VALID_PAYMENT_METHODS = {"SPEI_TRANSFER", "BANK_DEPOSIT", "CHECK", "CASH_RECEIPT"}
 
 
 # --- SQLALCHEMY MODELS ---
@@ -329,6 +331,7 @@ class LoanModel(Base):
 
     customer = relationship("CustomerModel", back_populates="loans")
     installments = relationship("LoanInstallmentModel", back_populates="loan", cascade="all, delete-orphan", order_by="LoanInstallmentModel.installment_number")
+    payments = relationship("LoanPaymentModel", back_populates="loan", order_by="LoanPaymentModel.loan_payment_seq")
 
 
 class LoanInstallmentModel(Base):
