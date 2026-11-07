@@ -581,7 +581,7 @@ def upgrade() -> None:
                             p_loan_id, v_loan.amount_paid_cents, v_posted_amount, v_inst_paid;
                     END IF;
 
-                    IF (v_loan.principal_cents - v_loan.unpaid_principal_cents) != v_posted_principal
+                    IF (v_loan.principal_cents - v_loan.unpaid_principal_cents) != v_posted_prin
                        OR (v_loan.principal_cents - v_loan.unpaid_principal_cents) != v_inst_prin_paid THEN
                         RAISE EXCEPTION 'Ledger integrity violation on loan %: principal paid mismatch across loan, payments, and installments.', p_loan_id;
                     END IF;
