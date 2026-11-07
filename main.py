@@ -632,23 +632,23 @@ def verify_database_schema_compatibility(db_engine):
         return  # SQLite dev DB trusts test fixtures / alembic
     try:
         inspector = inspect(db_engine)
-    tables = set(inspector.get_table_names())
-    required_tables = {
-        "users", "sessions", "conversations", "chat_messages", "audit_logs",
-        "customers", "leads", "lead_stage_history", "interactions", "loans", "loan_installments",
-        "loan_payments", "loan_payment_allocations"
-    }
-    if not required_tables.issubset(tables):
-        missing = required_tables - tables
-        raise RuntimeError(f"Database schema is missing required tables: {missing}")
+        tables = set(inspector.get_table_names())
+        required_tables = {
+            "users", "sessions", "conversations", "chat_messages", "audit_logs",
+            "customers", "leads", "lead_stage_history", "interactions", "loans", "loan_installments",
+            "loan_payments", "loan_payment_allocations"
+        }
+        if not required_tables.issubset(tables):
+            missing = required_tables - tables
+            raise RuntimeError(f"Database schema is missing required tables: {missing}")
 
-    with db_engine.connect() as conn:
-        res = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
-        if not res:
-            raise RuntimeError("No alembic_version record found in database.")
-        rev = res[0]
-        if rev != "006":
-            raise RuntimeError(f"Database schema is at revision '{rev}', but Stage 5 (Block G) requires '006'. Run 'alembic upgrade head'.")
+        with db_engine.connect() as conn:
+            res = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
+            if not res:
+                raise RuntimeError("No alembic_version record found in database.")
+            rev = res[0]
+            if rev != "006":
+                raise RuntimeError(f"Database schema is at revision '{rev}', but Stage 5 (Block G) requires '006'. Run 'alembic upgrade head'.")
     except Exception as e:
         logger.error(f"Schema compatibility guard failed: {e}")
         raise
