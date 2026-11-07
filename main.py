@@ -3816,8 +3816,9 @@ def reverse_loan_payment(
 
         record_audit_event(
             db, "LOAN_PAYMENT_REVERSED", "loan", "SUCCESS", actor=current_user,
-            resource_id=target_payment.payment
-
+            resource_id=target_payment.payment_number, ip_address=ip,
+            details={"loan_number": loan.loan_number, "amount_cents": target_payment.amount_cents, "reason": payload.reversal_reason}, commit=False
+        )
 @app.get("/api/dashboard/summary")
 def get_dashboard_summary(
     current_user: UserModel = Depends(get_current_user),
