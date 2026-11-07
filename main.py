@@ -16,7 +16,7 @@ from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request, 
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr, Field
 import google.generativeai as genai
-from sqlalchemy import (
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
     create_engine, Column, Integer, BigInteger, String, Text,
     DateTime, Date, Boolean, ForeignKey, CheckConstraint, event, text, or_, inspect
 )
