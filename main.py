@@ -19,7 +19,7 @@ import google.generativeai as genai
 from sqlalchemy import (
     create_engine, Column, Integer, BigInteger, String, Text,
     DateTime, Date, Boolean, ForeignKey, UniqueConstraint,
-    CheckConstraint, event, text, or_, inspect
+    CheckConstraint, event, text, or_, inspect, func
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from passlib.context import CryptContext
@@ -785,17 +785,180 @@ def generate_next_lead_number(db: Session) -> str:
         next_seq += 1
 
 
-def generate_next_loan_number(db: Session) -> str:
+def generate_next_payment_number(db: Session) -> str:
     if db.bind and db.bind.dialect.name == "postgresql":
-        db.execute(text("SELECT pg_advisory_xact_lock(9004001)"))
-    last_loan = db.query(LoanModel.id).order_by(LoanModel.id.desc()).first()
-    next_seq = (last_loan[0] + 1) if last_loan else 1
+        db.execute(text("SELECT pg_advisory_xact_lock(9005001)"))
+    last_payment = db.query(LoanPaymentModel.id).order_by(LoanPaymentModel.id.desc()).first()
+    next_seq = (last_payment[0] + 1) if last_payment else 1
     while True:
-        candidate = f"LN-{next_seq:05d}"
-        exists = db.query(LoanModel.id).filter(LoanModel.loan_number == candidate).first()
+        candidate = f"PAY-{next_seq:06d}"
+        exists = db.query(LoanPaymentModel.id).filter(LoanPaymentModel.payment_number == candidate).first()
         if not exists:
             return candidate
         next_seq += 1
+
+class LoanPaymentEngine:
+    @staticmethod
+    def _verify_ledger_integrity_python(loan: LoanModel, installments: List[LoanInstallmentModel], db: Session):
+        posted_payments = db.query(LoanPaymentModel).filter(
+            LoanPaymentModel.loan_id == loan.id, LoanPaymentModel.status == 'POSTED'
+        ).all()
+        
+        posted_amt = sum(p.amount_cents for p in posted_payments)
+        inst_amt = sum(i.amount_paid_cents for i in installments)
+        if loan.amount_paid_cents != posted_amt or loan.amount_paid_cents != inst_amt:
+            raise RuntimeError(f"Python Ledger Violation: amount_paid_cents mismatch. Loan={loan.amount_paid_cents}, Posted={posted_amt}, Inst={inst_amt}")
+        
+        posted_int = sum(p.interest_applied_cents for p in posted_payments)
+        inst_int = sum(i.interest_paid_cents for i in installments)
+        if (loan.total_interest_cents - loan.remaining_contractual_interest_cents) != posted_int or posted_int != inst_int:
+            raise RuntimeError("Python Ledger Violation: interest_paid mismatch.")
+            
+        posted_prin = sum(p.principal_applied_cents for p in posted_payments)
+        inst_prin = sum(i.principal_paid_cents for i in installments)
+        if (loan.principal_cents - loan.unpaid_principal_cents) != posted_prin or posted_prin != inst_prin:
+            raise RuntimeError("Python Ledger Violation: principal_paid mismatch.")
+            
+        rem_total = sum(i.remaining_amount_cents for i in installments)
+        if loan.remaining_contract_total_cents != rem_total:
+            raise RuntimeError("Python Ledger Violation: remaining_contract_total_cents mismatch.")
+
+    @staticmethod
+    def execute_waterfall_allocation(db: Session, loan: LoanModel, installments: List[LoanInstallmentModel], amount_cents: int, payment_method: str, payment_reference: str, paid_at_dt: datetime, notes: str, user_id: int, idempotency_key: str, payload_hash: str) -> dict:
+        if amount_cents <= 0 or amount_cents > loan.remaining_contract_total_cents:
+            raise ValueError("Payment amount must be > 0 and cannot exceed the remaining contract total.")
+
+        payment_number = generate_next_payment_number(db)
+        max_seq = db.query(func.max(LoanPaymentModel.loan_payment_seq)).filter(LoanPaymentModel.loan_id == loan.id).scalar()
+        next_seq = (max_seq or 0) + 1
+
+        payment = LoanPaymentModel(
+            payment_number=payment_number,
+            loan_id=loan.id,
+            customer_id=loan.customer_id,
+            loan_payment_seq=next_seq,
+            idempotency_key=idempotency_key,
+            request_payload_hash=payload_hash,
+            status="POSTED",
+            currency="MXN",
+            amount_cents=amount_cents,
+            interest_applied_cents=0,
+            principal_applied_cents=0,
+            prev_loan_status=loan.status,
+            prev_unpaid_principal_cents=loan.unpaid_principal_cents,
+            prev_remaining_interest_cents=loan.remaining_contractual_interest_cents,
+            prev_remaining_total_cents=loan.remaining_contract_total_cents,
+            prev_amount_paid_cents=loan.amount_paid_cents,
+            payment_method=payment_method,
+            payment_reference=payment_reference,
+            paid_at=paid_at_dt,
+            notes=notes,
+            recorded_by_user_id=user_id
+        )
+        db.add(payment)
+        db.flush()
+
+        remaining_to_allocate = amount_cents
+        interest_applied = 0
+        principal_applied = 0
+
+        for inst in installments:
+            if remaining_to_allocate <= 0:
+                break
+            if inst.remaining_amount_cents <= 0:
+                continue
+
+            prev_prin_paid = inst.principal_paid_cents
+            prev_int_paid = inst.interest_paid_cents
+            prev_amt_paid = inst.amount_paid_cents
+            prev_rem_amt = inst.remaining_amount_cents
+            prev_paid_at = inst.paid_at
+
+            int_pending = inst.interest_due_cents - inst.interest_paid_cents
+            int_alloc = min(remaining_to_allocate, int_pending)
+            if int_alloc > 0:
+                inst.interest_paid_cents += int_alloc
+                remaining_to_allocate -= int_alloc
+                interest_applied += int_alloc
+
+            prin_pending = inst.principal_due_cents - inst.principal_paid_cents
+            prin_alloc = min(remaining_to_allocate, prin_pending)
+            if prin_alloc > 0:
+                inst.principal_paid_cents += prin_alloc
+                remaining_to_allocate -= prin_alloc
+                principal_applied += prin_alloc
+
+            total_alloc = int_alloc + prin_alloc
+            if total_alloc > 0:
+                inst.amount_paid_cents += total_alloc
+                inst.remaining_amount_cents = inst.scheduled_payment_cents - inst.amount_paid_cents
+                if inst.remaining_amount_cents == 0:
+                    inst.paid_at = paid_at_dt
+
+                alloc = LoanPaymentAllocationModel(
+                    payment_id=payment.id,
+                    loan_id=loan.id,
+                    installment_id=inst.id,
+                    installment_number=inst.installment_number,
+                    interest_allocated_cents=int_alloc,
+                    principal_allocated_cents=prin_alloc,
+                    total_allocated_cents=total_alloc,
+                    prev_principal_paid_cents=prev_prin_paid,
+                    prev_interest_paid_cents=prev_int_paid,
+                    prev_amount_paid_cents=prev_amt_paid,
+                    prev_remaining_amount_cents=prev_rem_amt,
+                    prev_paid_at=prev_paid_at
+                )
+                db.add(alloc)
+
+        payment.interest_applied_cents = interest_applied
+        payment.principal_applied_cents = principal_applied
+
+        loan.unpaid_principal_cents -= principal_applied
+        loan.remaining_contractual_interest_cents -= interest_applied
+        loan.remaining_contract_total_cents -= amount_cents
+        loan.amount_paid_cents += amount_cents
+
+        if loan.remaining_contract_total_cents == 0:
+            loan.status = "PAID_OFF"
+
+        db.flush()
+        if db.bind and db.bind.dialect.name == "sqlite":
+            LoanPaymentEngine._verify_ledger_integrity_python(loan, installments, db)
+
+        return {"payment": payment, "allocations_count": len(payment.allocations)}
+
+    @staticmethod
+    def execute_reversal_restoration(db: Session, loan: LoanModel, payment: LoanPaymentModel, reason: str, user_id: int):
+        now_utc = datetime.now(timezone.utc)
+        
+        for alloc in payment.allocations:
+            inst = db.query(LoanInstallmentModel).filter(LoanInstallmentModel.id == alloc.installment_id).with_for_update().first()
+            if not inst:
+                raise ValueError(f"Data corruption: Installment {alloc.installment_id} not found.")
+                
+            inst.principal_paid_cents = alloc.prev_principal_paid_cents
+            inst.interest_paid_cents = alloc.prev_interest_paid_cents
+            inst.amount_paid_cents = alloc.prev_amount_paid_cents
+            inst.remaining_amount_cents = alloc.prev_remaining_amount_cents
+            inst.paid_at = alloc.prev_paid_at
+
+        payment.status = "REVERSED"
+        payment.reversed_by_user_id = user_id
+        payment.reversed_at = now_utc
+        payment.reversal_reason = reason
+
+        loan.status = payment.prev_loan_status
+        loan.unpaid_principal_cents = payment.prev_unpaid_principal_cents
+        loan.remaining_contractual_interest_cents = payment.prev_remaining_interest_cents
+        loan.remaining_contract_total_cents = payment.prev_remaining_total_cents
+        loan.amount_paid_cents = payment.prev_amount_paid_cents
+
+        db.flush()
+        
+        installments = db.query(LoanInstallmentModel).filter(LoanInstallmentModel.loan_id == loan.id).all()
+        if db.bind and db.bind.dialect.name == "sqlite":
+            LoanPaymentEngine._verify_ledger_integrity_python(loan, installments, db)
 
 
 # --- AUDIT SERVICE ---
@@ -1025,8 +1188,17 @@ class LoanActivateRequest(BaseModel):
     disbursement_notes: Optional[str] = Field(default=None, max_length=1000)
 
 
-class LoanCancelRequest(BaseModel):
-    cancellation_reason: str = Field(..., min_length=3, max_length=255)
+class LoanPaymentCreateRequest(BaseModel):
+    idempotency_key: str = Field(..., min_length=10, max_length=64)
+    amount_pesos: Optional[float] = Field(default=None, gt=0)
+    amount_cents: Optional[int] = Field(default=None, gt=0)
+    payment_method: str = Field(...)
+    payment_reference: Optional[str] = Field(default=None, max_length=120)
+    paid_at: Optional[str] = None
+    notes: Optional[str] = Field(default=None, max_length=1000)
+
+class LoanPaymentReverseRequest(BaseModel):
+    reversal_reason: str = Field(..., min_length=3, max_length=255)
 
 
 # --- CSRF PROTECTION WITH AUDIT ---
@@ -1834,6 +2006,13 @@ def get_customer_detail(
         "remaining_installments": remaining_inst_count
     }
     data["loans"] = [serialize_loan_summary(l, today_local) for l in all_loans]
+
+    last_payment = db.query(func.max(LoanPaymentModel.paid_at)).filter(
+        LoanPaymentModel.customer_id == customer.id, LoanPaymentModel.status == 'POSTED'
+    ).scalar()
+    if last_payment:
+        data["credit_summary"]["last_payment_date"] = last_payment.astimezone(get_crm_timezone()).strftime("%Y-%m-%d")
+
     return data
 
 
@@ -2930,9 +3109,8 @@ def serialize_loan_summary(l: LoanModel, today_local: date) -> dict:
     overdue_amt = 0
     due_today_amt = 0
     accrued_int = 0
-    unaccrued_int = l.remaining_contractual_interest_cents
 
-    if is_active and l.installments:
+    if (is_active or l.status == "PAID_OFF") and l.installments:
         for inst in l.installments:
             if inst.remaining_amount_cents > 0:
                 if inst.due_date < today_local:
@@ -2940,9 +3118,8 @@ def serialize_loan_summary(l: LoanModel, today_local: date) -> dict:
                 elif inst.due_date == today_local:
                     due_today_amt += inst.remaining_amount_cents
 
-                if inst.due_date <= today_local:
-                    accrued_int += inst.interest_due_cents
-                    unaccrued_int = max(0, unaccrued_int - inst.interest_due_cents)
+            if inst.due_date <= today_local:
+                accrued_int += max(0, inst.interest_due_cents - inst.interest_paid_cents)
 
     return {
         "id": l.id,
@@ -2966,7 +3143,6 @@ def serialize_loan_summary(l: LoanModel, today_local: date) -> dict:
         "maturity_date": l.maturity_date.isoformat(),
         "created_at": l.created_at.isoformat() if l.created_at else None
     }
-
 
 def serialize_loan_detail(l: LoanModel, today_local: date) -> dict:
     base = serialize_loan_summary(l, today_local)
@@ -3001,7 +3177,22 @@ def serialize_loan_detail(l: LoanModel, today_local: date) -> dict:
         "cancelled_at": l.cancelled_at.isoformat() if l.cancelled_at else None,
         "cancellation_reason": l.cancellation_reason,
         "notes": l.notes,
-        "installments": [{
+        "installments": []
+    })
+    
+    for inst in l.installments:
+        if inst.remaining_amount_cents == 0:
+            status = "PAID"
+        elif l.status == "ACTIVE" and inst.due_date < today_local:
+            status = "OVERDUE"
+        elif l.status == "ACTIVE" and inst.due_date == today_local:
+            status = "DUE_TODAY"
+        elif inst.amount_paid_cents > 0 and inst.remaining_amount_cents > 0:
+            status = "PARTIALLY_PAID"
+        else:
+            status = "SCHEDULED"
+            
+        base["installments"].append({
             "id": inst.id,
             "installment_number": inst.installment_number,
             "due_date": inst.due_date.isoformat(),
@@ -3014,10 +3205,39 @@ def serialize_loan_detail(l: LoanModel, today_local: date) -> dict:
             "interest_paid_cents": inst.interest_paid_cents,
             "amount_paid_cents": inst.amount_paid_cents,
             "remaining_amount_cents": inst.remaining_amount_cents,
-            "status": "OVERDUE" if (l.status == "ACTIVE" and inst.due_date < today_local and inst.remaining_amount_cents > 0) else ("DUE_TODAY" if (l.status == "ACTIVE" and inst.due_date == today_local and inst.remaining_amount_cents > 0) else ("PAID" if inst.remaining_amount_cents == 0 else "SCHEDULED"))
-        } for inst in l.installments]
-    })
+            "paid_at": inst.paid_at.isoformat() if inst.paid_at else None,
+            "status": status
+        })
     return base
+
+def serialize_loan_payment(p: LoanPaymentModel, include_allocations: bool = False, is_top_reversible: bool = False) -> dict:
+    data = {
+        "id": p.id,
+        "payment_number": p.payment_number,
+        "loan_id": p.loan_id,
+        "status": p.status,
+        "amount_cents": p.amount_cents,
+        "interest_applied_cents": p.interest_applied_cents,
+        "principal_applied_cents": p.principal_applied_cents,
+        "payment_method": p.payment_method,
+        "payment_reference": p.payment_reference,
+        "paid_at": p.paid_at.isoformat(),
+        "notes": p.notes,
+        "recorded_by_user_id": p.recorded_by_user_id,
+        "reversed_by_user_id": p.reversed_by_user_id,
+        "reversed_at": p.reversed_at.isoformat() if p.reversed_at else None,
+        "reversal_reason": p.reversal_reason,
+        "created_at": p.created_at.isoformat(),
+        "is_top_reversible": is_top_reversible
+    }
+    if include_allocations and p.allocations:
+        data["allocations"] = [{
+            "installment_number": a.installment_number,
+            "interest_allocated_cents": a.interest_allocated_cents,
+            "principal_allocated_cents": a.principal_allocated_cents,
+            "total_allocated_cents": a.total_allocated_cents
+        } for a in p.allocations]
+    return data
 
 
 @app.get("/api/loans")
@@ -3459,6 +3679,144 @@ def cancel_loan(
         logger.exception("Failed to cancel loan")
         raise HTTPException(status_code=500, detail=f"Could not cancel loan: {type(e).__name__}")
 
+@app.get("/api/loans/{loan_id}/payments")
+def list_loan_payments(
+    loan_id: int,
+    current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")),
+    db: Session = Depends(get_db)
+):
+    loan = db.query(LoanModel).filter(LoanModel.id == loan_id).first()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found.")
+        
+    payments = db.query(LoanPaymentModel).filter(LoanPaymentModel.loan_id == loan_id).order_by(LoanPaymentModel.loan_payment_seq.desc()).all()
+    top_posted_id = next((p.id for p in payments if p.status == 'POSTED'), None)
+    
+    return [serialize_loan_payment(p, include_allocations=True, is_top_reversible=(p.id == top_posted_id)) for p in payments]
+
+
+@app.post("/api/loans/{loan_id}/payments", dependencies=[Depends(verify_csrf)])
+def create_loan_payment(
+    loan_id: int,
+    payload: LoanPaymentCreateRequest,
+    request: Request,
+    current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    amount_cents = parse_pesos_to_cents(payload.amount_pesos, payload.amount_cents)
+    if amount_cents <= 0:
+        raise HTTPException(status_code=422, detail="Payment amount must be greater than zero.")
+    if payload.payment_method not in VALID_PAYMENT_METHODS:
+        raise HTTPException(status_code=422, detail="Invalid payment method.")
+        
+    paid_at_dt = parse_optional_datetime_utc(payload.paid_at) or datetime.now(timezone.utc)
+    if paid_at_dt > datetime.now(timezone.utc) + timedelta(minutes=5):
+        raise HTTPException(status_code=422, detail="Payment effective date cannot be in the future.")
+
+    canonical = {
+        "loan_id": loan_id, "amount_cents": amount_cents, "payment_method": payload.payment_method,
+        "payment_reference": payload.payment_reference, "paid_at": paid_at_dt.isoformat()
+    }
+    payload_hash = hashlib.sha256(json.dumps(canonical, sort_keys=True).encode("utf-8")).hexdigest()
+
+    existing = db.query(LoanPaymentModel).filter(LoanPaymentModel.idempotency_key == payload.idempotency_key).first()
+    if existing:
+        if existing.request_payload_hash == payload_hash:
+            return {"idempotent_replay": True, "payment": serialize_loan_payment(existing)}
+        raise HTTPException(status_code=409, detail="Idempotency key collision with different payload.")
+
+    try:
+        if payload.payment_method in ('SPEI_TRANSFER', 'BANK_DEPOSIT', 'CHECK') and payload.payment_reference:
+            ref_clean = payload.payment_reference.strip().upper()
+            dup_ref = db.query(LoanPaymentModel).filter(
+                LoanPaymentModel.payment_method == payload.payment_method,
+                func.upper(func.trim(LoanPaymentModel.payment_reference)) == ref_clean,
+                LoanPaymentModel.status == 'POSTED'
+            ).first()
+            if dup_ref:
+                raise HTTPException(status_code=409, detail=f"Duplicate payment reference detected: {ref_clean}")
+
+        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found.")
+        if loan.status != "ACTIVE":
+            raise HTTPException(status_code=409, detail=f"Payments can only be applied to ACTIVE loans. Current: {loan.status}")
+        if amount_cents > loan.remaining_contract_total_cents:
+            raise HTTPException(status_code=422, detail=f"Amount exceeds remaining balance. Max allowed: {NuraFinancialEngine.formatMXNFromCents(loan.remaining_contract_total_cents)}")
+
+        existing_locked = db.query(LoanPaymentModel).filter(LoanPaymentModel.idempotency_key == payload.idempotency_key).first()
+        if existing_locked:
+            db.rollback()
+            if existing_locked.request_payload_hash == payload_hash:
+                return {"idempotent_replay": True, "payment": serialize_loan_payment(existing_locked)}
+            raise HTTPException(status_code=409, detail="Concurrency collision on idempotency key.")
+
+        installments = db.query(LoanInstallmentModel).filter(
+            LoanInstallmentModel.loan_id == loan_id, LoanInstallmentModel.remaining_amount_cents > 0
+        ).order_by(LoanInstallmentModel.installment_number.asc()).with_for_update().all()
+
+        result = LoanPaymentEngine.execute_waterfall_allocation(
+            db=db, loan=loan, installments=installments, amount_cents=amount_cents,
+            payment_method=payload.payment_method, payment_reference=payload.payment_reference,
+            paid_at_dt=paid_at_dt, notes=payload.notes, user_id=current_user.id,
+            idempotency_key=payload.idempotency_key, payload_hash=payload_hash
+        )
+
+        record_audit_event(
+            db, "LOAN_PAYMENT_RECORDED", "loan", "SUCCESS", actor=current_user,
+            resource_id=result["payment"].payment_number, ip_address=ip,
+            details={"loan_number": loan.loan_number, "amount_cents": amount_cents, "method": payload.payment_method}, commit=False
+        )
+        db.commit()
+        db.refresh(result["payment"])
+        _, _, _, today_local = get_local_day_bounds_utc()
+        return {"idempotent_replay": False, "payment": serialize_loan_payment(result["payment"], include_allocations=True, is_top_reversible=True), "loan": serialize_loan_detail(loan, today_local)}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception("Failed to record payment")
+        raise HTTPException(status_code=500, detail=f"Payment execution failed: {type(e).__name__}")
+
+
+@app.post("/api/loans/{loan_id}/payments/{payment_id}/reverse", dependencies=[Depends(verify_csrf)])
+def reverse_loan_payment(
+    loan_id: int,
+    payment_id: int,
+    payload: LoanPaymentReverseRequest,
+    request: Request,
+    current_user: UserModel = Depends(require_roles("OWNER_ADMIN")),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    try:
+        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found.")
+
+        target_payment = db.query(LoanPaymentModel).filter(
+            LoanPaymentModel.id == payment_id, LoanPaymentModel.loan_id == loan_id
+        ).with_for_update().first()
+        
+        if not target_payment:
+            raise HTTPException(status_code=404, detail="Payment not found.")
+        if target_payment.status == "REVERSED":
+            raise HTTPException(status_code=409, detail="Payment is already reversed.")
+
+        latest_payment = db.query(LoanPaymentModel.id).filter(
+            LoanPaymentModel.loan_id == loan_id, LoanPaymentModel.status == 'POSTED'
+        ).order_by(LoanPaymentModel.loan_payment_seq.desc()).first()
+        
+        if not latest_payment or latest_payment[0] != payment_id:
+            raise HTTPException(status_code=409, detail="Only the most recent POSTED payment can be reversed to preserve ledger integrity.")
+
+        LoanPaymentEngine.execute_reversal_restoration(db, loan, target_payment, payload.reversal_reason.strip(), current_user.id)
+
+        record_audit_event(
+            db, "LOAN_PAYMENT_REVERSED", "loan", "SUCCESS", actor=current_user,
+            resource_id=target_payment.payment
 
 @app.get("/api/dashboard/summary")
 def get_dashboard_summary(
@@ -3492,21 +3850,32 @@ def get_dashboard_summary(
     open_leads_count = db.query(LeadModel).filter(LeadModel.stage.notin_(["CONVERTED", "LOST"])).count()
     active_loans_count = len(active_loans)
 
+    # Bloque G-2: Semana ISO para pagos cobrados
+    crm_tz = get_crm_timezone()
+    now_local = datetime.now(crm_tz)
+    monday_local = (now_local - timedelta(days=now_local.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    sunday_local = (monday_local + timedelta(days=6)).replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    collected_week_cents = db.query(func.sum(LoanPaymentModel.amount_cents)).filter(
+        LoanPaymentModel.status == 'POSTED',
+        LoanPaymentModel.paid_at >= monday_local.astimezone(timezone.utc),
+        LoanPaymentModel.paid_at <= sunday_local.astimezone(timezone.utc)
+    ).scalar() or 0
+
     return {
         "active_loan_portfolio_cents": active_portfolio_cents,
         "due_today_cents": due_today_cents,
         "overdue_amount_cents": overdue_amount_cents,
         "total_outstanding_principal_cents": total_outstanding_principal_cents,
         "total_amount_due_cents": total_contract_due_cents,
-        "collected_this_week_enabled": False,
-        "collected_this_week_cents": None,
+        "collected_this_week_enabled": True,
+        "collected_this_week_cents": collected_week_cents,
         "counts": {
             "active_loans": active_loans_count,
             "customers": customers_count,
             "open_leads": open_leads_count
         }
     }
-
 
 # --- CONVERSATIONS & NURA ASSISTANT ---
 @app.get("/api/conversations")
