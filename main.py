@@ -333,28 +333,52 @@ class LoanModel(Base):
     installments = relationship("LoanInstallmentModel", back_populates="loan", cascade="all, delete-orphan", order_by="LoanInstallmentModel.installment_number")
     payments = relationship("LoanPaymentModel", back_populates="loan", order_by="LoanPaymentModel.loan_payment_seq")
 
-
 class LoanInstallmentModel(Base):
     __tablename__ = "loan_installments"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    loan_id = Column(Integer, ForeignKey("loans.id", ondelete="RESTRICT"), index=True, nullable=False)
+    loan_id = Column(Integer, ForeignKey("loans.id", ondelete="RESTRICT"), nullable=False, index=True)
     installment_number = Column(Integer, nullable=False)
-    due_date = Column(Date, index=True, nullable=False)
+    due_date = Column(Date, nullable=False, index=True)
     beginning_principal_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
     principal_due_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
     interest_due_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
     scheduled_payment_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
     ending_principal_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
-    principal_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
-    interest_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
-    amount_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
+    principal_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False, default=0)
+    interest_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False, default=0)
+    amount_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False, default=0)
     remaining_amount_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
     paid_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
+    __table_args__ = (
+        CheckConstraint("installment_number >= 1", name="ck_inst_number_positive"),
+        CheckConstraint("principal_due_cents + interest_due_cents = scheduled_payment_cents", name="ck_inst_components_sum"),
+        CheckConstraint("beginning_principal_cents - principal_due_cents = ending_principal_cents", name="ck_inst_principal_roll"),
+        CheckConstraint("principal_paid_cents + interest_paid_cents = amount_paid_cents", name="ck_inst_paid_components_sum"),
+        CheckConstraint("amount_paid_cents + remaining_amount_cents = scheduled_payment_cents", name="ck_inst_remaining_balance"),
+        CheckConstraint(
+            "beginning_principal_cents >= 0 AND principal_due_cents >= 0 "
+            "AND interest_due_cents >= 0 AND scheduled_payment_cents >= 0 "
+            "AND ending_principal_cents >= 0 AND principal_paid_cents >= 0 "
+            "AND interest_paid_cents >= 0 AND amount_paid_cents >= 0 "
+            "AND remaining_amount_cents >= 0",
+            name="ck_inst_non_negative"
+        ),
+        CheckConstraint(
+            "(remaining_amount_cents = 0 AND paid_at IS NOT NULL) "
+            "OR (remaining_amount_cents > 0 AND paid_at IS NULL)",
+            name="ck_inst_paid_at_coherent"
+        ),
+        UniqueConstraint("loan_id", "installment_number", name="uq_loan_installments_loan_num"),
+    )
+
     loan = relationship("LoanModel", back_populates="installments")
-
-
+    payment_allocations = relationship(
+        "LoanPaymentAllocationModel",
+        back_populates="installment",
+        order_by="LoanPaymentAllocationModel.id"
+    )
 @event.listens_for(AuditLogModel, "before_update")
 def _prevent_audit_update(mapper, connection, target):
     raise RuntimeError("AuditLogModel is append-only: UPDATE is forbidden.")
@@ -363,7 +387,169 @@ def _prevent_audit_update(mapper, connection, target):
 @event.listens_for(AuditLogModel, "before_delete")
 def _prevent_audit_delete(mapper, connection, target):
     raise RuntimeError("AuditLogModel is append-only: DELETE is forbidden.")
+class LoanPaymentModel(Base):
+    __tablename__ = "loan_payments"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    payment_number = Column(String(24), unique=True, index=True, nullable=False)
+    loan_id = Column(Integer, ForeignKey("loans.id", ondelete="RESTRICT"), nullable=False, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False, index=True)
+    loan_payment_seq = Column(Integer, nullable=False)
+    idempotency_key = Column(String(64), nullable=False)
+    request_payload_hash = Column(String(64), nullable=False)
+    status = Column(String(20), nullable=False, default="POSTED", index=True)
+    currency = Column(String(3), nullable=False, default="MXN")
+    amount_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    interest_applied_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    principal_applied_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    prev_loan_status = Column(String(25), nullable=False)
+    prev_unpaid_principal_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    prev_remaining_interest_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    prev_remaining_total_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    prev_amount_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    payment_method = Column(String(40), nullable=False)
+    payment_reference = Column(String(120), nullable=True, index=True)
+    paid_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    notes = Column(Text, nullable=True)
+    recorded_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    reversed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    reversed_at = Column(DateTime(timezone=True), nullable=True)
+    reversal_reason = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
+    __table_args__ = (
+        CheckConstraint("loan_payment_seq >= 1", name="ck_loan_payments_seq_positive"),
+        CheckConstraint("status IN ('POSTED', 'REVERSED')", name="ck_loan_payments_status_valid"),
+        CheckConstraint("currency = 'MXN'", name="ck_loan_payments_currency_mxn"),
+        CheckConstraint(
+            "payment_method IN ('SPEI_TRANSFER', 'BANK_DEPOSIT', 'CHECK', 'CASH_RECEIPT')",
+            name="ck_loan_payments_method_valid"
+        ),
+        CheckConstraint(
+            "amount_cents > 0 AND interest_applied_cents >= 0 AND principal_applied_cents >= 0",
+            name="ck_loan_payments_amounts_positive"
+        ),
+        CheckConstraint(
+            "interest_applied_cents + principal_applied_cents = amount_cents",
+            name="ck_loan_payments_components_sum"
+        ),
+        CheckConstraint("prev_loan_status = 'ACTIVE'", name="ck_loan_payments_prev_status_active"),
+        CheckConstraint(
+            "prev_unpaid_principal_cents >= 0 "
+            "AND prev_remaining_interest_cents >= 0 "
+            "AND prev_remaining_total_cents > 0 "
+            "AND prev_amount_paid_cents >= 0 "
+            "AND prev_unpaid_principal_cents + prev_remaining_interest_cents = prev_remaining_total_cents "
+            "AND amount_cents <= prev_remaining_total_cents "
+            "AND interest_applied_cents <= prev_remaining_interest_cents "
+            "AND principal_applied_cents <= prev_unpaid_principal_cents",
+            name="ck_loan_payments_prev_balances_valid"
+        ),
+        CheckConstraint(
+            "(status = 'POSTED' AND reversed_by_user_id IS NULL AND reversed_at IS NULL AND reversal_reason IS NULL) "
+            "OR (status = 'REVERSED' AND reversed_by_user_id IS NOT NULL AND reversed_at IS NOT NULL "
+            "AND length(trim(reversal_reason)) >= 3)",
+            name="ck_loan_payments_reversal_metadata"
+        ),
+        UniqueConstraint("idempotency_key", name="uq_loan_payments_idempotency_key"),
+        UniqueConstraint("loan_id", "loan_payment_seq", name="uq_loan_payments_loan_seq"),
+    )
+
+    loan = relationship("LoanModel", back_populates="payments")
+    allocations = relationship(
+        "LoanPaymentAllocationModel",
+        back_populates="payment",
+        order_by="LoanPaymentAllocationModel.installment_number"
+    )
+
+
+class LoanPaymentAllocationModel(Base):
+    __tablename__ = "loan_payment_allocations"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    payment_id = Column(Integer, ForeignKey("loan_payments.id", ondelete="RESTRICT"), nullable=False, index=True)
+    loan_id = Column(Integer, ForeignKey("loans.id", ondelete="RESTRICT"), nullable=False, index=True)
+    installment_id = Column(Integer, ForeignKey("loan_installments.id", ondelete="RESTRICT"), nullable=False, index=True)
+    installment_number = Column(Integer, nullable=False)
+    interest_allocated_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    principal_allocated_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    total_allocated_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    prev_principal_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    prev_interest_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    prev_amount_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    prev_remaining_amount_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    prev_paid_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("installment_number >= 1", name="ck_payment_alloc_inst_num_pos"),
+        CheckConstraint(
+            "total_allocated_cents > 0 AND interest_allocated_cents >= 0 AND principal_allocated_cents >= 0",
+            name="ck_payment_alloc_amounts_valid"
+        ),
+        CheckConstraint(
+            "interest_allocated_cents + principal_allocated_cents = total_allocated_cents",
+            name="ck_payment_alloc_components_sum"
+        ),
+        CheckConstraint(
+            "prev_principal_paid_cents >= 0 "
+            "AND prev_interest_paid_cents >= 0 "
+            "AND prev_amount_paid_cents >= 0 "
+            "AND prev_remaining_amount_cents > 0 "
+            "AND prev_remaining_amount_cents >= total_allocated_cents "
+            "AND prev_principal_paid_cents + prev_interest_paid_cents = prev_amount_paid_cents "
+            "AND prev_paid_at IS NULL",
+            name="ck_payment_alloc_prev_valid"
+        ),
+        UniqueConstraint("payment_id", "installment_id", name="uq_payment_alloc_payment_inst"),
+    )
+
+    payment = relationship("LoanPaymentModel", back_populates="allocations")
+    installment = relationship("LoanInstallmentModel", back_populates="payment_allocations")
+
+
+@event.listens_for(LoanPaymentAllocationModel, "before_update")
+def _prevent_payment_allocation_update(mapper, connection, target):
+    raise ValueError("Loan payment allocations are strictly immutable and cannot be updated.")
+
+
+@event.listens_for(LoanPaymentAllocationModel, "before_delete")
+def _prevent_payment_allocation_delete(mapper, connection, target):
+    raise ValueError("Loan payment allocations are strictly immutable and cannot be deleted.")
+
+
+@event.listens_for(LoanPaymentModel, "before_delete")
+def _prevent_payment_delete(mapper, connection, target):
+    raise ValueError("Loan payments are strictly immutable and cannot be deleted.")
+
+
+@event.listens_for(LoanPaymentModel, "before_update")
+def _enforce_payment_reversal_only_update(mapper, connection, target):
+    state = inspect(target)
+    immutable_attrs = (
+        "id", "payment_number", "loan_id", "customer_id", "loan_payment_seq",
+        "idempotency_key", "request_payload_hash", "currency", "amount_cents",
+        "interest_applied_cents", "principal_applied_cents", "prev_loan_status",
+        "prev_unpaid_principal_cents", "prev_remaining_interest_cents",
+        "prev_remaining_total_cents", "prev_amount_paid_cents",
+        "payment_method", "payment_reference", "paid_at", "notes",
+        "recorded_by_user_id", "created_at"
+    )
+    for attr_name in immutable_attrs:
+        hist = state.attrs[attr_name].history
+        if hist.has_changes():
+            raise ValueError(f"Immutable loan payment field '{attr_name}' cannot be modified.")
+
+    status_hist = state.attrs["status"].history
+    if status_hist.deleted and status_hist.deleted[0] == "REVERSED":
+        raise ValueError("Reversed payments are terminal and cannot be modified.")
+    if target.status != "REVERSED" or (status_hist.deleted and status_hist.deleted[0] != "POSTED"):
+        raise ValueError("Invalid payment update: only the transition POSTED -> REVERSED is allowed.")
+    if (
+        target.reversed_by_user_id is None
+        or target.reversed_at is None
+        or not (target.reversal_reason or "").strip()
+        or len((target.reversal_reason or "").strip()) < 3
+    ):
+        raise ValueError("Payment reversal requires reversed_by_user_id, reversed_at, and a valid reversal_reason.")
 
 # --- AUTHORITATIVE FINANCIAL ENGINE (FLAT_ORIGINAL_PRINCIPAL) ---
 class LoanFinancialEngine:
@@ -446,23 +632,23 @@ def verify_database_schema_compatibility(db_engine):
         return  # SQLite dev DB trusts test fixtures / alembic
     try:
         inspector = inspect(db_engine)
-        tables = set(inspector.get_table_names())
-        required_tables = {
-            "users", "sessions", "conversations", "chat_messages", "audit_logs",
-            "customers", "leads", "lead_stage_history", "interactions", "loans", "loan_installments"
-        }
-        if not required_tables.issubset(tables):
-            missing = required_tables - tables
-            raise RuntimeError(f"Database schema is missing required tables: {missing}")
+    tables = set(inspector.get_table_names())
+    required_tables = {
+        "users", "sessions", "conversations", "chat_messages", "audit_logs",
+        "customers", "leads", "lead_stage_history", "interactions", "loans", "loan_installments",
+        "loan_payments", "loan_payment_allocations"
+    }
+    if not required_tables.issubset(tables):
+        missing = required_tables - tables
+        raise RuntimeError(f"Database schema is missing required tables: {missing}")
 
-        with db_engine.connect() as conn:
-            res = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
-            if not res:
-                raise RuntimeError("No alembic_version record found in database.")
-            rev = res[0]
-            pre_stage3 = {"001", "002", "003", "004"}
-            if rev in pre_stage3:
-                raise RuntimeError(f"Database schema is at legacy revision '{rev}'. Migration 005 must be applied first.")
+    with db_engine.connect() as conn:
+        res = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
+        if not res:
+            raise RuntimeError("No alembic_version record found in database.")
+        rev = res[0]
+        if rev != "006":
+            raise RuntimeError(f"Database schema is at revision '{rev}', but Stage 5 (Block G) requires '006'. Run 'alembic upgrade head'.")
     except Exception as e:
         logger.error(f"Schema compatibility guard failed: {e}")
         raise
