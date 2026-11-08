@@ -3573,11 +3573,6 @@ def activate_loan(
             raise HTTPException(status_code=404, detail="Loan not found.")
 
         if loan.status == "ACTIVE":
-            record_audit_event(
-                db, "LOAN_ACTIVATION_DUPLICATE_BLOCKED", "loan", "DENIED",
-                actor=current_user, resource_id=loan.loan_number, ip_address=ip,
-                details={"reason": "Already active"}, commit=True
-            )
             raise HTTPException(status_code=409, detail=f"Loan {loan.loan_number} is already active.")
         if loan.status == "CANCELLED":
             raise HTTPException(status_code=409, detail=f"Cannot activate loan {loan.loan_number} because it was cancelled.")
@@ -3585,7 +3580,13 @@ def activate_loan(
             raise HTTPException(status_code=409, detail=f"Loan must be in APPROVED status before activation. Current: {loan.status}")
 
         now_utc = datetime.now(timezone.utc)
-        loan.status = "ACTIVE"
+        
+        # Asignación limpia y ordenada exigida por el trigger de Postgres
+        loan.unpaid_principal_cents = int(loan.principal_cents)
+        loan.remaining_contractual_interest_cents = int(loan.total_interest_cents)
+        loan.remaining_contract_total_cents = int(loan.total_repayment_cents)
+        loan.amount_paid_cents = 0
+        
         loan.activated_by_user_id = current_user.id
         loan.activated_at = now_utc
         loan.disbursed_at = disbursed_at_dt
@@ -3593,13 +3594,11 @@ def activate_loan(
         loan.disbursement_reference = payload.disbursement_reference.strip()
         if payload.disbursement_notes:
             loan.disbursement_notes = payload.disbursement_notes.strip()
-
-        # Initialize operational balances
-        loan.unpaid_principal_cents = loan.principal_cents
-        loan.remaining_contractual_interest_cents = loan.total_interest_cents
-        loan.remaining_contract_total_cents = loan.total_repayment_cents
-        loan.amount_paid_cents = 0
+            
+        loan.status = "ACTIVE"
         loan.updated_at = now_utc
+
+        db.flush() # Fuerza la validación del trigger antes del commit final
 
         record_audit_event(
             db, "LOAN_ACTIVATED_DISBURSED", "loan", "SUCCESS",
