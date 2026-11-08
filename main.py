@@ -3856,9 +3856,9 @@ def create_loan_payment(
         db.rollback()
         raise
     except Exception as e:
-        db.rollback()
-        logger.exception("Failed to record payment")
-        raise HTTPException(status_code=500, detail=f"Payment execution failed: {type(e).__name__}")
+     db.rollback()
+     logger.exception("Failed to record payment")
+     raise HTTPException(status_code=500, detail=f"Payment execution failed: {type(e).__name__} — {str(e)}")
 
 
 @app.post("/api/loans/{loan_id}/payments/{payment_id}/reverse", dependencies=[Depends(verify_csrf)])
