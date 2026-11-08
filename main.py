@@ -3675,7 +3675,7 @@ def activate_loan(
     except Exception as e:
         db.rollback()
         logger.exception("Failed to activate loan")
-        raise HTTPException(status_code=500, detail=f"Could not activate loan: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail=f"Could not activate loan: {type(e).__name__} — {str(e)}")
 
 
 @app.post("/api/loans/{loan_id}/cancel", dependencies=[Depends(verify_csrf)])
