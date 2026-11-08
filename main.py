@@ -628,6 +628,7 @@ class LoanFinancialEngine:
 
 
 # --- STARTUP SCHEMA GUARD ---
+# --- STARTUP SCHEMA GUARD ---
 def verify_database_schema_compatibility(db_engine):
     if not IS_PRODUCTION and "sqlite" in str(db_engine.url):
         return  # SQLite dev DB trusts test fixtures / alembic
@@ -643,17 +644,54 @@ def verify_database_schema_compatibility(db_engine):
             missing = required_tables - tables
             raise RuntimeError(f"Database schema is missing required tables: {missing}")
 
-        with db_engine.connect() as conn:
+        with db_engine.begin() as conn:
             res = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
             if not res:
                 raise RuntimeError("No alembic_version record found in database.")
             rev = res[0]
             if rev != "006":
                 raise RuntimeError(f"Database schema is at revision '{rev}', but Stage 5 (Block G) requires '006'. Run 'alembic upgrade head'.")
+
+            if db_engine.dialect.name == "postgresql":
+                conn.execute(text("""
+                    DO $$
+                    DECLARE
+                        r RECORD;
+                    BEGIN
+                        FOR r IN
+                            SELECT tgname
+                            FROM pg_trigger t
+                            JOIN pg_class c ON t.tgrelid = c.oid
+                            WHERE c.relname = 'loans'
+                              AND NOT t.tgisinternal
+                              AND (t.tgtype & 3) = 3
+                        LOOP
+                            EXECUTE format('DROP TRIGGER IF EXISTS %I ON loans', r.tgname);
+                        END LOOP;
+
+                        CREATE TRIGGER trg_protect_loans_immutability
+                        BEFORE UPDATE OR DELETE ON loans
+                        FOR EACH ROW EXECUTE FUNCTION enforce_loans_immutability();
+
+                        FOR r IN
+                            SELECT tgname
+                            FROM pg_trigger t
+                            JOIN pg_class c ON t.tgrelid = c.oid
+                            WHERE c.relname = 'loan_installments'
+                              AND NOT t.tgisinternal
+                              AND (t.tgtype & 3) = 3
+                        LOOP
+                            EXECUTE format('DROP TRIGGER IF EXISTS %I ON loan_installments', r.tgname);
+                        END LOOP;
+
+                        CREATE TRIGGER trg_protect_loan_installments_immutability
+                        BEFORE UPDATE OR DELETE ON loan_installments
+                        FOR EACH ROW EXECUTE FUNCTION enforce_loan_installments_immutability();
+                    END $$;
+                """))
     except Exception as e:
         logger.error(f"Schema compatibility guard failed: {e}")
         raise
-
 
 # --- RATE LIMITING, PHONE NORMALIZATION & ID HELPERS ---
 _RATE_BUCKETS = defaultdict(list)
@@ -780,6 +818,19 @@ def generate_next_lead_number(db: Session) -> str:
     while True:
         candidate = f"LD-{next_seq:05d}"
         exists = db.query(LeadModel.id).filter(LeadModel.lead_number == candidate).first()
+        if not exists:
+            return candidate
+        next_seq += 1
+
+
+def generate_next_loan_number(db: Session) -> str:
+    if db.bind and db.bind.dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(9004001)"))
+    last_loan = db.query(LoanModel.id).order_by(LoanModel.id.desc()).first()
+    next_seq = (last_loan[0] + 1) if last_loan else 1
+    while True:
+        candidate = f"LN-{next_seq:05d}"
+        exists = db.query(LoanModel.id).filter(LoanModel.loan_number == candidate).first()
         if not exists:
             return candidate
         next_seq += 1
@@ -1186,6 +1237,10 @@ class LoanActivateRequest(BaseModel):
     disbursement_reference: str = Field(..., min_length=3, max_length=120)
     disbursed_at: Optional[str] = None  # ISO datetime
     disbursement_notes: Optional[str] = Field(default=None, max_length=1000)
+
+
+class LoanCancelRequest(BaseModel):
+    cancellation_reason: str = Field(..., min_length=3, max_length=255)
 
 
 class LoanPaymentCreateRequest(BaseModel):
@@ -3742,7 +3797,7 @@ def create_loan_payment(
         if loan.status != "ACTIVE":
             raise HTTPException(status_code=409, detail=f"Payments can only be applied to ACTIVE loans. Current: {loan.status}")
         if amount_cents > loan.remaining_contract_total_cents:
-            raise HTTPException(status_code=422, detail=f"Amount exceeds remaining balance. Max allowed: {NuraFinancialEngine.formatMXNFromCents(loan.remaining_contract_total_cents)}")
+            raise HTTPException(status_code=422, detail=f"Amount exceeds remaining balance. Max allowed: ${loan.remaining_contract_total_cents / 100:,.2f} MXN")
 
         existing_locked = db.query(LoanPaymentModel).filter(LoanPaymentModel.idempotency_key == payload.idempotency_key).first()
         if existing_locked:
