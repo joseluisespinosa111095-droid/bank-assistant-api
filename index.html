@@ -1072,6 +1072,9 @@
                                         <button type="button" id="ld-btn-cancel" onclick="openLoanCancelModal()" class="hidden py-2 px-3.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-semibold text-xs transition">
                                             ✕ Cancel Loan
                                         </button>
+                                        <button type="button" id="ld-btn-payment" onclick="openLoanPaymentModal()" class="hidden py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-sm">
+                                            💳 Record Payment
+                                        </button>
                                     </div>
                                     <button type="button" id="ld-btn-customer" class="py-2 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-sm transition">
                                         <span>Open Customer Profile →</span>
@@ -1292,6 +1295,41 @@
                                 </div>
                             </div>
 
+                            <!-- ========================================================= -->
+                            <!-- SECTION: PAYMENT HISTORY & REVERSAL LEDGER (BLOCK G)      -->
+                            <!-- ========================================================= -->
+                            <div id="loan-payments-container" class="fintech-card p-5 bg-white space-y-4 border border-slate-200 hidden">
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
+                                    <div>
+                                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Payment History &amp; Allocation Ledger</h3>
+                                        <p class="text-[11px] text-slate-500">Immutable record of posted receipts, per-installment waterfall allocations, and controlled LIFO reversals</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span id="ld-payments-count-badge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">0 Payments</span>
+                                    </div>
+                                </div>
+
+                                <div class="overflow-x-auto rounded-xl border border-slate-200/80">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                <th class="py-2.5 px-3">Receipt / Allocations</th>
+                                                <th class="py-2.5 px-3">Effective Date &amp; Method</th>
+                                                <th class="py-2.5 px-3 text-right">Interest Applied</th>
+                                                <th class="py-2.5 px-3 text-right">Principal Applied</th>
+                                                <th class="py-2.5 px-3 text-right">Total Received</th>
+                                                <th class="py-2.5 px-3 text-center">Status</th>
+                                                <th class="py-2.5 px-3 text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ld-payments-tbody" class="divide-y divide-slate-100 text-xs bg-white">
+                                            <tr>
+                                                <td colspan="7" class="py-6 px-4 text-center text-slate-400">No payments recorded for this loan yet.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
 
                             <!-- SECTION 2: OPERATIONAL LIFECYCLE & SERVICING AUDIT -->
                             <div class="fintech-card p-5 bg-white space-y-4">
@@ -2472,6 +2510,147 @@
                         <button type="button" onclick="closeLoanCancelModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs">Back</button>
                         <button type="submit" id="lcanc-submit-btn" class="py-2.5 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs shadow-sm transition">
                             Confirm Cancellation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 4. RECORD LOAN PAYMENT MODAL (STAGE 5 / BLOCK G) -->
+        <div id="loan-payment-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[540px] max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-extrabold text-slate-900 text-base">Record Loan Payment Receipt</h3>
+                            <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">WATERFALL LEDGER</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Allocates chronologically to oldest unpaid installments (Interest first, then Principal)</p>
+                    </div>
+                    <button type="button" onclick="closeLoanPaymentModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">✕</button>
+                </div>
+
+                <div id="loan-payment-error" class="hidden p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <form id="loan-payment-form" onsubmit="handleLoanPaymentSubmit(event)" class="space-y-4 text-xs">
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-200/70 pb-2">
+                            <span id="lpay-loan-header" class="font-extrabold text-slate-900 text-sm">LN-00000</span>
+                            <span id="lpay-customer-badge" class="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-xl border border-blue-200">Customer #—</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-amber-800 uppercase">Current Payable</p>
+                                <p id="lpay-current-payable" class="font-extrabold font-mono text-amber-900 mt-0.5 text-xs">—</p>
+                                <button type="button" onclick="setPaymentQuickAmount('payable')" class="mt-1 text-[10px] font-bold text-blue-600 hover:underline">Use Payable</button>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-slate-500 uppercase">Next Installment</p>
+                                <p id="lpay-next-installment" class="font-extrabold font-mono text-slate-900 mt-0.5 text-xs">—</p>
+                                <button type="button" onclick="setPaymentQuickAmount('installment')" class="mt-1 text-[10px] font-bold text-blue-600 hover:underline">Use Installment</button>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200/70">
+                                <p class="text-[9px] font-bold text-emerald-800 uppercase">Full Payoff</p>
+                                <p id="lpay-rem-total" class="font-extrabold font-mono text-emerald-900 mt-0.5 text-xs">—</p>
+                                <button type="button" onclick="setPaymentQuickAmount('payoff')" class="mt-1 text-[10px] font-bold text-emerald-700 hover:underline">Pay in Full</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Payment Amount Received (MXN) *</label>
+                            <input type="number" id="lpay-amount" required min="0.01" step="0.01" oninput="onLoanPaymentParamChange()" class="w-full fintech-input rounded-xl p-3 text-sm font-extrabold font-mono text-slate-900" placeholder="0.00">
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Payment Method *</label>
+                            <select id="lpay-method" required onchange="onLoanPaymentParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="SPEI_TRANSFER">SPEI_TRANSFER (Electronic Transfer)</option>
+                                <option value="BANK_DEPOSIT">BANK_DEPOSIT (Branch Deposit)</option>
+                                <option value="CHECK">CHECK</option>
+                                <option value="CASH_RECEIPT">CASH_RECEIPT (Cash Receipt)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Effective Date &amp; Time (Optional)</label>
+                            <input type="datetime-local" id="lpay-date" onchange="onLoanPaymentParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono">
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Bank Reference / Tracking Key (Clave de Rastreo / Folio)</label>
+                            <input type="text" id="lpay-reference" maxlength="120" oninput="onLoanPaymentParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono font-bold" placeholder="e.g., SPEI-20261107-00192 or Receipt #104">
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Collection Notes (Optional)</label>
+                            <textarea id="lpay-notes" rows="2" maxlength="1000" oninput="onLoanPaymentParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Optional payment observations..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200">
+                        <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                            <input type="checkbox" id="lpay-confirm-check" required class="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                            <span class="text-[11px] text-emerald-950 leading-snug">
+                                <strong>Confirm Verified Payment:</strong> I confirm these funds were received and verified. This payment will be posted to the immutable PostgreSQL ledger.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeLoanPaymentModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs">Cancel</button>
+                        <button type="submit" id="lpay-submit-btn" class="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition">
+                            Post Payment →
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 5. REVERSE LOAN PAYMENT MODAL (OWNER_ADMIN LIFO ONLY) -->
+        <div id="loan-reversal-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[480px] max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-extrabold text-slate-900 text-base">Reverse Posted Payment</h3>
+                            <span class="bg-red-50 text-red-700 border border-red-200 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">POSTED → REVERSED</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Controlled LIFO reversal • Restores exact prior loan and installment balances</p>
+                    </div>
+                    <button type="button" onclick="closeLoanReversalModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">✕</button>
+                </div>
+
+                <div id="loan-reversal-error" class="hidden p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <form id="loan-reversal-form" onsubmit="handleLoanReversalSubmit(event)" class="space-y-4 text-xs">
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <span id="lrev-number" class="font-mono font-extrabold text-slate-900 text-sm">PAY-000000</span>
+                            <span id="lrev-amount" class="font-mono font-extrabold text-red-600 text-sm">$0.00 MXN</span>
+                        </div>
+                        <p id="lrev-meta" class="text-[11px] text-slate-600">Method: — • Paid at: —</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-red-700 uppercase mb-1">Mandatory Reversal Reason *</label>
+                        <textarea id="lrev-reason" required minlength="3" maxlength="255" rows="3" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="State the reason for reversing this payment (min. 3 characters, e.g., Returned check, Duplicate entry, Incorrect amount)..."></textarea>
+                    </div>
+
+                    <div class="p-3.5 rounded-2xl bg-red-50/70 border border-red-200">
+                        <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                            <input type="checkbox" id="lrev-confirm-check" required class="mt-0.5 h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500">
+                            <span class="text-[11px] text-red-950 leading-snug">
+                                <strong>Confirm LIFO Payment Reversal:</strong> I understand this payment will be permanently marked as <code>REVERSED</code> and all affected installments will revert to their exact pre-payment balances.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeLoanReversalModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs">Back</button>
+                        <button type="submit" id="lrev-submit-btn" class="py-2.5 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs shadow-sm transition">
+                            Confirm Reversal
                         </button>
                     </div>
                 </form>
@@ -5196,16 +5375,26 @@ async function loadDashboardSummary() {
             if (box) box.classList.add('hidden');
         }
 
+        let currentPaymentIdempotencyKey = null;
+        let currentSelectedPaymentForReversal = null;
+        let loanPaymentsRequestSeq = 0;
+
+        function onLoanPaymentParamChange() {
+            currentPaymentIdempotencyKey = null;
+        }
+
         function updateLoanLifecycleActionsUI(loan) {
             const container = document.getElementById('ld-lifecycle-actions');
             const btnApprove = document.getElementById('ld-btn-approve');
             const btnActivate = document.getElementById('ld-btn-activate');
             const btnCancel = document.getElementById('ld-btn-cancel');
+            const btnPayment = document.getElementById('ld-btn-payment');
             if (!container || !btnApprove || !btnActivate || !btnCancel) return;
 
             btnApprove.classList.add('hidden');
             btnActivate.classList.add('hidden');
             btnCancel.classList.add('hidden');
+            if (btnPayment) btnPayment.classList.add('hidden');
             container.classList.add('hidden');
 
             if (!loan || typeof loan !== 'object') return;
@@ -5227,10 +5416,387 @@ async function loadDashboardSummary() {
                     btnCancel.classList.remove('hidden');
                     anyVisible = true;
                 }
+            } else if (status === 'ACTIVE') {
+                if (btnPayment && canUserActivateLoan()) {
+                    btnPayment.classList.remove('hidden');
+                    anyVisible = true;
+                }
             }
 
             if (anyVisible) {
                 container.classList.remove('hidden');
+            }
+
+            const paymentsBox = document.getElementById('loan-payments-container');
+            if (paymentsBox) {
+                if (['ACTIVE', 'PAID_OFF', 'DEFAULTED'].includes(status)) {
+                    paymentsBox.classList.remove('hidden');
+                    loadLoanPayments(loan.id);
+                } else {
+                    paymentsBox.classList.add('hidden');
+                }
+            }
+        }
+
+        async function loadLoanPayments(loanId) {
+            if (!Number.isSafeInteger(loanId) || loanId <= 0) return;
+            const thisSeq = ++loanPaymentsRequestSeq;
+            const tbody = document.getElementById('ld-payments-tbody');
+            const countBadge = document.getElementById('ld-payments-count-badge');
+            if (!tbody) return;
+
+            tbody.innerHTML = '<tr><td colspan="7" class="py-6 px-4 text-center text-slate-400">Loading payment ledger...</td></tr>';
+
+            try {
+                const res = await fetch(`/api/loans/${loanId}/payments`);
+                if (thisSeq !== loanPaymentsRequestSeq) return;
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const payments = await res.json();
+                if (thisSeq !== loanPaymentsRequestSeq) return;
+
+                const list = Array.isArray(payments) ? payments : [];
+                const postedCount = list.filter(p => p && p.status === 'POSTED').length;
+                if (countBadge) {
+                    countBadge.innerText = `${postedCount} Posted / ${list.length} Total`;
+                }
+
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="py-6 px-4 text-center text-slate-400">No payments recorded for this loan yet.</td></tr>';
+                    return;
+                }
+
+                let rowsHtml = '';
+                list.forEach(p => {
+                    const isPosted = p.status === 'POSTED';
+                    const badgeClass = isPosted
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : 'bg-slate-200 text-slate-600 border-slate-300 line-through';
+
+                    const allocs = Array.isArray(p.allocations) ? p.allocations : [];
+                    const allocSummary = allocs.map(a => `#${a.installment_number} (${NuraFinancialEngine.formatMXNFromCents(a.total_allocated_cents)})`).join(', ');
+
+                    const canReverse = isPosted && p.is_top_reversible === true && currentUser?.role === 'OWNER_ADMIN';
+                    const actionHtml = canReverse
+                        ? `<button type="button" data-pay-id="${p.id}" class="btn-reverse-payment py-1.5 px-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-[11px] transition">↩ Reverse</button>`
+                        : (isPosted ? '<span class="text-[10px] text-slate-400 font-medium">Locked (LIFO)</span>' : '<span class="text-[10px] text-slate-400">Reversed</span>');
+
+                    const reversalNoteHtml = (!isPosted && p.reversal_reason)
+                        ? `<p class="text-[10px] text-red-600 mt-0.5">Reversed: ${escapeHtml(p.reversal_reason)} (${escapeHtml(formatDateTimeShort(p.reversed_at))})</p>`
+                        : '';
+
+                    rowsHtml += `
+                        <tr class="${isPosted ? 'hover:bg-slate-50/80' : 'bg-slate-50/60 opacity-75'} transition-colors">
+                            <td class="py-2.5 px-3">
+                                <p class="font-mono font-bold text-slate-900">${escapeHtml(p.payment_number)}</p>
+                                ${allocSummary ? `<p class="text-[10px] text-slate-500 mt-0.5">Inst: ${escapeHtml(allocSummary)}</p>` : ''}
+                                ${p.notes ? `<p class="text-[10px] text-slate-500 italic mt-0.5">${escapeHtml(p.notes)}</p>` : ''}
+                                ${reversalNoteHtml}
+                            </td>
+                            <td class="py-2.5 px-3">
+                                <p class="font-semibold text-slate-800">${escapeHtml(formatDateTimeShort(p.paid_at))}</p>
+                                <p class="text-[10px] font-mono text-slate-500">${escapeHtml(p.payment_method)}${p.payment_reference ? ` • Ref: ${escapeHtml(p.payment_reference)}` : ''}</p>
+                            </td>
+                            <td class="py-2.5 px-3 text-right font-mono text-amber-800">${NuraFinancialEngine.formatMXNFromCents(p.interest_applied_cents)}</td>
+                            <td class="py-2.5 px-3 text-right font-mono text-blue-900">${NuraFinancialEngine.formatMXNFromCents(p.principal_applied_cents)}</td>
+                            <td class="py-2.5 px-3 text-right font-mono font-extrabold text-emerald-800">${NuraFinancialEngine.formatMXNFromCents(p.amount_cents)}</td>
+                            <td class="py-2.5 px-3 text-center">
+                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full border uppercase ${badgeClass}">${escapeHtml(p.status)}</span>
+                            </td>
+                            <td class="py-2.5 px-3 text-right">${actionHtml}</td>
+                        </tr>`;
+                });
+
+                tbody.innerHTML = rowsHtml;
+
+                tbody.querySelectorAll('.btn-reverse-payment').forEach(btn => {
+                    const pid = Number(btn.getAttribute('data-pay-id'));
+                    const payObj = list.find(x => x.id === pid);
+                    if (payObj) {
+                        btn.onclick = () => openLoanReversalModal(payObj);
+                    }
+                });
+            } catch (err) {
+                if (thisSeq !== loanPaymentsRequestSeq) return;
+                tbody.innerHTML = `<tr><td colspan="7" class="py-6 px-4 text-center text-red-600">Unable to load payment history (${escapeHtml(err.message)}).</td></tr>`;
+            }
+        }
+
+        async function openLoanPaymentModal() {
+            if (!currentSelectedLoan || currentSelectedLoan.status !== 'ACTIVE') return;
+            if (!canUserActivateLoan()) return;
+
+            const l = currentSelectedLoan;
+            currentPaymentIdempotencyKey = null;
+
+            const errBox = document.getElementById('loan-payment-error');
+            if (errBox) errBox.classList.add('hidden');
+
+            const form = document.getElementById('loan-payment-form');
+            if (form) form.reset();
+
+            const submitBtn = document.getElementById('lpay-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Post Payment →';
+            }
+
+            document.getElementById('lpay-loan-header').innerText = `${l.loan_number || 'Loan'} • ${l.product_name || 'Personal Loan'}`;
+            document.getElementById('lpay-customer-badge').innerText = `Customer #${l.customer_id}`;
+
+            const payableCents = Number.isSafeInteger(l.current_payable_amount_cents) ? l.current_payable_amount_cents : 0;
+            const remTotalCents = Number.isSafeInteger(l.remaining_contract_total_cents) ? l.remaining_contract_total_cents : 0;
+            const unpaidInsts = (Array.isArray(l.installments) ? l.installments : []).filter(i => i && i.remaining_amount_cents > 0);
+            const nextInstCents = unpaidInsts.length > 0 ? unpaidInsts[0].remaining_amount_cents : (l.regular_installment_cents || 0);
+
+            document.getElementById('lpay-current-payable').innerText = NuraFinancialEngine.formatMXNFromCents(payableCents);
+            document.getElementById('lpay-next-installment').innerText = NuraFinancialEngine.formatMXNFromCents(nextInstCents);
+            document.getElementById('lpay-rem-total').innerText = NuraFinancialEngine.formatMXNFromCents(remTotalCents);
+
+            const defaultCents = payableCents > 0 ? payableCents : nextInstCents;
+            document.getElementById('lpay-amount').value = (defaultCents / 100).toFixed(2);
+            document.getElementById('lpay-method').value = 'SPEI_TRANSFER';
+            document.getElementById('lpay-date').value = '';
+            document.getElementById('lpay-reference').value = '';
+            document.getElementById('lpay-notes').value = '';
+            document.getElementById('lpay-confirm-check').checked = false;
+
+            document.getElementById('loan-payment-modal')?.classList.remove('hidden');
+
+            const resolvedCust = await resolveLoanCustomerDisplay(l);
+            const badgeEl = document.getElementById('lpay-customer-badge');
+            if (badgeEl) badgeEl.innerText = resolvedCust;
+        }
+
+        function setPaymentQuickAmount(mode) {
+            if (!currentSelectedLoan) return;
+            const l = currentSelectedLoan;
+            let targetCents = 0;
+            if (mode === 'payable') {
+                targetCents = l.current_payable_amount_cents || 0;
+            } else if (mode === 'installment') {
+                const unpaidInsts = (Array.isArray(l.installments) ? l.installments : []).filter(i => i && i.remaining_amount_cents > 0);
+                targetCents = unpaidInsts.length > 0 ? unpaidInsts[0].remaining_amount_cents : (l.regular_installment_cents || 0);
+            } else if (mode === 'payoff') {
+                targetCents = l.remaining_contract_total_cents || 0;
+            }
+            if (targetCents > 0) {
+                document.getElementById('lpay-amount').value = (targetCents / 100).toFixed(2);
+                onLoanPaymentParamChange();
+            }
+        }
+
+        function closeLoanPaymentModal() {
+            if (isSubmittingLoanLifecycle) return;
+            document.getElementById('loan-payment-modal')?.classList.add('hidden');
+        }
+
+        async function handleLoanPaymentSubmit(e) {
+            e.preventDefault();
+            if (isSubmittingLoanLifecycle || !currentSelectedLoan) return;
+
+            const loanId = currentSelectedLoan.id;
+            const loanNumber = currentSelectedLoan.loan_number || `#${loanId}`;
+            const errBox = document.getElementById('loan-payment-error');
+            const submitBtn = document.getElementById('lpay-submit-btn');
+            if (errBox) errBox.classList.add('hidden');
+
+            const showError = (msg) => {
+                if (errBox) {
+                    errBox.innerText = msg;
+                    errBox.classList.remove('hidden');
+                }
+            };
+
+            const amountPesos = Number(document.getElementById('lpay-amount')?.value);
+            if (!Number.isFinite(amountPesos) || amountPesos <= 0) {
+                showError('Payment amount must be greater than $0.00 MXN.');
+                return;
+            }
+            const amountCents = Math.round(amountPesos * 100);
+            if (amountCents <= 0 || amountCents > (currentSelectedLoan.remaining_contract_total_cents || 0)) {
+                showError(`Payment cannot exceed the remaining contract total (${NuraFinancialEngine.formatMXNFromCents(currentSelectedLoan.remaining_contract_total_cents)}).`);
+                return;
+            }
+
+            const method = document.getElementById('lpay-method')?.value || '';
+            const reference = (document.getElementById('lpay-reference')?.value || '').trim() || null;
+            const paidAtRaw = (document.getElementById('lpay-date')?.value || '').trim() || null;
+            const notesVal = (document.getElementById('lpay-notes')?.value || '').trim() || null;
+
+            if (!document.getElementById('lpay-confirm-check')?.checked) {
+                showError('Please check the confirmation box before posting this payment.');
+                return;
+            }
+
+            if (!currentPaymentIdempotencyKey) {
+                currentPaymentIdempotencyKey = generateFreshLoanIdempotencyKey();
+            }
+
+            const payload = {
+                idempotency_key: currentPaymentIdempotencyKey,
+                amount_cents: amountCents,
+                payment_method: method,
+                payment_reference: reference,
+                paid_at: paidAtRaw,
+                notes: notesVal
+            };
+
+            isSubmittingLoanLifecycle = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Posting Payment...';
+            }
+
+            try {
+                const res = await fetch(`/api/loans/${loanId}/payments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCookie('csrf_token')
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.status === 401) {
+                    isSubmittingLoanLifecycle = false;
+                    document.getElementById('loan-payment-modal')?.classList.add('hidden');
+                    mostrarAuthView();
+                    return;
+                }
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const detailMsg = typeof data.detail === 'string'
+                        ? data.detail
+                        : (Array.isArray(data.detail) ? data.detail.map(d => d.msg).join('; ') : null);
+                    throw new Error(detailMsg || `Failed to record payment (HTTP ${res.status}).`);
+                }
+
+                currentPaymentIdempotencyKey = null;
+                isSubmittingLoanLifecycle = false;
+                document.getElementById('loan-payment-modal')?.classList.add('hidden');
+
+                const pNum = data.payment?.payment_number || 'Receipt';
+                await applyUpdatedLoanFromLifecycleAction(
+                    loanId,
+                    `✓ Payment ${pNum} (${NuraFinancialEngine.formatMXNFromCents(amountCents)}) posted to ${loanNumber}.`
+                );
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                isSubmittingLoanLifecycle = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Post Payment →';
+                }
+            }
+        }
+
+        function openLoanReversalModal(paymentObj) {
+            if (!currentSelectedLoan || !paymentObj || paymentObj.status !== 'POSTED') return;
+            if (currentUser?.role !== 'OWNER_ADMIN') return;
+
+            currentSelectedPaymentForReversal = paymentObj;
+            const errBox = document.getElementById('loan-reversal-error');
+            if (errBox) errBox.classList.add('hidden');
+
+            const form = document.getElementById('loan-reversal-form');
+            if (form) form.reset();
+
+            const submitBtn = document.getElementById('lrev-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Confirm Reversal';
+            }
+
+            document.getElementById('lrev-number').innerText = paymentObj.payment_number || `Payment #${paymentObj.id}`;
+            document.getElementById('lrev-amount').innerText = NuraFinancialEngine.formatMXNFromCents(paymentObj.amount_cents);
+            document.getElementById('lrev-meta').innerText = `Method: ${paymentObj.payment_method || '—'} • Paid at: ${formatDateTimeShort(paymentObj.paid_at)}`;
+            document.getElementById('lrev-reason').value = '';
+            document.getElementById('lrev-confirm-check').checked = false;
+
+            document.getElementById('loan-reversal-modal')?.classList.remove('hidden');
+        }
+
+        function closeLoanReversalModal() {
+            if (isSubmittingLoanLifecycle) return;
+            document.getElementById('loan-reversal-modal')?.classList.add('hidden');
+        }
+
+        async function handleLoanReversalSubmit(e) {
+            e.preventDefault();
+            if (isSubmittingLoanLifecycle || !currentSelectedLoan || !currentSelectedPaymentForReversal) return;
+
+            const loanId = currentSelectedLoan.id;
+            const paymentId = currentSelectedPaymentForReversal.id;
+            const payNumber = currentSelectedPaymentForReversal.payment_number || `#${paymentId}`;
+            const errBox = document.getElementById('loan-reversal-error');
+            const submitBtn = document.getElementById('lrev-submit-btn');
+            if (errBox) errBox.classList.add('hidden');
+
+            const showError = (msg) => {
+                if (errBox) {
+                    errBox.innerText = msg;
+                    errBox.classList.remove('hidden');
+                }
+            };
+
+            const reason = (document.getElementById('lrev-reason')?.value || '').trim();
+            if (reason.length < 3 || reason.length > 255) {
+                showError('Reversal reason must be between 3 and 255 characters.');
+                return;
+            }
+
+            if (!document.getElementById('lrev-confirm-check')?.checked) {
+                showError('Please check the confirmation box to authorize this reversal.');
+                return;
+            }
+
+            isSubmittingLoanLifecycle = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Reversing Payment...';
+            }
+
+            try {
+                const res = await fetch(`/api/loans/${loanId}/payments/${paymentId}/reverse`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCookie('csrf_token')
+                    },
+                    body: JSON.stringify({ reversal_reason: reason })
+                });
+
+                if (res.status === 401) {
+                    isSubmittingLoanLifecycle = false;
+                    document.getElementById('loan-reversal-modal')?.classList.add('hidden');
+                    mostrarAuthView();
+                    return;
+                }
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const detailMsg = typeof data.detail === 'string'
+                        ? data.detail
+                        : (Array.isArray(data.detail) ? data.detail.map(d => d.msg).join('; ') : null);
+                    throw new Error(detailMsg || `Failed to reverse payment (HTTP ${res.status}).`);
+                }
+
+                isSubmittingLoanLifecycle = false;
+                document.getElementById('loan-reversal-modal')?.classList.add('hidden');
+                await applyUpdatedLoanFromLifecycleAction(
+                    loanId,
+                    `✓ Payment ${payNumber} has been reversed and prior balances restored.`
+                );
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                isSubmittingLoanLifecycle = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Confirm Reversal';
+                }
             }
         }
 
