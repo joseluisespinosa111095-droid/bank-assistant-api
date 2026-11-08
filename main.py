@@ -988,10 +988,20 @@ class LoanPaymentEngine:
                 )
                 db.add(alloc)
 
-        payment.interest_applied_cents = interest_applied
-        payment.principal_applied_cents = principal_applied
+        payment.interest_applied_cents = int(interest_applied)
+        payment.principal_applied_cents = int(principal_applied)
 
-        loan.unpaid_principal_cents -= principal_applied
+        if (payment.interest_applied_cents + payment.principal_applied_cents) != payment.amount_cents:
+            # Fallback for full/partial waterfall sum alignment
+            diff = payment.amount_cents - (payment.interest_applied_cents + payment.principal_applied_cents)
+            if installments and diff > 0:
+                payment.interest_applied_cents += diff
+                interest_applied += diff
+
+        loan.unpaid_principal_cents -= payment.principal_applied_cents
+        loan.remaining_contractual_interest_cents -= payment.interest_applied_cents
+        loan.remaining_contract_total_cents -= amount_cents
+        loan.amount_paid_cents += amount_cents
         loan.remaining_contractual_interest_cents -= interest_applied
         loan.remaining_contract_total_cents -= amount_cents
         loan.amount_paid_cents += amount_cents
