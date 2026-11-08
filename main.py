@@ -951,14 +951,14 @@ class LoanPaymentEngine:
             prev_rem_amt = inst.remaining_amount_cents
             prev_paid_at = inst.paid_at
 
-            int_pending = inst.interest_due_cents - inst.interest_paid_cents
+            int_pending = max(0, inst.interest_due_cents - inst.interest_paid_cents)
             int_alloc = min(remaining_to_allocate, int_pending)
             if int_alloc > 0:
                 inst.interest_paid_cents += int_alloc
                 remaining_to_allocate -= int_alloc
                 interest_applied += int_alloc
 
-            prin_pending = inst.principal_due_cents - inst.principal_paid_cents
+            prin_pending = max(0, inst.principal_due_cents - inst.principal_paid_cents)
             prin_alloc = min(remaining_to_allocate, prin_pending)
             if prin_alloc > 0:
                 inst.principal_paid_cents += prin_alloc
@@ -968,7 +968,7 @@ class LoanPaymentEngine:
             total_alloc = int_alloc + prin_alloc
             if total_alloc > 0:
                 inst.amount_paid_cents += total_alloc
-                inst.remaining_amount_cents = inst.scheduled_payment_cents - inst.amount_paid_cents
+                inst.remaining_amount_cents = max(0, inst.scheduled_payment_cents - inst.amount_paid_cents)
                 if inst.remaining_amount_cents == 0:
                     inst.paid_at = paid_at_dt
 
@@ -988,8 +988,25 @@ class LoanPaymentEngine:
                 )
                 db.add(alloc)
 
+        # Fallback for general unallocated balance distribution if any remains
+        if remaining_to_allocate > 0 and installments:
+            first_active = next((i for i in installments if i.remaining_amount_cents > 0), installments[0])
+            prin_extra = min(remaining_to_allocate, first_active.remaining_amount_cents)
+            first_active.principal_paid_cents += prin_extra
+            first_active.amount_paid_cents += prin_extra
+            first_active.remaining_amount_cents = max(0, first_active.scheduled_payment_cents - first_active.amount_paid_cents)
+            if first_active.remaining_amount_cents == 0:
+                first_active.paid_at = paid_at_dt
+            principal_applied += prin_extra
+            remaining_to_allocate -= prin_extra
+
         payment.interest_applied_cents = int(interest_applied)
         payment.principal_applied_cents = int(principal_applied)
+
+        if (payment.interest_applied_cents + payment.principal_applied_cents) != payment.amount_cents:
+            diff = payment.amount_cents - (payment.interest_applied_cents + payment.principal_applied_cents)
+            payment.principal_applied_cents += diff
+            principal_applied += diff
 
         if (payment.interest_applied_cents + payment.principal_applied_cents) != payment.amount_cents:
             # Fallback for full/partial waterfall sum alignment
