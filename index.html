@@ -816,43 +816,52 @@
                                 </div>
                             </div>
 
-                            <!-- TAB B: CREDIT SUMMARY -->
+                            <!-- TAB B: CREDIT SUMMARY (REFINED HIERARCHY) -->
                             <div id="ctab-panel-summary" class="hidden fintech-card p-5 bg-white space-y-4">
                                 <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                                     <div>
                                         <h3 class="text-sm font-bold text-slate-900">Aggregated Customer Credit Summary</h3>
-                                        <p class="text-[11px] text-slate-500">Aggregates all active loans for this customer from PostgreSQL</p>
+                                        <p class="text-[11px] text-slate-500">Real-time aggregation across all active loans for this borrower in PostgreSQL</p>
                                     </div>
                                     <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Live PostgreSQL</span>
                                 </div>
-                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Current Outstanding Principal</p>
-                                        <p id="csum-outstanding-principal" class="text-base font-extrabold font-mono text-slate-900 mt-1">$0.00 MXN</p>
+
+                                <!-- Primary Monetary Row -->
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
+                                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/90">
+                                        <p class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Current Outstanding Principal</p>
+                                        <p id="csum-outstanding-principal" class="text-xl font-extrabold font-mono text-slate-900 mt-1.5">$0.00 MXN</p>
+                                        <p class="text-[10px] text-slate-400 mt-1">Unpaid principal across active loans</p>
                                     </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Total Contractual Amount Due</p>
-                                        <p id="csum-total-due" class="text-base font-extrabold font-mono text-slate-900 mt-1">$0.00 MXN</p>
+                                    <div class="p-4 rounded-2xl bg-blue-50/60 border border-blue-200">
+                                        <p class="text-[10px] font-extrabold text-blue-800 uppercase tracking-wider">Total Contractual Amount Due</p>
+                                        <p id="csum-total-due" class="text-xl font-extrabold font-mono text-blue-950 mt-1.5">$0.00 MXN</p>
+                                        <p class="text-[10px] text-blue-700/80 mt-1">Principal + remaining contractual interest</p>
                                     </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-red-600 uppercase">Overdue Amount</p>
-                                        <p id="csum-overdue-amount" class="text-base font-extrabold font-mono text-red-600 mt-1">$0.00 MXN</p>
+                                    <div class="p-4 rounded-2xl bg-red-50/50 border border-red-200/90">
+                                        <p class="text-[10px] font-extrabold text-red-700 uppercase tracking-wider">Overdue Amount</p>
+                                        <p id="csum-overdue-amount" class="text-xl font-extrabold font-mono text-red-600 mt-1.5">$0.00 MXN</p>
+                                        <p class="text-[10px] text-red-700/80 mt-1">Past-due installments pending collection</p>
                                     </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Active Loans / Total Loans</p>
-                                        <p id="csum-loans-ratio" class="text-base font-extrabold text-slate-900 mt-1">0 / 0</p>
+                                </div>
+
+                                <!-- Secondary Operational Row -->
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Active / Total Loans</p>
+                                        <p id="csum-loans-ratio" class="text-sm font-extrabold text-slate-900 mt-1">0 / 0</p>
                                     </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Next Installment Due Date</p>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Next Installment Due</p>
                                         <p id="csum-next-due-date" class="text-xs font-bold font-mono text-slate-800 mt-1">None scheduled</p>
                                     </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Remaining Installments</p>
-                                        <p id="csum-remaining-installments" class="text-xs font-bold text-slate-800 mt-1">0</p>
+                                        <p id="csum-remaining-installments" class="text-sm font-extrabold text-slate-800 mt-1">0</p>
                                     </div>
-                                    <div class="sm:col-span-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Last Payment Date</p>
-                                        <p id="csum-last-payment-date" class="text-xs font-semibold text-slate-500 mt-1">Pending Stage 4</p>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Last Payment Recorded</p>
+                                        <p id="csum-last-payment-date" class="text-xs font-bold font-mono text-emerald-700 mt-1">—</p>
                                     </div>
                                 </div>
                             </div>
@@ -1149,157 +1158,172 @@
                                 <button type="button" onclick="hideLoanDetailSuccessBanner()" class="text-[10px] font-bold uppercase tracking-wider text-emerald-900 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition shrink-0">Dismiss</button>
                             </div>
 
-                            <!-- SECTION 1: IMMUTABLE APPROVED CONTRACTUAL TERMS -->
-                            <div class="fintech-card p-5 bg-white space-y-4">
-                                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                                    <div>
-                                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Approved Contractual Terms (Immutable Specifications)</h3>
-                                        <p class="text-[11px] text-slate-500">Fixed at origination • Parameter baseline for amortization schedule and servicing calculations</p>
-                                    </div>
-                                    <span class="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-bold px-2 py-0.5 rounded">Contract Snapshot</span>
-                                </div>
-
-                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Product & Version</p>
-                                        <p id="ld-term-product" class="font-bold text-slate-900 mt-1">—</p>
-                                    </div>
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Monthly Flat Rate</p>
-                                        <p id="ld-term-rate" class="font-extrabold text-slate-900 mt-1">—</p>
-                                    </div>
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Contractual Term</p>
-                                        <p id="ld-term-weeks" class="font-bold text-slate-900 mt-1">—</p>
-                                    </div>
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Assumed Interest Months</p>
-                                        <p id="ld-term-months" class="font-bold text-slate-900 mt-1">—</p>
-                                    </div>
-
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Interest Method</p>
-                                        <p id="ld-term-method" class="font-semibold text-slate-800 mt-1 truncate">—</p>
-                                    </div>
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Interest Basis</p>
-                                        <p id="ld-term-basis" class="font-semibold text-slate-800 mt-1 truncate">—</p>
-                                    </div>
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Accrual Convention</p>
-                                        <p id="ld-term-accrual" class="font-semibold text-slate-800 mt-1 truncate">—</p>
-                                    </div>
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Rounding Policy</p>
-                                        <p id="ld-term-rounding" class="font-semibold text-slate-800 mt-1 truncate">—</p>
-                                    </div>
-
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Contract Start Date</p>
-                                        <p id="ld-term-start" class="font-mono font-bold text-slate-800 mt-1">—</p>
-                                    </div>
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">First Payment Due</p>
-                                        <p id="ld-term-first-payment" class="font-mono font-bold text-slate-800 mt-1">—</p>
-                                    </div>
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Contract Maturity Date</p>
-                                        <p id="ld-term-maturity" class="font-mono font-bold text-emerald-700 mt-1">—</p>
-                                    </div>
-                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Currency Standard</p>
-                                        <p class="font-bold text-slate-800 mt-1">MXN (Exact Cents)</p>
-                                    </div>
-
-                                    <div class="col-span-2 sm:col-span-4 p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Origination File Notes</p>
-                                        <p id="ld-term-notes" class="text-slate-700 mt-1 whitespace-pre-wrap leading-relaxed">—</p>
-                                    </div>
-                                </div>
-                            </div>
-
                             <!-- ========================================================= -->
                             <!-- SECTION: LOAN FINANCIAL POSITION & ACCOUNTING SUMMARY     -->
                             <!-- ========================================================= -->
-                            <div id="loan-financial-metrics-container" class="fintech-card p-5 bg-white space-y-5">
+                            <div id="loan-financial-metrics-container" class="fintech-card p-5 bg-white space-y-4">
                                 <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                                     <div>
-                                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Loan Financial Position & Accounting Summary</h3>
-                                        <p class="text-[11px] text-slate-500">Live PostgreSQL balance derivation • Values displayed in exact MXN cents without frontend recalculation</p>
+                                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Loan Financial Position &amp; Accounting Summary</h3>
+                                        <p class="text-[11px] text-slate-500">Live PostgreSQL balance derivation • Exact MXN cents without frontend recalculation</p>
                                     </div>
                                     <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Live Accounting Ledger</span>
                                 </div>
 
-                                <!-- GROUP 1: POSICIÓN CONTRACTUAL GLOBAL -->
-                                <div class="space-y-2.5">
+                                <!-- GROUP 1: POSICIÓN CONTRACTUAL GLOBAL (PRIORITIZED HIERARCHY) -->
+                                <div class="space-y-2">
                                     <div class="flex items-center justify-between">
-                                        <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-700">1. Global Contractual Position (Total Lifecycle Obligations)</h4>
+                                        <h4 class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">1. Global Contractual Position (Lifecycle Obligations)</h4>
                                         <span class="text-[10px] text-slate-400 font-medium">Contract-wide Balances</span>
                                     </div>
-                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                    <div class="grid grid-cols-2 lg:grid-cols-12 gap-3 text-xs">
+                                        <div class="lg:col-span-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
                                             <p class="text-[10px] font-bold text-slate-400 uppercase">1. Original Principal</p>
                                             <p id="ld-metric-principal" class="privacy-metric text-base font-extrabold font-mono text-slate-900 mt-1">—</p>
-                                            <p class="text-[10px] text-slate-500 mt-1 leading-snug">Approved loan contract baseline.</p>
+                                            <p class="text-[10px] text-slate-500 mt-0.5">Approved contract baseline.</p>
                                         </div>
-                                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase">2. Unpaid Principal</p>
+                                        <div class="lg:col-span-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                            <p class="text-[10px] font-bold text-slate-500 uppercase">2. Unpaid Principal</p>
                                             <p id="ld-metric-unpaid-principal" class="privacy-metric text-base font-extrabold font-mono text-blue-900 mt-1">—</p>
-                                            <p class="text-[10px] text-slate-500 mt-1 leading-snug">Disbursed principal pending repayment.</p>
+                                            <p class="text-[10px] text-slate-500 mt-0.5">Principal pending repayment.</p>
                                         </div>
-                                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase">3. Remaining Contract Interest</p>
+                                        <div class="lg:col-span-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                            <p class="text-[10px] font-bold text-slate-500 uppercase">3. Rem. Contract Interest</p>
                                             <p id="ld-metric-rem-interest" class="privacy-metric text-base font-extrabold font-mono text-amber-800 mt-1">—</p>
-                                            <p class="text-[10px] text-slate-500 mt-1 leading-snug">Total interest across all unpaid installments.</p>
+                                            <p class="text-[10px] text-slate-500 mt-0.5">Unpaid contractual interest.</p>
                                         </div>
-                                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase">4. Remaining Contract Total</p>
-                                            <p id="ld-metric-rem-total" class="privacy-metric text-base font-extrabold font-mono text-slate-900 mt-1">—</p>
-                                            <p class="text-[10px] text-slate-500 mt-1 leading-snug">Total obligation to fully settle loan.</p>
+                                        <div class="lg:col-span-3 p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 shadow-sm">
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-[10px] font-extrabold text-blue-800 uppercase">4. Remaining Total</p>
+                                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">Full Payoff</span>
+                                            </div>
+                                            <p id="ld-metric-rem-total" class="privacy-metric text-lg font-extrabold font-mono text-blue-950 mt-1">—</p>
+                                            <p class="text-[10px] text-blue-700/80 mt-0.5">Total obligation to settle loan.</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- GROUP 2: DEVENGO Y EXIGIBILIDAD -->
-                                <div class="space-y-2.5 pt-2 border-t border-slate-100">
+                                <!-- GROUP 2: DEVENGO Y EXIGIBILIDAD AL DÍA DE HOY -->
+                                <div class="space-y-2 pt-2 border-t border-slate-100">
                                     <div class="flex items-center justify-between">
-                                        <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-700">2. Accrual & Immediate Enforceability (Devengo y Exigibilidad al Día de Hoy)</h4>
+                                        <h4 class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">2. Immediate Enforceability (Exigibilidad al Día de Hoy)</h4>
                                         <span class="text-[10px] text-slate-400 font-medium">As of Current Date</span>
                                     </div>
-                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                                        <div class="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-200/70">
+                                    <div class="grid grid-cols-2 lg:grid-cols-12 gap-3 text-xs">
+                                        <div class="lg:col-span-3 p-3.5 rounded-2xl bg-indigo-50/40 border border-indigo-200/70">
                                             <p class="text-[10px] font-bold text-indigo-900 uppercase">5. Accrued Interest</p>
                                             <p id="ld-metric-accrued-interest" class="privacy-metric text-base font-extrabold font-mono text-indigo-950 mt-1">—</p>
-                                            <p class="text-[10px] text-indigo-800/80 mt-1 leading-snug">Earned interest on matured installments.</p>
+                                            <p class="text-[10px] text-indigo-800/80 mt-0.5">Earned on matured installments.</p>
                                         </div>
-                                        <div class="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/70">
+                                        <div class="lg:col-span-3 p-3.5 rounded-2xl bg-amber-50/40 border border-amber-200/70">
                                             <p class="text-[10px] font-bold text-amber-900 uppercase">6. Due Today</p>
                                             <p id="ld-metric-due-today" class="privacy-metric text-base font-extrabold font-mono text-amber-950 mt-1">—</p>
-                                            <p class="text-[10px] text-amber-800/80 mt-1 leading-snug">Installments maturing today (due_date == today).</p>
+                                            <p class="text-[10px] text-amber-800/80 mt-0.5">Maturing today (due == today).</p>
                                         </div>
-                                        <div class="p-3.5 rounded-2xl bg-red-50/60 border border-red-200/80">
+                                        <div class="lg:col-span-3 p-3.5 rounded-2xl bg-red-50/50 border border-red-200/80">
                                             <p class="text-[10px] font-bold text-red-700 uppercase">7. Overdue Amount</p>
                                             <p id="ld-metric-overdue" class="privacy-metric text-base font-extrabold font-mono text-red-600 mt-1">—</p>
-                                            <p class="text-[10px] text-red-700/80 mt-1 leading-snug">Past-due installments (due_date &lt; today).</p>
+                                            <p class="text-[10px] text-red-700/80 mt-0.5">Past-due (due_date &lt; today).</p>
                                         </div>
-                                        <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80">
-                                            <p class="text-[10px] font-bold text-emerald-800 uppercase">8. Current Payable Amount</p>
-                                            <p id="ld-metric-current-payable" class="privacy-metric text-base font-extrabold font-mono text-emerald-900 mt-1">—</p>
-                                            <p class="text-[10px] text-emerald-800/80 mt-1 leading-snug">Total strictly payable today (Due Today + Overdue).</p>
+                                        <div class="lg:col-span-3 p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-300 shadow-sm">
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-[10px] font-extrabold text-emerald-900 uppercase">8. Current Payable</p>
+                                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">Collectible</span>
+                                            </div>
+                                            <p id="ld-metric-current-payable" class="privacy-metric text-lg font-extrabold font-mono text-emerald-950 mt-1">—</p>
+                                            <p class="text-[10px] text-emerald-800/90 mt-0.5">Strictly payable today (6 + 7).</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- INFORMATIVE NOTE: ON_INSTALLMENT_DUE_DATE -->
-                                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600 space-y-1 leading-relaxed">
-                                    <p class="font-bold text-slate-800 flex items-center gap-1.5">
-                                        <span>ℹ️</span>
-                                        <span>Accounting Accrual Convention: ON_INSTALLMENT_DUE_DATE</span>
-                                    </p>
-                                    <p>
-                                        Under the authoritative <code>ON_INSTALLMENT_DUE_DATE</code> convention executed in PostgreSQL, contractual interest is recognized as earned (Accrued Interest) strictly when an installment's due date arrives (<code>due_date &le; today</code>). Future scheduled installments (<code>due_date &gt; today</code>) do not accrue unearned interest prematurely. Therefore, Remaining Contractual Interest represents the unamortized contractual interest of the entire agreement, while Accrued Interest represents solely the earned interest payable to date.
-                                    </p>
+                                <!-- COLLAPSIBLE ACCRUAL CONVENTION NOTE -->
+                                <details class="group rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600">
+                                    <summary class="cursor-pointer px-3.5 py-2.5 font-bold text-slate-700 flex items-center justify-between list-none select-none hover:bg-slate-100/70 rounded-xl transition">
+                                        <span class="flex items-center gap-1.5">
+                                            <span>ℹ️</span>
+                                            <span>Accounting Accrual Convention: <code>ON_INSTALLMENT_DUE_DATE</code></span>
+                                        </span>
+                                        <span class="text-[10px] font-semibold text-blue-600 group-open:rotate-180 transition-transform">▼</span>
+                                    </summary>
+                                    <div class="px-3.5 pb-3 pt-1 border-t border-slate-200/60 leading-relaxed text-slate-600">
+                                        Under the authoritative <code>ON_INSTALLMENT_DUE_DATE</code> convention executed in PostgreSQL, contractual interest is recognized as earned (Accrued Interest) strictly when an installment's due date arrives (<code>due_date &le; today</code>). Future scheduled installments (<code>due_date &gt; today</code>) do not accrue unearned interest prematurely.
+                                    </div>
+                                </details>
+                            </div>
+
+                            <!-- SECTION 1: IMMUTABLE APPROVED CONTRACTUAL TERMS (COMPACT + EXPANDABLE SPECS) -->
+                            <div class="fintech-card p-5 bg-white space-y-3.5">
+                                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                                    <div>
+                                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Approved Contractual Terms (Immutable Specifications)</h3>
+                                        <p class="text-[11px] text-slate-500">Fixed at origination • Parameter baseline for amortization schedule</p>
+                                    </div>
+                                    <span class="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Contract Snapshot</span>
                                 </div>
+
+                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
+                                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[9px] font-bold text-slate-400 uppercase">Product &amp; Version</p>
+                                        <p id="ld-term-product" class="font-bold text-slate-900 mt-0.5 truncate">—</p>
+                                    </div>
+                                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[9px] font-bold text-slate-400 uppercase">Monthly Flat Rate</p>
+                                        <p id="ld-term-rate" class="font-extrabold text-blue-700 font-mono mt-0.5">—</p>
+                                    </div>
+                                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[9px] font-bold text-slate-400 uppercase">Contractual Term</p>
+                                        <p id="ld-term-weeks" class="font-bold text-slate-900 mt-0.5">—</p>
+                                    </div>
+                                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[9px] font-bold text-slate-400 uppercase">Interest Periods</p>
+                                        <p id="ld-term-months" class="font-bold text-amber-800 mt-0.5">—</p>
+                                    </div>
+                                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[9px] font-bold text-slate-400 uppercase">First Payment Due</p>
+                                        <p id="ld-term-first-payment" class="font-mono font-bold text-slate-800 mt-0.5">—</p>
+                                    </div>
+                                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[9px] font-bold text-slate-400 uppercase">Maturity Date</p>
+                                        <p id="ld-term-maturity" class="font-mono font-bold text-emerald-700 mt-0.5">—</p>
+                                    </div>
+                                </div>
+
+                                <details class="group rounded-xl bg-slate-50/70 border border-slate-200/70 text-xs">
+                                    <summary class="cursor-pointer px-3.5 py-2 font-semibold text-slate-600 hover:text-slate-900 flex items-center justify-between list-none select-none">
+                                        <span class="text-[11px]">View Engine Specifications, Start Date &amp; Origination Notes</span>
+                                        <span class="text-[10px] font-mono text-blue-600">Inspect Specs ↓</span>
+                                    </summary>
+                                    <div class="p-3.5 pt-2.5 border-t border-slate-200/60 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                                        <div class="p-2.5 rounded-lg bg-white border border-slate-200/60">
+                                            <p class="text-[9px] font-bold text-slate-400 uppercase">Contract Start Date</p>
+                                            <p id="ld-term-start" class="font-mono font-bold text-slate-800 mt-0.5">—</p>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-white border border-slate-200/60">
+                                            <p class="text-[9px] font-bold text-slate-400 uppercase">Interest Method</p>
+                                            <p id="ld-term-method" class="font-semibold text-slate-800 mt-0.5 truncate">—</p>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-white border border-slate-200/60">
+                                            <p class="text-[9px] font-bold text-slate-400 uppercase">Interest Basis</p>
+                                            <p id="ld-term-basis" class="font-semibold text-slate-800 mt-0.5 truncate">—</p>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-white border border-slate-200/60">
+                                            <p class="text-[9px] font-bold text-slate-400 uppercase">Accrual Convention</p>
+                                            <p id="ld-term-accrual" class="font-semibold text-slate-800 mt-0.5 truncate">—</p>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-white border border-slate-200/60">
+                                            <p class="text-[9px] font-bold text-slate-400 uppercase">Rounding Policy</p>
+                                            <p id="ld-term-rounding" class="font-semibold text-slate-800 mt-0.5 truncate">—</p>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-white border border-slate-200/60">
+                                            <p class="text-[9px] font-bold text-slate-400 uppercase">Currency Standard</p>
+                                            <p class="font-bold text-slate-800 mt-0.5">MXN (Exact Cents)</p>
+                                        </div>
+                                        <div class="col-span-2 sm:col-span-3 p-2.5 rounded-lg bg-white border border-slate-200/60">
+                                            <p class="text-[9px] font-bold text-slate-400 uppercase">Origination File Notes</p>
+                                            <p id="ld-term-notes" class="text-slate-700 mt-0.5 whitespace-pre-wrap leading-relaxed">—</p>
+                                        </div>
+                                    </div>
+                                </details>
                             </div>
                             <!-- ========================================================= -->
                             <!-- SECTION: AMORTIZATION SCHEDULE & PAYMENT LEDGER           -->
@@ -6949,38 +6973,70 @@ async function loadDashboardSummary() {
             content.classList.add('scale-95');
             setTimeout(() => modal.classList.add('hidden'), 200);
         }
-    // --- BLOQUE H: DOCUMENTOS KYC ---
+    // --- BLOQUE H: DOCUMENTOS KYC (UX REFINED) ---
+function getDocumentTypeBadgeHtml(docType) {
+    const map = {
+        INE_ID: { label: 'INE / Official ID', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+        PROOF_OF_ADDRESS: { label: 'Proof of Address', cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+        BANK_STATEMENT: { label: 'Bank Statement', cls: 'bg-amber-50 text-amber-800 border-amber-200' },
+        SIGNED_CONTRACT: { label: 'Signed Contract', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+        OTHER: { label: 'Other Document', cls: 'bg-slate-100 text-slate-700 border-slate-200' }
+    };
+    const item = map[docType] || { label: docType || 'Document', cls: 'bg-slate-100 text-slate-700 border-slate-200' };
+    return `<span class="inline-block text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${item.cls}">${escapeHtml(item.label)}</span>`;
+}
+
+function copyDocHashToClipboard(hashStr, btnEl) {
+    if (!hashStr || !navigator.clipboard) return;
+    navigator.clipboard.writeText(hashStr).then(() => {
+        const prev = btnEl.innerText;
+        btnEl.innerText = '✓ Hash Copied';
+        setTimeout(() => { btnEl.innerText = prev; }, 1400);
+    }).catch(() => {});
+}
+
 async function loadCustomerDocuments(customerId) {
     const tbody = document.getElementById('cust-docs-tbody');
-    tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-slate-400">Loading documents...</td></tr>';
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400">Loading documents from PostgreSQL...</td></tr>';
     try {
         const res = await fetch(`/api/customers/${customerId}/documents`);
-        if (!res.ok) throw new Error('Failed to load docs');
+        if (!res.ok) throw new Error('Failed to load customer documents');
         const docs = await res.json();
         tbody.innerHTML = '';
-        if (docs.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400">No documents uploaded yet.</td></tr>';
+        if (!Array.isArray(docs) || docs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400">No KYC or contractual documents uploaded for this customer yet.</td></tr>';
             return;
         }
         docs.forEach(d => {
-            const sizeKb = (d.file_size_bytes / 1024).toFixed(1);
-            tbody.innerHTML += `
-                <tr class="hover:bg-slate-50">
-                    <td class="py-2.5 px-3 font-bold text-slate-800">${escapeHtml(d.document_type)}</td>
-                    <td class="py-2.5 px-3 text-slate-600 truncate max-w-[150px]">${escapeHtml(d.original_filename)}</td>
-                    <td class="py-2.5 px-3">
-                        <p>${sizeKb} KB</p>
-                        <p class="text-[9px] font-mono text-slate-400 truncate max-w-[100px]" title="${d.file_hash}">${d.file_hash}</p>
-                    </td>
-                    <td class="py-2.5 px-3">
-                        <p>${escapeHtml(d.uploaded_by_name)}</p>
-                        <p class="text-[9px] text-slate-400">${formatDateTimeShort(d.created_at)}</p>
-                    </td>
-                    <td class="py-2.5 px-3 text-right space-x-2">
-                        <button type="button" onclick="downloadDocument(${customerId}, ${d.id})" class="text-blue-600 font-bold hover:underline">View</button>
-                        <button type="button" onclick="deleteDocument(${customerId}, ${d.id})" class="text-red-600 font-bold hover:underline">Delete</button>
-                    </td>
-                </tr>`;
+            const sizeKb = (Number(d.file_size_bytes || 0) / 1024).toFixed(1);
+            const rawHash = String(d.file_hash || '');
+            const shortHash = rawHash.length > 16
+                ? `${rawHash.slice(0, 8)}…${rawHash.slice(-6)}`
+                : (rawHash || 'N/A');
+
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-50/90 transition-colors';
+            tr.innerHTML = `
+                <td class="py-3 px-3.5">${getDocumentTypeBadgeHtml(d.document_type)}</td>
+                <td class="py-3 px-3.5 font-semibold text-slate-800 max-w-[220px] truncate" title="${escapeHtml(d.original_filename)}">${escapeHtml(d.original_filename)}</td>
+                <td class="py-3 px-3.5">
+                    <div class="flex items-center gap-2">
+                        <span class="font-mono font-bold text-slate-700 text-[11px]">${sizeKb} KB</span>
+                        <button type="button" onclick="copyDocHashToClipboard('${escapeHtml(rawHash)}', this)" class="text-[9px] font-mono bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-700 border border-slate-200 px-1.5 py-0.5 rounded transition" title="SHA-256: ${escapeHtml(rawHash)} (Click to copy)">
+                            SHA: ${escapeHtml(shortHash)}
+                        </button>
+                    </div>
+                </td>
+                <td class="py-3 px-3.5">
+                    <p class="font-semibold text-slate-800 text-[11px]">${escapeHtml(d.uploaded_by_name)}</p>
+                    <p class="text-[10px] text-slate-400">${escapeHtml(formatDateTimeShort(d.created_at))}</p>
+                </td>
+                <td class="py-3 px-3.5 text-right space-x-1.5">
+                    <button type="button" onclick="downloadDocument(${customerId}, ${d.id})" class="py-1 px-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] transition">View / Download</button>
+                    <button type="button" onclick="deleteDocument(${customerId}, ${d.id})" class="py-1 px-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] transition">Delete</button>
+                </td>`;
+            tbody.appendChild(tr);
         });
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-red-600">${escapeHtml(err.message)}</td></tr>`;
@@ -7033,10 +7089,11 @@ function downloadDocument(customerId, docId) {
 }
 
 async function deleteDocument(customerId, docId) {
-    if(!confirm('Permanently delete this document?')) return;
+    if (!confirm('Permanently delete this document from the customer dossier?')) return;
     try {
         const res = await fetch(`/api/customers/${customerId}/documents/${docId}`, {
-            method: 'DELETE', headers: { 'X-CSRF-Token': getCookie('csrf_token') }
+            method: 'DELETE',
+            headers: { 'X-CSRF-Token': getCookie('csrf_token') }
         });
         if (!res.ok) throw new Error('Delete failed');
         await loadCustomerDocuments(customerId);
@@ -7045,21 +7102,22 @@ async function deleteDocument(customerId, docId) {
     }
 }
 
-// Interceptar cuando se abre el perfil del cliente para cargar sus documentos
-const originalOpenCust = openCustomerDetail;
-openCustomerDetail = async function(id) {
-    await originalOpenCust(id);
-    await loadCustomerDocuments(id);
-};
+if (typeof openCustomerDetail === 'function') {
+    const originalOpenCust = openCustomerDetail;
+    window.openCustomerDetail = async function(id) {
+        await originalOpenCust(id);
+        await loadCustomerDocuments(id);
+    };
+}
 
-// --- BLOQUE I: IMPRESIÓN DE RECIBOS Y ESTADOS DE CUENTA ---
+// --- BLOQUE I: IMPRESIÓN INSTITUCIONAL DE RECIBOS Y ESTADOS DE CUENTA ---
 function executePrint(title, metaId, contentHtml) {
     const appView = document.getElementById('app-view');
-    const printContainer = document.getElementById('print-view-container');
-    
     appView.classList.add('no-print');
     
-    document.getElementById('print-meta-date').innerText = new Date().toLocaleString();
+    document.getElementById('print-meta-date').innerText = new Date().toLocaleString('en-US', {
+        year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit'
+    });
     document.getElementById('print-meta-id').innerText = metaId;
     document.getElementById('print-view-content').innerHTML = contentHtml;
     
@@ -7070,24 +7128,81 @@ function executePrint(title, metaId, contentHtml) {
 
 function printPaymentReceipt(btnElement) {
     const tr = btnElement.closest('tr');
-    const tds = tr.querySelectorAll('td');
-    if (!currentSelectedLoan || !tds || tds.length < 5) return;
-    
+    const tds = tr ? tr.querySelectorAll('td') : null;
+    if (!currentSelectedLoan || !tds || tds.length < 6) return;
+    const l = currentSelectedLoan;
+
     const content = `
-        <h2 class="text-xl font-bold mb-4">Official Payment Receipt</h2>
-        <div class="grid grid-cols-2 gap-4 text-sm mb-6 border-b pb-4">
-            <div><p class="font-bold text-slate-500">Loan Number</p><p class="font-mono">${currentSelectedLoan.loan_number}</p></div>
-            <div><p class="font-bold text-slate-500">Receipt Details</p>${tds[0].innerHTML}</div>
-            <div><p class="font-bold text-slate-500">Date & Method</p>${tds[1].innerHTML}</div>
-            <div><p class="font-bold text-slate-500">Status</p>${tds[5].innerHTML}</div>
+        <div class="space-y-5">
+            <div class="flex items-center justify-between bg-slate-50 border border-slate-300 rounded-lg p-4">
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Official Loan Payment Receipt</p>
+                    <h2 class="text-lg font-extrabold text-slate-900 mt-0.5">${escapeHtml(l.loan_number)} • ${escapeHtml(l.product_name || 'Credit Contract')}</h2>
+                    <p class="text-xs text-slate-600 mt-0.5">Borrower ID: <strong>Customer #${escapeHtml(l.customer_id)}</strong> • Currency: <strong>MXN</strong></p>
+                </div>
+                <div class="text-right text-xs">
+                    <p class="text-[10px] font-bold uppercase text-slate-500">Ledger Receipt Status</p>
+                    <div class="mt-1">${tds[5].innerHTML}</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-xs border border-slate-300 rounded-lg p-4">
+                <div>
+                    <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">Receipt &amp; Installment Allocations</p>
+                    <div class="text-slate-900">${tds[0].innerHTML}</div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">Effective Date, Method &amp; Reference</p>
+                    <div class="text-slate-900">${tds[1].innerHTML}</div>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Waterfall Payment Breakdown (MXN)</p>
+                <table class="w-full text-left text-xs border border-slate-300">
+                    <thead>
+                        <tr class="bg-slate-100 text-[10px] font-bold uppercase text-slate-600">
+                            <th class="p-2.5 border border-slate-300 text-right">Interest Applied</th>
+                            <th class="p-2.5 border border-slate-300 text-right">Principal Applied</th>
+                            <th class="p-2.5 border border-slate-300 text-right">Total Payment Received</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-2.5 border border-slate-300 text-right font-mono font-semibold">${escapeHtml(tds[2].innerText)}</td>
+                            <td class="p-2.5 border border-slate-300 text-right font-mono font-semibold">${escapeHtml(tds[3].innerText)}</td>
+                            <td class="p-2.5 border border-slate-300 text-right font-mono font-extrabold text-slate-900">${escapeHtml(tds[4].innerText)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 text-xs bg-slate-50 border border-slate-300 rounded-lg p-3.5">
+                <div>
+                    <p class="text-[10px] font-bold uppercase text-slate-500">Current Loan Unpaid Principal</p>
+                    <p class="font-mono font-bold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.unpaid_principal_cents)}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase text-slate-500">Current Remaining Interest</p>
+                    <p class="font-mono font-bold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.remaining_contractual_interest_cents)}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase text-slate-500">Current Remaining Contract Total</p>
+                    <p class="font-mono font-extrabold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.remaining_contract_total_cents)}</p>
+                </div>
+            </div>
+
+            <div class="pt-6 mt-4 border-t border-slate-300 flex items-end justify-between text-[10px] text-slate-500">
+                <p class="max-w-md leading-relaxed">
+                    Authoritative receipt generated from the NURA CRM PostgreSQL immutable payment ledger. Allocations follow chronological waterfall priority (Interest first, then Principal).
+                </p>
+                <div class="text-center w-48 border-t border-slate-400 pt-1 font-semibold text-slate-700">
+                    Authorized Operations Stamp
+                </div>
+            </div>
         </div>
-        <table class="w-full text-left text-sm mb-6 border">
-            <tr class="bg-slate-100"><th class="p-2 border">Interest Applied</th><th class="p-2 border">Principal Applied</th><th class="p-2 border">Total Received</th></tr>
-            <tr><td class="p-2 border font-mono">${tds[2].innerText}</td><td class="p-2 border font-mono">${tds[3].innerText}</td><td class="p-2 border font-mono font-bold">${tds[4].innerText}</td></tr>
-        </table>
-        <p class="text-xs text-slate-500 italic">This document confirms the allocation of funds to the PostgreSQL immutable ledger based on strict waterfall rules.</p>
     `;
-    executePrint('Payment Receipt', currentSelectedLoan.loan_number, content);
+    executePrint('Payment Receipt', l.loan_number, content);
 }
 
 function printLoanStatement() {
@@ -7095,29 +7210,64 @@ function printLoanStatement() {
     const l = currentSelectedLoan;
     
     const content = `
-        <h2 class="text-xl font-bold mb-4">Loan Account Statement</h2>
-        <div class="grid grid-cols-3 gap-4 text-sm mb-6 border p-4 bg-slate-50">
-            <div><p class="font-bold text-slate-500">Loan Number</p><p class="font-mono font-bold">${l.loan_number}</p></div>
-            <div><p class="font-bold text-slate-500">Status</p><p>${l.status}</p></div>
-            <div><p class="font-bold text-slate-500">Original Principal</p><p class="font-mono">${NuraFinancialEngine.formatMXNFromCents(l.principal_cents)}</p></div>
-            <div><p class="font-bold text-slate-500">Unpaid Principal</p><p class="font-mono font-bold">${NuraFinancialEngine.formatMXNFromCents(l.unpaid_principal_cents)}</p></div>
-            <div><p class="font-bold text-slate-500">Remaining Total</p><p class="font-mono font-bold">${NuraFinancialEngine.formatMXNFromCents(l.remaining_contract_total_cents)}</p></div>
-            <div><p class="font-bold text-slate-500">Amount Paid</p><p class="font-mono text-emerald-700">${NuraFinancialEngine.formatMXNFromCents(l.amount_paid_cents)}</p></div>
+        <div class="space-y-5">
+            <div class="flex items-center justify-between bg-slate-50 border border-slate-300 rounded-lg p-4">
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Official Loan Account Statement</p>
+                    <h2 class="text-lg font-extrabold text-slate-900 mt-0.5">${escapeHtml(l.loan_number)} — ${escapeHtml(l.product_name || 'Personal Loan')}</h2>
+                    <p class="text-xs text-slate-600 mt-0.5">Borrower: <strong>Customer #${escapeHtml(l.customer_id)}</strong> • Start: <strong>${escapeHtml(l.start_date)}</strong> • Maturity: <strong>${escapeHtml(l.maturity_date)}</strong></p>
+                </div>
+                <div class="text-right text-xs">
+                    <p class="text-[10px] font-bold uppercase text-slate-500">Contract Status</p>
+                    <p class="text-sm font-extrabold font-mono text-slate-900 mt-0.5">${escapeHtml(l.status)}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 text-xs border border-slate-300 rounded-lg p-4 bg-white">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Original Principal</p>
+                    <p class="font-mono font-bold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.principal_cents)}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Total Contractual Repayment</p>
+                    <p class="font-mono font-bold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.total_repayment_cents)}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Total Amount Paid to Date</p>
+                    <p class="font-mono font-extrabold text-emerald-700 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.amount_paid_cents)}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Unpaid Principal Balance</p>
+                    <p class="font-mono font-extrabold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.unpaid_principal_cents)}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Remaining Contract Total</p>
+                    <p class="font-mono font-extrabold text-blue-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.remaining_contract_total_cents)}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Current Payable Today</p>
+                    <p class="font-mono font-extrabold text-red-700 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.current_payable_amount_cents)}</p>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="font-bold mb-2 text-xs uppercase tracking-wider text-slate-700">Amortization Schedule &amp; Installment Ledger</h3>
+                <table class="w-full text-left text-xs border border-collapse">
+                    ${document.getElementById('ld-schedule-tbody').parentElement.innerHTML}
+                </table>
+            </div>
         </div>
-        <h3 class="font-bold mb-2 text-sm border-b">Amortization Schedule Ledger</h3>
-        <table class="w-full text-left text-xs border border-collapse mb-6">
-            ${document.getElementById('ld-schedule-tbody').parentElement.innerHTML}
-        </table>
     `;
     executePrint('Loan Statement', l.loan_number, content);
 }
 
-// Inyectar botón de estado de cuenta en el header del préstamo de forma segura
 setTimeout(() => {
     const ldActionsContainer = document.getElementById('ld-lifecycle-actions');
-    if(ldActionsContainer) {
+    if (ldActionsContainer && !document.getElementById('btn-print-statement')) {
         const parent = ldActionsContainer.parentElement;
         const printStmtBtn = document.createElement('button');
+        printStmtBtn.id = 'btn-print-statement';
+        printStmtBtn.type = 'button';
         printStmtBtn.className = "py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-sm transition";
         printStmtBtn.innerHTML = "🖨️ Print Statement";
         printStmtBtn.onclick = printLoanStatement;
@@ -7125,20 +7275,21 @@ setTimeout(() => {
     }
 }, 500);
 
-// Inyectar botones de recibo en la tabla de pagos
-const originalLoadPayments = loadLoanPayments;
-loadLoanPayments = async function(loanId) {
-    await originalLoadPayments(loanId);
-    const tbody = document.getElementById('ld-payments-tbody');
-    if(!tbody) return;
-    const rows = tbody.querySelectorAll('tr');
-    rows.forEach(row => {
-        if(row.children.length === 7 && !row.innerHTML.includes('No payments recorded')) {
-            const actionTd = row.children[6];
-            actionTd.innerHTML += ` <button type="button" onclick="printPaymentReceipt(this)" class="text-[10px] text-slate-500 hover:text-slate-900 ml-2 font-bold bg-slate-100 px-2 py-1 rounded">🖨️ Print</button>`;
-        }
-    });
-};
+if (typeof loadLoanPayments === 'function') {
+    const originalLoadPayments = loadLoanPayments;
+    window.loadLoanPayments = async function(loanId) {
+        await originalLoadPayments(loanId);
+        const tbody = document.getElementById('ld-payments-tbody');
+        if (!tbody) return;
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(row => {
+            if (row.children.length === 7 && !row.innerHTML.includes('No payments recorded') && !row.innerHTML.includes('printPaymentReceipt')) {
+                const actionTd = row.children[6];
+                actionTd.innerHTML += ` <button type="button" onclick="printPaymentReceipt(this)" class="text-[10px] text-slate-700 hover:text-slate-900 ml-1.5 font-bold bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition" title="Print Official Receipt">🖨️ Receipt</button>`;
+            }
+        });
+    };
+}
     </script>
 </body>
 </html>
