@@ -667,8 +667,8 @@ def verify_database_schema_compatibility(db_engine):
             if not res:
                 raise RuntimeError("No alembic_version record found in database.")
             rev = res[0]
-            if rev != "006":
-                raise RuntimeError(f"Database schema is at revision '{rev}', but Stage 5 (Block G) requires '006'. Run 'alembic upgrade head'.")
+            if rev != "007":
+                raise RuntimeError(f"Database schema is at revision '{rev}', but Stage 6 (Blocks H & I) requires '007'. Run 'alembic upgrade head'.")
 
             if db_engine.dialect.name == "postgresql":
                 conn.execute(text("""
