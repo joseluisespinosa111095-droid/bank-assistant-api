@@ -1880,208 +1880,208 @@
         </div>
 
         <!-- ================================================================= -->
-        <!-- STAGE 4 (BLOCK E): LOAN ORIGINATION MODAL                         -->
+        <!-- STAGE 4 (BLOCK E): LOAN ORIGINATION MODAL (UX REFINED)            -->
         <!-- ================================================================= -->
-        <div id="loan-origination-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-3 sm:p-4 no-print">
-            <div class="bg-white rounded-3xl p-5 sm:p-6 w-full max-w-[920px] max-h-[92vh] overflow-y-auto shadow-2xl space-y-5">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div id="loan-origination-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-3 sm:p-4 no-print">
+            <div class="bg-white rounded-2xl w-full max-w-[960px] max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+                
+                <!-- STICKY HEADER -->
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white z-10 shrink-0">
                     <div>
                         <div class="flex items-center gap-2">
-                            <h3 class="font-extrabold text-slate-900 text-base">Originate New Loan Contract</h3>
-                            <span class="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">Initial Status: DRAFT</span>
+                            <h3 class="font-extrabold text-slate-900 text-lg tracking-tight">Originate New Loan Contract</h3>
+                            <span class="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider">Draft</span>
                         </div>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Select an active customer, configure contractual terms, and inspect the schedule preview before creating the loan record in PostgreSQL</p>
+                        <p class="text-xs text-slate-500 mt-1">Configure terms and inspect the generated schedule before committing to PostgreSQL.</p>
                     </div>
-                    <button type="button" onclick="closeLoanOriginationModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">✕</button>
+                    <button type="button" onclick="closeLoanOriginationModal()" class="h-8 w-8 rounded-full bg-slate-50 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition shrink-0">✕</button>
                 </div>
 
-                <div id="loan-origination-error" class="hidden p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+                <!-- ERROR BANNER -->
+                <div id="loan-origination-error" class="hidden mx-6 mt-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium shrink-0"></div>
 
-                <form id="loan-origination-form" onsubmit="handleLoanOriginationSubmit(event)" class="space-y-5 text-xs">
-                    <!-- STEP 1: BORROWER SELECTION (ACTIVE CUSTOMERS ONLY) -->
-                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">1. Select Registered Active Borrower *</span>
-                            <span id="lo-customer-status-hint" class="text-[10px] font-semibold text-slate-400">Requires ACTIVE customer status</span>
-                        </div>
-
-                        <!-- Search Box (Shown when no customer is selected) -->
-                        <div id="lo-customer-picker-box" class="space-y-2.5">
-                            <div class="flex gap-2">
-                                <input type="text" id="lo-customer-search" oninput="debounceLoanCustomerSearch()" placeholder="Search customer by CUST-XXXXX, Full Legal Name, Phone, or RFC..." class="flex-1 fintech-input bg-white rounded-xl px-3.5 py-2.5 text-xs">
-                                <button type="button" onclick="searchLoanOriginationCustomers()" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold text-xs">Search</button>
-                            </div>
-                            <div id="lo-customer-results" class="max-h-[190px] overflow-y-auto divide-y divide-slate-100 bg-white rounded-xl border border-slate-200/80">
-                                <p class="py-4 px-3 text-center text-slate-400 text-xs">Loading active customers...</p>
-                            </div>
-                        </div>
-
-                        <!-- Selected Customer Summary Card -->
-                        <div id="lo-selected-customer-card" class="hidden p-3.5 rounded-2xl bg-white border border-blue-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div class="space-y-1">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <span id="lo-sel-cust-number" class="font-mono font-extrabold text-blue-700 text-xs">CUST-00000</span>
-                                    <span id="lo-sel-cust-entity" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">INDIVIDUAL</span>
-                                    <span id="lo-sel-cust-status" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">ACTIVE</span>
-                                    <span id="lo-sel-cust-kyc" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800">PENDING_VERIFICATION</span>
+                <!-- SCROLLABLE FORM BODY -->
+                <form id="loan-origination-form" onsubmit="handleLoanOriginationSubmit(event)" class="flex-1 overflow-y-auto flex flex-col bg-slate-50/30">
+                    <div class="p-6 space-y-8">
+                        
+                        <!-- STAGE 1: BORROWER SELECTION -->
+                        <section class="space-y-3">
+                            <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                <span class="bg-slate-200 text-slate-600 rounded-full h-4 w-4 flex items-center justify-center font-mono">1</span>
+                                Borrower Selection
+                            </h4>
+                            
+                            <div id="lo-customer-picker-box" class="space-y-2.5">
+                                <div class="flex gap-2">
+                                    <input type="text" id="lo-customer-search" oninput="debounceLoanCustomerSearch()" placeholder="Search active customer by CUST-XXXXX, Name, Phone, or RFC..." class="flex-1 fintech-input bg-white rounded-xl px-4 py-2.5 text-xs shadow-sm">
+                                    <button type="button" onclick="searchLoanOriginationCustomers()" class="py-2.5 px-4 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-sm">Search</button>
                                 </div>
-                                <p id="lo-sel-cust-name" class="text-sm font-extrabold text-slate-900">Borrower Name</p>
-                                <p id="lo-sel-cust-meta" class="text-[11px] text-slate-500">Phone: — • Active Loans: 0 • Current Unpaid Principal: $0.00 MXN</p>
-                            </div>
-                            <button type="button" onclick="clearLoanOriginationCustomer()" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs shrink-0 self-start sm:self-center">
-                                Change Customer
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- STEP 2: CONTRACTUAL TERMS & SCHEDULE CONFIGURATION -->
-                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                        <div class="lg:col-span-6 p-4 rounded-2xl bg-white border border-slate-200 space-y-3.5">
-                            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                                <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">2. Contractual Loan Parameters</span>
-                                <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">MXN • Weekly Flat</span>
+                                <div id="lo-customer-results" class="max-h-[160px] overflow-y-auto divide-y divide-slate-100 bg-white rounded-xl border border-slate-200/80 shadow-sm">
+                                    <p class="py-4 px-3 text-center text-slate-400 text-xs">Waiting for search...</p>
+                                </div>
                             </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div class="sm:col-span-2">
+                            <!-- COMPACT SELECTED CUSTOMER CARD -->
+                            <div id="lo-selected-customer-card" class="hidden p-3 rounded-xl bg-blue-50/40 border border-blue-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm transition-all">
+                                <div class="flex items-center gap-3">
+                                    <div class="h-10 w-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">✓</div>
+                                    <div>
+                                        <div class="flex items-center gap-2 flex-wrap mb-0.5">
+                                            <span id="lo-sel-cust-name" class="text-sm font-extrabold text-slate-900">Borrower Name</span>
+                                            <span id="lo-sel-cust-number" class="font-mono font-bold text-blue-700 text-[10px]">CUST-00000</span>
+                                            <span id="lo-sel-cust-status" class="hidden">ACTIVE</span>
+                                            <span id="lo-sel-cust-entity" class="hidden">INDIVIDUAL</span>
+                                            <span id="lo-sel-cust-kyc" class="hidden">KYC</span>
+                                        </div>
+                                        <p id="lo-sel-cust-meta" class="text-[11px] text-slate-500">Phone: — • Active Loans: 0</p>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="clearLoanOriginationCustomer()" class="py-2 px-3 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs shrink-0 shadow-sm">
+                                    Change Customer
+                                </button>
+                            </div>
+                        </section>
+
+                        <!-- STAGE 2: CONTRACTUAL PARAMETERS -->
+                        <section class="space-y-3">
+                            <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                <span class="bg-slate-200 text-slate-600 rounded-full h-4 w-4 flex items-center justify-center font-mono">2</span>
+                                Contractual Parameters
+                            </h4>
+                            <div class="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-5 text-xs">
+                                
+                                <div class="sm:col-span-4">
                                     <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Credit Product *</label>
                                     <select id="lo-product" onchange="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
                                         <option value="Personal Loan">Personal Loan</option>
                                         <option value="Business Loan">Business Loan</option>
                                     </select>
                                 </div>
-
-                                <div>
+                                <div class="sm:col-span-4">
                                     <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Principal Amount (MXN) *</label>
-                                    <input type="number" id="lo-principal" required min="1" max="10000000" step="0.01" value="50000" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-extrabold font-mono">
-                                    <span class="text-[10px] text-slate-400 mt-0.5 block">Max: $10,000,000.00 MXN</span>
+                                    <input type="number" id="lo-principal" required min="1" max="10000000" step="0.01" value="50000" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-extrabold font-mono text-blue-900">
                                 </div>
-
-                                <div>
+                                <div class="sm:col-span-4">
                                     <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Monthly Flat Rate (%) *</label>
-                                    <input type="number" id="lo-rate" required min="0" max="100" step="0.01" value="10" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-extrabold font-mono">
-                                    <span class="text-[10px] text-slate-400 mt-0.5 block">0% to 100% per month</span>
+                                    <input type="number" id="lo-rate" required min="0" max="100" step="0.01" value="10" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-extrabold font-mono text-amber-900">
                                 </div>
 
-                                <div class="sm:col-span-2 space-y-1.5">
-                                    <div class="flex items-center justify-between">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase">Quick Term Presets (Weeks / Interest Months)</label>
-                                        <span class="text-[10px] text-blue-600 font-semibold">16 Weeks Preferred</span>
+                                <div class="sm:col-span-12 p-3 bg-slate-50 rounded-xl border border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="flex items-center justify-between mb-1">
+                                            <label class="block text-[10px] font-bold text-slate-500 uppercase">Term (Weeks) *</label>
+                                            <div class="flex gap-1">
+                                                <button type="button" onclick="applyLoanOriginationTermPreset(8, 2)" class="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-[9px] font-bold text-slate-600 hover:bg-slate-100">8w</button>
+                                                <button type="button" onclick="applyLoanOriginationTermPreset(16, 4)" class="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-[9px] font-bold text-blue-700">16w</button>
+                                                <button type="button" onclick="applyLoanOriginationTermPreset(24, 6)" class="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-[9px] font-bold text-slate-600 hover:bg-slate-100">24w</button>
+                                            </div>
+                                        </div>
+                                        <input type="number" id="lo-term-weeks" required min="1" max="104" step="1" value="16" oninput="onLoanOriginationParamChange()" class="w-full fintech-input bg-white rounded-lg p-2 text-xs font-bold font-mono">
                                     </div>
-                                    <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                                        <button type="button" onclick="applyLoanOriginationTermPreset(4, 1)" class="py-1.5 px-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-700">4w / 1m</button>
-                                        <button type="button" onclick="applyLoanOriginationTermPreset(8, 2)" class="py-1.5 px-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-700">8w / 2m</button>
-                                        <button type="button" onclick="applyLoanOriginationTermPreset(12, 3)" class="py-1.5 px-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-700">12w / 3m</button>
-                                        <button type="button" onclick="applyLoanOriginationTermPreset(16, 4)" class="py-1.5 px-2 rounded-lg border border-blue-300 bg-blue-50 hover:bg-blue-100 text-[10px] font-extrabold text-blue-700">16w / 4m</button>
-                                        <button type="button" onclick="applyLoanOriginationTermPreset(24, 6)" class="py-1.5 px-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-700">24w / 6m</button>
-                                        <button type="button" onclick="applyLoanOriginationTermPreset(52, 12)" class="py-1.5 px-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-700">52w / 12m</button>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Assumed Interest Months *</label>
+                                        <input type="number" id="lo-interest-months" required min="1" max="36" step="1" value="4" oninput="onLoanOriginationParamChange()" class="w-full fintech-input bg-white rounded-lg p-2 text-xs font-bold font-mono">
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Term (Weekly Installments) *</label>
-                                    <input type="number" id="lo-term-weeks" required min="1" max="104" step="1" value="16" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold font-mono">
-                                    <span class="text-[10px] text-slate-400 mt-0.5 block">Allowed: 1 to 104 weeks</span>
-                                </div>
-
-                                <div>
-                                    <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Assumed Interest Months *</label>
-                                    <input type="number" id="lo-interest-months" required min="1" max="36" step="1" value="4" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold font-mono border-amber-300 bg-amber-50/40">
-                                    <span class="text-[10px] text-slate-400 mt-0.5 block">Allowed: 1 to 36 months</span>
-                                </div>
-
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Contract Start Date *</label>
+                                <div class="sm:col-span-4">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Start Date *</label>
                                     <input type="date" id="lo-start-date" required onchange="handleLoanOriginationStartDateChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono">
                                 </div>
-
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">First Payment Due Date *</label>
+                                <div class="sm:col-span-4">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">First Payment Due *</label>
                                     <input type="date" id="lo-first-payment-date" required onchange="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono">
                                 </div>
-
-                                <div class="sm:col-span-2">
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Origination File Notes (Optional)</label>
-                                    <textarea id="lo-notes" rows="2" maxlength="1000" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Credit purpose, collateral notes, or special underwriting remarks..."></textarea>
+                                <div class="sm:col-span-4">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Origination Notes</label>
+                                    <input type="text" id="lo-notes" maxlength="1000" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Optional context...">
                                 </div>
                             </div>
-                        </div>
+                        </section>
 
-                        <!-- STEP 3: CONTRACTUAL SUMMARY & NON-BINDING SCHEDULE PREVIEW -->
-                        <div class="lg:col-span-6 p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3.5">
-                            <div class="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
+                        <!-- STAGE 3: FINANCIAL REVIEW & SCHEDULE -->
+                        <section class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                    <span class="bg-slate-200 text-slate-600 rounded-full h-4 w-4 flex items-center justify-center font-mono">3</span>
+                                    Financial Review
+                                </h4>
+                                <span class="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">Exact MXN Cents</span>
+                            </div>
+
+                            <div class="p-5 rounded-2xl bg-slate-800 text-white shadow-lg grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                                <div class="sm:col-span-2 p-3 rounded-xl bg-slate-900/50 border border-slate-700/50">
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase">Total Contract Repayment</p>
+                                    <p id="lo-prev-total-repayment" class="text-2xl font-extrabold font-mono text-emerald-400 mt-1">$70,000.00 MXN</p>
+                                </div>
+                                <div class="sm:col-span-2 p-3 rounded-xl bg-slate-900/50 border border-slate-700/50">
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase">Regular Weekly Payment</p>
+                                    <div class="flex items-baseline gap-2 mt-1">
+                                        <p id="lo-prev-weekly-badge" class="text-2xl font-extrabold font-mono text-white">$4,375.00 MXN</p>
+                                    </div>
+                                </div>
+                                
                                 <div>
-                                    <span class="text-[10px] font-bold text-slate-800 uppercase tracking-wider">3. Contractual Summary & Schedule Preview</span>
-                                    <p class="text-[10px] text-slate-500">Preview only • Authoritative schedule generated by backend on submit</p>
-                                </div>
-                                <span id="lo-prev-weekly-badge" class="text-[11px] font-extrabold font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-xl">$4,375.00 MXN / wk</span>
-                            </div>
-
-                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-                                <div class="p-2.5 rounded-xl bg-white border border-slate-200/80">
                                     <p class="text-[9px] font-bold text-slate-400 uppercase">Original Principal</p>
-                                    <p id="lo-prev-principal" class="font-extrabold font-mono text-slate-900 mt-0.5">$50,000.00 MXN</p>
+                                    <p id="lo-prev-principal" class="font-bold font-mono mt-0.5">$50,000.00</p>
                                 </div>
-                                <div class="p-2.5 rounded-xl bg-white border border-slate-200/80">
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase">Monthly Interest</p>
-                                    <p id="lo-prev-monthly-interest" class="font-bold font-mono text-slate-800 mt-0.5">$5,000.00 MXN</p>
-                                </div>
-                                <div class="p-2.5 rounded-xl bg-white border border-slate-200/80">
+                                <div>
                                     <p class="text-[9px] font-bold text-slate-400 uppercase">Total Interest</p>
-                                    <p id="lo-prev-total-interest" class="font-extrabold font-mono text-amber-700 mt-0.5">$20,000.00 MXN</p>
+                                    <p id="lo-prev-total-interest" class="font-bold font-mono mt-0.5 text-amber-400">$20,000.00</p>
                                 </div>
-                                <div class="p-2.5 rounded-xl bg-blue-50/60 border border-blue-200">
-                                    <p class="text-[9px] font-bold text-blue-700 uppercase">Total Repayment</p>
-                                    <p id="lo-prev-total-repayment" class="font-extrabold font-mono text-blue-950 mt-0.5">$70,000.00 MXN</p>
+                                <div>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase">Monthly Interest</p>
+                                    <p id="lo-prev-monthly-interest" class="font-bold font-mono mt-0.5">$5,000.00</p>
                                 </div>
-                                <div class="p-2.5 rounded-xl bg-white border border-slate-200/80">
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase">Final Installment</p>
-                                    <p id="lo-prev-final-payment" class="font-bold font-mono text-slate-800 mt-0.5">$4,375.00 MXN</p>
-                                </div>
-                                <div class="p-2.5 rounded-xl bg-white border border-slate-200/80">
+                                <div>
                                     <p class="text-[9px] font-bold text-slate-400 uppercase">Maturity Date</p>
-                                    <p id="lo-prev-maturity" class="font-bold font-mono text-emerald-700 mt-0.5">—</p>
+                                    <p id="lo-prev-maturity" class="font-bold font-mono mt-0.5 text-blue-300">—</p>
+                                    <p id="lo-prev-final-payment" class="hidden">—</p>
                                 </div>
                             </div>
 
-                            <!-- Scrollable Installment Preview Table -->
-                            <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                                <div class="px-3 py-2 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between text-[10px] font-bold text-slate-600">
-                                    <span id="lo-prev-table-title">Projected Installments (16 Weeks)</span>
-                                    <span class="font-mono text-[9px] text-slate-500">FLOOR_REGULAR_EXACT_FINAL</span>
-                                </div>
-                                <div class="max-h-[210px] overflow-y-auto">
+                            <!-- ACCESSIBLE HTML5 ACCORDION FOR AMORTIZATION TABLE (Fixes double scrollbar) -->
+                            <details class="group bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden">
+                                <summary class="cursor-pointer px-5 py-3.5 bg-slate-50 flex items-center justify-between text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors list-none">
+                                    <span id="lo-prev-table-title" class="flex items-center gap-2">
+                                        <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        Projected Installments (16 Weeks)
+                                    </span>
+                                    <span class="text-[10px] font-mono font-semibold text-slate-400 uppercase">View Schedule</span>
+                                </summary>
+                                <div class="border-t border-slate-200/80 max-h-[300px] overflow-y-auto">
                                     <table class="w-full text-left border-collapse text-[11px]">
                                         <thead>
-                                            <tr class="bg-slate-50 border-b border-slate-200 text-[9px] font-bold uppercase text-slate-400 sticky top-0">
-                                                <th class="py-1.5 px-2.5">#</th>
-                                                <th class="py-1.5 px-2.5">Due Date</th>
-                                                <th class="py-1.5 px-2.5 text-right">Principal</th>
-                                                <th class="py-1.5 px-2.5 text-right">Interest</th>
-                                                <th class="py-1.5 px-2.5 text-right">Total Due</th>
+                                            <tr class="bg-white border-b border-slate-200 text-[9px] font-bold uppercase text-slate-400 sticky top-0 shadow-sm">
+                                                <th class="py-2.5 px-4">#</th>
+                                                <th class="py-2.5 px-4">Due Date</th>
+                                                <th class="py-2.5 px-4 text-right">Principal</th>
+                                                <th class="py-2.5 px-4 text-right">Interest</th>
+                                                <th class="py-2.5 px-4 text-right text-slate-600">Total Due</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="lo-preview-schedule-tbody" class="divide-y divide-slate-100 font-mono"></tbody>
+                                        <tbody id="lo-preview-schedule-tbody" class="divide-y divide-slate-100 font-mono bg-slate-50/30"></tbody>
                                     </table>
                                 </div>
-                            </div>
-                        </div>
+                            </details>
+                        </section>
                     </div>
 
-                    <!-- STEP 4: EXPLICIT OPERATOR CONFIRMATION & SUBMIT -->
-                    <div class="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <label class="flex items-start gap-2.5 cursor-pointer select-none">
-                            <input type="checkbox" id="lo-confirm-check" required class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                            <span class="text-[11px] text-amber-950 leading-snug">
-                                <strong>Confirm Loan Origination:</strong> I have verified the selected active customer, principal amount, flat interest rate, term, and payment dates. This action will create an official <code>DRAFT</code> loan contract in PostgreSQL.
+                    <!-- STAGE 4: STICKY FOOTER (CONFIRMATION & SUBMIT) -->
+                    <div class="sticky bottom-0 bg-white border-t border-slate-200 p-4 px-6 flex flex-col sm:flex-row items-center justify-between gap-4 z-20 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+                        <label class="flex items-start gap-3 cursor-pointer select-none max-w-xl">
+                            <input type="checkbox" id="lo-confirm-check" required class="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 shadow-sm">
+                            <span class="text-[11px] text-slate-600 leading-relaxed">
+                                <strong class="text-slate-900">Confirm Contractual Accuracy:</strong> I have verified the selected borrower, principal, flat interest rate, term, and payment dates. Proceeding creates an immutable <code>DRAFT</code> loan in PostgreSQL.
                             </span>
                         </label>
-                        <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                            <button type="button" onclick="closeLoanOriginationModal()" class="py-2.5 px-4 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold text-xs">
+                        <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                            <button type="button" onclick="closeLoanOriginationModal()" class="flex-1 sm:flex-none py-2.5 px-5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition shadow-sm">
                                 Cancel
                             </button>
-                            <button type="submit" id="lo-submit-btn" class="btn-primary py-2.5 px-5 rounded-xl text-xs shadow-sm">
-                                Create Draft Loan →
+                            <button type="submit" id="lo-submit-btn" class="flex-1 sm:flex-none btn-primary py-2.5 px-6 rounded-xl text-xs shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-2">
+                                <span>Create Draft Loan</span>
+                                <span>→</span>
                             </button>
                         </div>
                     </div>
