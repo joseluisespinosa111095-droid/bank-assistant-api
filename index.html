@@ -49,6 +49,28 @@
 </head>
 <body class="min-h-screen overflow-x-hidden">
 
+    <!-- PRINT VIEWS (BLOQUE I) -->
+    <style>
+        .print-only { display: none; }
+        @media print { 
+            .print-only { display: block !important; } 
+            .no-print { display: none !important; }
+        }
+    </style>
+    <div id="print-view-container" class="print-only w-full bg-white text-slate-900 p-8">
+        <div class="flex items-center justify-between border-b-2 border-slate-900 pb-4 mb-6">
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight">NURA CRM</h1>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Institutional Credit Document</p>
+            </div>
+            <div class="text-right text-xs">
+                <p class="font-bold">Printed: <span id="print-meta-date"></span></p>
+                <p class="text-slate-600">ID: <span id="print-meta-id"></span></p>
+            </div>
+        </div>
+        <div id="print-view-content" class="space-y-6"></div>
+    </div>
+
     <!-- ================================================================= -->
     <!-- AUTHENTICATION VIEW (PUBLIC SIGN-UP CLOSED)                       -->
     <!-- ================================================================= -->
@@ -928,9 +950,47 @@
                             </div>
 
                             <!-- TAB E: DOCUMENTS -->
-                            <div id="ctab-panel-documents" class="hidden fintech-card p-5 bg-white space-y-3">
-                                <h3 class="text-sm font-bold text-slate-900">Customer Document Dossier (KYC & Contracts)</h3>
-                                <p class="text-xs text-slate-500">Private server-side document storage (INE, Proof of Address, Signed Loan Agreement) will be enabled in Stage 5.</p>
+                            <div id="ctab-panel-documents" class="hidden fintech-card p-5 bg-white space-y-4">
+                                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                                    <div>
+                                        <h3 class="text-sm font-bold text-slate-900">Customer Document Dossier (KYC & Contracts)</h3>
+                                        <p class="text-[11px] text-slate-500">Secure PostgreSQL BYTEA Storage • Encrypted at rest</p>
+                                    </div>
+                                </div>
+                                <div id="cust-doc-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs"></div>
+                                
+                                <form id="document-upload-form" onsubmit="handleDocumentUpload(event)" class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3 text-xs flex flex-col sm:flex-row gap-3 items-end">
+                                    <div class="flex-1 w-full">
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Document Type *</label>
+                                        <select id="doc-upload-type" required class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs font-semibold">
+                                            <option value="INE_ID">INE / Official ID</option>
+                                            <option value="PROOF_OF_ADDRESS">Proof of Address</option>
+                                            <option value="BANK_STATEMENT">Bank Statement</option>
+                                            <option value="SIGNED_CONTRACT">Signed Contract</option>
+                                            <option value="OTHER">Other Document</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex-1 w-full">
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">File (PDF, JPG, PNG - Max 10MB) *</label>
+                                        <input type="file" id="doc-upload-file" accept=".pdf,.jpg,.jpeg,.png,.webp" required class="w-full text-xs file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                    </div>
+                                    <button type="submit" id="doc-upload-btn" class="btn-primary py-2.5 px-5 rounded-xl text-xs w-full sm:w-auto shrink-0">Upload to DB</button>
+                                </form>
+
+                                <div class="overflow-x-auto rounded-xl border border-slate-200/80">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                <th class="py-2.5 px-3">Type</th>
+                                                <th class="py-2.5 px-3">Filename</th>
+                                                <th class="py-2.5 px-3">Size & Hash</th>
+                                                <th class="py-2.5 px-3">Uploaded By</th>
+                                                <th class="py-2.5 px-3 text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cust-docs-tbody" class="divide-y divide-slate-100 bg-white"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -6764,6 +6824,196 @@ async function loadDashboardSummary() {
             content.classList.add('scale-95');
             setTimeout(() => modal.classList.add('hidden'), 200);
         }
+    // --- BLOQUE H: DOCUMENTOS KYC ---
+async function loadCustomerDocuments(customerId) {
+    const tbody = document.getElementById('cust-docs-tbody');
+    tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-slate-400">Loading documents...</td></tr>';
+    try {
+        const res = await fetch(`/api/customers/${customerId}/documents`);
+        if (!res.ok) throw new Error('Failed to load docs');
+        const docs = await res.json();
+        tbody.innerHTML = '';
+        if (docs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400">No documents uploaded yet.</td></tr>';
+            return;
+        }
+        docs.forEach(d => {
+            const sizeKb = (d.file_size_bytes / 1024).toFixed(1);
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50">
+                    <td class="py-2.5 px-3 font-bold text-slate-800">${escapeHtml(d.document_type)}</td>
+                    <td class="py-2.5 px-3 text-slate-600 truncate max-w-[150px]">${escapeHtml(d.original_filename)}</td>
+                    <td class="py-2.5 px-3">
+                        <p>${sizeKb} KB</p>
+                        <p class="text-[9px] font-mono text-slate-400 truncate max-w-[100px]" title="${d.file_hash}">${d.file_hash}</p>
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <p>${escapeHtml(d.uploaded_by_name)}</p>
+                        <p class="text-[9px] text-slate-400">${formatDateTimeShort(d.created_at)}</p>
+                    </td>
+                    <td class="py-2.5 px-3 text-right space-x-2">
+                        <button type="button" onclick="downloadDocument(${customerId}, ${d.id})" class="text-blue-600 font-bold hover:underline">View</button>
+                        <button type="button" onclick="deleteDocument(${customerId}, ${d.id})" class="text-red-600 font-bold hover:underline">Delete</button>
+                    </td>
+                </tr>`;
+        });
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-red-600">${escapeHtml(err.message)}</td></tr>`;
+    }
+}
+
+async function handleDocumentUpload(e) {
+    e.preventDefault();
+    if (!currentSelectedCustomer) return;
+    const btn = document.getElementById('doc-upload-btn');
+    const errBox = document.getElementById('cust-doc-error');
+    const fileInput = document.getElementById('doc-upload-file');
+    errBox.classList.add('hidden');
+    
+    if (fileInput.files.length === 0) return;
+    const file = fileInput.files[0];
+    if (file.size > 10 * 1024 * 1024) {
+        errBox.innerText = "File exceeds 10MB limit.";
+        errBox.classList.remove('hidden');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('document_type', document.getElementById('doc-upload-type').value);
+    formData.append('file', file);
+
+    btn.disabled = true;
+    btn.innerText = 'Uploading...';
+    try {
+        const res = await fetch(`/api/customers/${currentSelectedCustomer.id}/documents`, {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': getCookie('csrf_token') },
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Upload failed");
+        document.getElementById('document-upload-form').reset();
+        await loadCustomerDocuments(currentSelectedCustomer.id);
+    } catch (err) {
+        errBox.innerText = err.message;
+        errBox.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Upload to DB';
+    }
+}
+
+function downloadDocument(customerId, docId) {
+    window.open(`/api/customers/${customerId}/documents/${docId}/download`, '_blank');
+}
+
+async function deleteDocument(customerId, docId) {
+    if(!confirm('Permanently delete this document?')) return;
+    try {
+        const res = await fetch(`/api/customers/${customerId}/documents/${docId}`, {
+            method: 'DELETE', headers: { 'X-CSRF-Token': getCookie('csrf_token') }
+        });
+        if (!res.ok) throw new Error('Delete failed');
+        await loadCustomerDocuments(customerId);
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+// Interceptar cuando se abre el perfil del cliente para cargar sus documentos
+const originalOpenCust = openCustomerDetail;
+openCustomerDetail = async function(id) {
+    await originalOpenCust(id);
+    await loadCustomerDocuments(id);
+};
+
+// --- BLOQUE I: IMPRESIÓN DE RECIBOS Y ESTADOS DE CUENTA ---
+function executePrint(title, metaId, contentHtml) {
+    const appView = document.getElementById('app-view');
+    const printContainer = document.getElementById('print-view-container');
+    
+    appView.classList.add('no-print');
+    
+    document.getElementById('print-meta-date').innerText = new Date().toLocaleString();
+    document.getElementById('print-meta-id').innerText = metaId;
+    document.getElementById('print-view-content').innerHTML = contentHtml;
+    
+    window.print();
+    
+    appView.classList.remove('no-print');
+}
+
+function printPaymentReceipt(btnElement) {
+    const tr = btnElement.closest('tr');
+    const tds = tr.querySelectorAll('td');
+    if (!currentSelectedLoan || !tds || tds.length < 5) return;
+    
+    const content = `
+        <h2 class="text-xl font-bold mb-4">Official Payment Receipt</h2>
+        <div class="grid grid-cols-2 gap-4 text-sm mb-6 border-b pb-4">
+            <div><p class="font-bold text-slate-500">Loan Number</p><p class="font-mono">${currentSelectedLoan.loan_number}</p></div>
+            <div><p class="font-bold text-slate-500">Receipt Details</p>${tds[0].innerHTML}</div>
+            <div><p class="font-bold text-slate-500">Date & Method</p>${tds[1].innerHTML}</div>
+            <div><p class="font-bold text-slate-500">Status</p>${tds[5].innerHTML}</div>
+        </div>
+        <table class="w-full text-left text-sm mb-6 border">
+            <tr class="bg-slate-100"><th class="p-2 border">Interest Applied</th><th class="p-2 border">Principal Applied</th><th class="p-2 border">Total Received</th></tr>
+            <tr><td class="p-2 border font-mono">${tds[2].innerText}</td><td class="p-2 border font-mono">${tds[3].innerText}</td><td class="p-2 border font-mono font-bold">${tds[4].innerText}</td></tr>
+        </table>
+        <p class="text-xs text-slate-500 italic">This document confirms the allocation of funds to the PostgreSQL immutable ledger based on strict waterfall rules.</p>
+    `;
+    executePrint('Payment Receipt', currentSelectedLoan.loan_number, content);
+}
+
+function printLoanStatement() {
+    if (!currentSelectedLoan) return;
+    const l = currentSelectedLoan;
+    
+    const content = `
+        <h2 class="text-xl font-bold mb-4">Loan Account Statement</h2>
+        <div class="grid grid-cols-3 gap-4 text-sm mb-6 border p-4 bg-slate-50">
+            <div><p class="font-bold text-slate-500">Loan Number</p><p class="font-mono font-bold">${l.loan_number}</p></div>
+            <div><p class="font-bold text-slate-500">Status</p><p>${l.status}</p></div>
+            <div><p class="font-bold text-slate-500">Original Principal</p><p class="font-mono">${NuraFinancialEngine.formatMXNFromCents(l.principal_cents)}</p></div>
+            <div><p class="font-bold text-slate-500">Unpaid Principal</p><p class="font-mono font-bold">${NuraFinancialEngine.formatMXNFromCents(l.unpaid_principal_cents)}</p></div>
+            <div><p class="font-bold text-slate-500">Remaining Total</p><p class="font-mono font-bold">${NuraFinancialEngine.formatMXNFromCents(l.remaining_contract_total_cents)}</p></div>
+            <div><p class="font-bold text-slate-500">Amount Paid</p><p class="font-mono text-emerald-700">${NuraFinancialEngine.formatMXNFromCents(l.amount_paid_cents)}</p></div>
+        </div>
+        <h3 class="font-bold mb-2 text-sm border-b">Amortization Schedule Ledger</h3>
+        <table class="w-full text-left text-xs border border-collapse mb-6">
+            ${document.getElementById('ld-schedule-tbody').parentElement.innerHTML}
+        </table>
+    `;
+    executePrint('Loan Statement', l.loan_number, content);
+}
+
+// Inyectar botón de estado de cuenta en el header del préstamo de forma segura
+setTimeout(() => {
+    const ldActionsContainer = document.getElementById('ld-lifecycle-actions');
+    if(ldActionsContainer) {
+        const parent = ldActionsContainer.parentElement;
+        const printStmtBtn = document.createElement('button');
+        printStmtBtn.className = "py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-sm transition";
+        printStmtBtn.innerHTML = "🖨️ Print Statement";
+        printStmtBtn.onclick = printLoanStatement;
+        parent.insertBefore(printStmtBtn, parent.firstChild);
+    }
+}, 500);
+
+// Inyectar botones de recibo en la tabla de pagos
+const originalLoadPayments = loadLoanPayments;
+loadLoanPayments = async function(loanId) {
+    await originalLoadPayments(loanId);
+    const tbody = document.getElementById('ld-payments-tbody');
+    if(!tbody) return;
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(row => {
+        if(row.children.length === 7 && !row.innerHTML.includes('No payments recorded')) {
+            const actionTd = row.children[6];
+            actionTd.innerHTML += ` <button type="button" onclick="printPaymentReceipt(this)" class="text-[10px] text-slate-500 hover:text-slate-900 ml-2 font-bold bg-slate-100 px-2 py-1 rounded">🖨️ Print</button>`;
+        }
+    });
+};
     </script>
 </body>
 </html>
