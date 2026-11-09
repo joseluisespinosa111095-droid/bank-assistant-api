@@ -909,6 +909,66 @@ class LoanPaymentEngine:
         max_seq = db.query(func.max(LoanPaymentModel.loan_payment_seq)).filter(LoanPaymentModel.loan_id == loan.id).scalar()
         next_seq = (max_seq or 0) + 1
 
+        prev_loan_status = loan.status
+        prev_unpaid_principal = int(loan.unpaid_principal_cents)
+        prev_remaining_interest = int(loan.remaining_contractual_interest_cents)
+        prev_remaining_total = int(loan.remaining_contract_total_cents)
+        prev_amount_paid = int(loan.amount_paid_cents)
+
+        remaining_to_allocate = int(amount_cents)
+        interest_applied = 0
+        principal_applied = 0
+        pending_allocations = []
+
+        for inst in installments:
+            if remaining_to_allocate <= 0:
+                break
+            if inst.remaining_amount_cents <= 0:
+                continue
+
+            prev_prin_paid = int(inst.principal_paid_cents)
+            prev_int_paid = int(inst.interest_paid_cents)
+            prev_amt_paid = int(inst.amount_paid_cents)
+            prev_rem_amt = int(inst.remaining_amount_cents)
+            prev_paid_at = inst.paid_at
+
+            int_pending = max(0, int(inst.interest_due_cents) - prev_int_paid)
+            int_alloc = min(remaining_to_allocate, int_pending)
+            if int_alloc > 0:
+                inst.interest_paid_cents = prev_int_paid + int_alloc
+                remaining_to_allocate -= int_alloc
+                interest_applied += int_alloc
+
+            prin_pending = max(0, int(inst.principal_due_cents) - prev_prin_paid)
+            prin_alloc = min(remaining_to_allocate, prin_pending)
+            if prin_alloc > 0:
+                inst.principal_paid_cents = prev_prin_paid + prin_alloc
+                remaining_to_allocate -= prin_alloc
+                principal_applied += prin_alloc
+
+            total_alloc = int_alloc + prin_alloc
+            if total_alloc > 0:
+                inst.amount_paid_cents = prev_amt_paid + total_alloc
+                inst.remaining_amount_cents = int(inst.scheduled_payment_cents) - int(inst.amount_paid_cents)
+                if inst.remaining_amount_cents == 0:
+                    inst.paid_at = paid_at_dt
+
+                pending_allocations.append({
+                    "installment_id": inst.id,
+                    "installment_number": inst.installment_number,
+                    "interest_allocated_cents": int_alloc,
+                    "principal_allocated_cents": prin_alloc,
+                    "total_allocated_cents": total_alloc,
+                    "prev_principal_paid_cents": prev_prin_paid,
+                    "prev_interest_paid_cents": prev_int_paid,
+                    "prev_amount_paid_cents": prev_amt_paid,
+                    "prev_remaining_amount_cents": prev_rem_amt,
+                    "prev_paid_at": prev_paid_at
+                })
+
+        if remaining_to_allocate != 0 or (interest_applied + principal_applied) != amount_cents:
+            raise RuntimeError("Waterfall allocation mismatch: unable to allocate exact payment amount across installments.")
+
         payment = LoanPaymentModel(
             payment_number=payment_number,
             loan_id=loan.id,
@@ -918,14 +978,14 @@ class LoanPaymentEngine:
             request_payload_hash=payload_hash,
             status="POSTED",
             currency="MXN",
-            amount_cents=amount_cents,
-            interest_applied_cents=0,
-            principal_applied_cents=0,
-            prev_loan_status=loan.status,
-            prev_unpaid_principal_cents=loan.unpaid_principal_cents,
-            prev_remaining_interest_cents=loan.remaining_contractual_interest_cents,
-            prev_remaining_total_cents=loan.remaining_contract_total_cents,
-            prev_amount_paid_cents=loan.amount_paid_cents,
+            amount_cents=int(amount_cents),
+            interest_applied_cents=int(interest_applied),
+            principal_applied_cents=int(principal_applied),
+            prev_loan_status=prev_loan_status,
+            prev_unpaid_principal_cents=prev_unpaid_principal,
+            prev_remaining_interest_cents=prev_remaining_interest,
+            prev_remaining_total_cents=prev_remaining_total,
+            prev_amount_paid_cents=prev_amount_paid,
             payment_method=payment_method,
             payment_reference=payment_reference,
             paid_at=paid_at_dt,
@@ -935,102 +995,27 @@ class LoanPaymentEngine:
         db.add(payment)
         db.flush()
 
-        remaining_to_allocate = amount_cents
-        interest_applied = 0
-        principal_applied = 0
+        for alloc_data in pending_allocations:
+            db.add(LoanPaymentAllocationModel(
+                payment_id=payment.id,
+                loan_id=loan.id,
+                **alloc_data
+            ))
 
-        for inst in installments:
-            if remaining_to_allocate <= 0:
-                break
-            if inst.remaining_amount_cents <= 0:
-                continue
-
-            prev_prin_paid = inst.principal_paid_cents
-            prev_int_paid = inst.interest_paid_cents
-            prev_amt_paid = inst.amount_paid_cents
-            prev_rem_amt = inst.remaining_amount_cents
-            prev_paid_at = inst.paid_at
-
-            int_pending = max(0, inst.interest_due_cents - inst.interest_paid_cents)
-            int_alloc = min(remaining_to_allocate, int_pending)
-            if int_alloc > 0:
-                inst.interest_paid_cents += int_alloc
-                remaining_to_allocate -= int_alloc
-                interest_applied += int_alloc
-
-            prin_pending = max(0, inst.principal_due_cents - inst.principal_paid_cents)
-            prin_alloc = min(remaining_to_allocate, prin_pending)
-            if prin_alloc > 0:
-                inst.principal_paid_cents += prin_alloc
-                remaining_to_allocate -= prin_alloc
-                principal_applied += prin_alloc
-
-            total_alloc = int_alloc + prin_alloc
-            if total_alloc > 0:
-                inst.amount_paid_cents += total_alloc
-                inst.remaining_amount_cents = max(0, inst.scheduled_payment_cents - inst.amount_paid_cents)
-                if inst.remaining_amount_cents == 0:
-                    inst.paid_at = paid_at_dt
-
-                alloc = LoanPaymentAllocationModel(
-                    payment_id=payment.id,
-                    loan_id=loan.id,
-                    installment_id=inst.id,
-                    installment_number=inst.installment_number,
-                    interest_allocated_cents=int_alloc,
-                    principal_allocated_cents=prin_alloc,
-                    total_allocated_cents=total_alloc,
-                    prev_principal_paid_cents=prev_prin_paid,
-                    prev_interest_paid_cents=prev_int_paid,
-                    prev_amount_paid_cents=prev_amt_paid,
-                    prev_remaining_amount_cents=prev_rem_amt,
-                    prev_paid_at=prev_paid_at
-                )
-                db.add(alloc)
-
-        # Fallback for general unallocated balance distribution if any remains
-        if remaining_to_allocate > 0 and installments:
-            first_active = next((i for i in installments if i.remaining_amount_cents > 0), installments[0])
-            prin_extra = min(remaining_to_allocate, first_active.remaining_amount_cents)
-            first_active.principal_paid_cents += prin_extra
-            first_active.amount_paid_cents += prin_extra
-            first_active.remaining_amount_cents = max(0, first_active.scheduled_payment_cents - first_active.amount_paid_cents)
-            if first_active.remaining_amount_cents == 0:
-                first_active.paid_at = paid_at_dt
-            principal_applied += prin_extra
-            remaining_to_allocate -= prin_extra
-
-        payment.interest_applied_cents = int(interest_applied)
-        payment.principal_applied_cents = int(principal_applied)
-
-        if (payment.interest_applied_cents + payment.principal_applied_cents) != payment.amount_cents:
-            diff = payment.amount_cents - (payment.interest_applied_cents + payment.principal_applied_cents)
-            payment.principal_applied_cents += diff
-            principal_applied += diff
-
-        if (payment.interest_applied_cents + payment.principal_applied_cents) != payment.amount_cents:
-            # Fallback for full/partial waterfall sum alignment
-            diff = payment.amount_cents - (payment.interest_applied_cents + payment.principal_applied_cents)
-            if installments and diff > 0:
-                payment.interest_applied_cents += diff
-                interest_applied += diff
-
-        loan.unpaid_principal_cents -= payment.principal_applied_cents
-        loan.remaining_contractual_interest_cents -= payment.interest_applied_cents
-        loan.remaining_contract_total_cents -= amount_cents
-        loan.amount_paid_cents += amount_cents
-        loan.remaining_contractual_interest_cents -= interest_applied
-        loan.remaining_contract_total_cents -= amount_cents
-        loan.amount_paid_cents += amount_cents
+        loan.unpaid_principal_cents = prev_unpaid_principal - principal_applied
+        loan.remaining_contractual_interest_cents = prev_remaining_interest - interest_applied
+        loan.remaining_contract_total_cents = prev_remaining_total - int(amount_cents)
+        loan.amount_paid_cents = prev_amount_paid + int(amount_cents)
 
         if loan.remaining_contract_total_cents == 0:
             loan.status = "PAID_OFF"
+        loan.updated_at = datetime.now(timezone.utc)
 
         db.flush()
         if db.bind and db.bind.dialect.name == "sqlite":
             LoanPaymentEngine._verify_ledger_integrity_python(loan, installments, db)
 
-        return {"payment": payment, "allocations_count": len(payment.allocations)}
+        return {"payment": payment, "allocations_count": len(pending_allocations)}
 
     @staticmethod
     def execute_reversal_restoration(db: Session, loan: LoanModel, payment: LoanPaymentModel, reason: str, user_id: int):
