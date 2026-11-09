@@ -12,14 +12,14 @@ from typing import Optional, List
 from contextlib import asynccontextmanager
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request, Query
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request, Query, UploadFile, File, Form
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, EmailStr, Field
 import google.generativeai as genai
 from sqlalchemy import (
     create_engine, Column, Integer, BigInteger, String, Text,
     DateTime, Date, Boolean, ForeignKey, UniqueConstraint,
-    CheckConstraint, event, text, or_, inspect, func
+    CheckConstraint, event, text, or_, inspect, func, LargeBinary
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from passlib.context import CryptContext
@@ -99,6 +99,7 @@ VALID_LOAN_STATUSES = {"DRAFT", "APPROVED", "ACTIVE", "PAID_OFF", "CANCELLED", "
 VALID_DISBURSEMENT_METHODS = {"SPEI_TRANSFER", "BANK_DEPOSIT", "CHECK", "CASH_RECEIPT"}
 VALID_PAYMENT_STATUSES = {"POSTED", "REVERSED"}
 VALID_PAYMENT_METHODS = {"SPEI_TRANSFER", "BANK_DEPOSIT", "CHECK", "CASH_RECEIPT"}
+VALID_DOCUMENT_TYPES = {"INE_ID", "PROOF_OF_ADDRESS", "BANK_STATEMENT", "SIGNED_CONTRACT", "OTHER"}
 
 
 # --- SQLALCHEMY MODELS ---
@@ -202,6 +203,24 @@ class CustomerModel(Base):
     )
 
     loans = relationship("LoanModel", back_populates="customer", cascade="all, delete-orphan")
+    documents = relationship("CustomerDocumentModel", back_populates="customer", cascade="all, delete-orphan")
+
+
+class CustomerDocumentModel(Base):
+    __tablename__ = "customer_documents"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False, index=True)
+    document_type = Column(String(40), nullable=False)
+    original_filename = Column(String(255), nullable=False)
+    mime_type = Column(String(100), nullable=False)
+    file_size_bytes = Column(Integer, nullable=False)
+    file_hash = Column(String(64), nullable=False)
+    file_data = Column(LargeBinary, nullable=False)  # BYTEA
+    status = Column(String(30), default="ACTIVE", nullable=False)
+    uploaded_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    customer = relationship("CustomerModel", back_populates="documents")
 
 
 class LeadModel(Base):
@@ -2364,6 +2383,124 @@ def create_customer_interaction(
         db.rollback()
         logger.exception("Failed to log customer interaction")
         raise HTTPException(status_code=500, detail="Could not save customer interaction.")
+
+
+MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
+ALLOWED_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
+
+@app.post("/api/customers/{customer_id}/documents", dependencies=[Depends(verify_csrf)])
+async def upload_customer_document(
+    customer_id: int,
+    request: Request,
+    document_type: str = Form(...),
+    file: UploadFile = File(...),
+    current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR")),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    customer = db.query(CustomerModel).filter(CustomerModel.id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found.")
+
+    if document_type not in VALID_DOCUMENT_TYPES:
+        raise HTTPException(status_code=422, detail="Invalid document type.")
+
+    file_data = await file.read()
+    file_size = len(file_data)
+
+    if file_size == 0 or file_size > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(status_code=422, detail="File must be between 1 byte and 10 MB.")
+
+    mime_type = file.content_type
+    if mime_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=422, detail="Invalid file type. Only PDF, JPG, PNG, WEBP are allowed.")
+
+    file_hash = hashlib.sha256(file_data).hexdigest()
+
+    try:
+        new_doc = CustomerDocumentModel(
+            customer_id=customer.id,
+            document_type=document_type,
+            original_filename=file.filename[:255],
+            mime_type=mime_type,
+            file_size_bytes=file_size,
+            file_hash=file_hash,
+            file_data=file_data,
+            uploaded_by_user_id=current_user.id
+        )
+        db.add(new_doc)
+        db.flush()
+
+        record_audit_event(
+            db, "CUSTOMER_DOCUMENT_UPLOADED", "document", "SUCCESS", actor=current_user,
+            resource_id=str(new_doc.id), ip_address=ip,
+            details={"customer_number": customer.customer_number, "type": document_type, "hash": file_hash}, commit=False
+        )
+        db.commit()
+        return {
+            "id": new_doc.id, "document_type": new_doc.document_type,
+            "original_filename": new_doc.original_filename, "file_size_bytes": new_doc.file_size_bytes,
+            "created_at": new_doc.created_at.isoformat()
+        }
+    except Exception as e:
+        db.rollback()
+        logger.exception("Document upload failed")
+        raise HTTPException(status_code=500, detail="Could not upload document.")
+
+@app.get("/api/customers/{customer_id}/documents")
+def list_customer_documents(
+    customer_id: int,
+    current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")),
+    db: Session = Depends(get_db)
+):
+    docs = db.query(CustomerDocumentModel).filter(CustomerDocumentModel.customer_id == customer_id, CustomerDocumentModel.status == "ACTIVE").order_by(CustomerDocumentModel.id.desc()).all()
+    user_ids = {d.uploaded_by_user_id for d in docs}
+    users = {u.id: u.full_name or u.email for u in db.query(UserModel).filter(UserModel.id.in_(user_ids)).all()} if user_ids else {}
+
+    return [{
+        "id": d.id, "document_type": d.document_type, "original_filename": d.original_filename,
+        "mime_type": d.mime_type, "file_size_bytes": d.file_size_bytes, "file_hash": d.file_hash,
+        "uploaded_by_name": users.get(d.uploaded_by_user_id, "System"),
+        "created_at": d.created_at.isoformat()
+    } for d in docs]
+
+@app.get("/api/customers/{customer_id}/documents/{doc_id}/download")
+def download_customer_document(
+    customer_id: int,
+    doc_id: int,
+    request: Request,
+    current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")),
+    db: Session = Depends(get_db)
+):
+    doc = db.query(CustomerDocumentModel).filter(CustomerDocumentModel.id == doc_id, CustomerDocumentModel.customer_id == customer_id, CustomerDocumentModel.status == "ACTIVE").first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found or unauthorized.")
+
+    record_audit_event(
+        db, "CUSTOMER_DOCUMENT_DOWNLOADED", "document", "SUCCESS", actor=current_user,
+        resource_id=str(doc.id), ip_address=get_client_ip(request), commit=True
+    )
+    return Response(content=doc.file_data, media_type=doc.mime_type, headers={"Content-Disposition": f'inline; filename="{doc.original_filename}"'})
+
+@app.delete("/api/customers/{customer_id}/documents/{doc_id}", dependencies=[Depends(verify_csrf)])
+def delete_customer_document(
+    customer_id: int,
+    doc_id: int,
+    request: Request,
+    current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "CREDIT_ADVISOR")),
+    db: Session = Depends(get_db)
+):
+    doc = db.query(CustomerDocumentModel).filter(CustomerDocumentModel.id == doc_id, CustomerDocumentModel.customer_id == customer_id, CustomerDocumentModel.status == "ACTIVE").first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    doc.status = "DELETED"
+    record_audit_event(
+        db, "CUSTOMER_DOCUMENT_DELETED", "document", "SUCCESS", actor=current_user,
+        resource_id=str(doc.id), ip_address=get_client_ip(request), commit=True
+    )
+    db.commit()
+    return {"message": "Document deleted successfully"}
 
 
 # --- STAGE 2: LEADS, CALL LIST & CONVERSION ---
