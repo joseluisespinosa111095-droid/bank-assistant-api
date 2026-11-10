@@ -1380,8 +1380,9 @@ class LoanPaymentEngine:
 
 # --- AUDIT SERVICE ---
 SENSITIVE_AUDIT_KEYS = {
-    "password", "password_hash", "token", "session_token",
-    "csrf_token", "secret", "bootstrap_secret", "api_key",
+    "password", "new_password", "password_hash", "token", "reset_token",
+    "token_hash", "session_token", "csrf_token", "secret", "bootstrap_secret",
+    "rate_limit_hmac_secret", "api_key", "email", "raw_email",
     "phone", "phone_primary", "phone_secondary", "address_full",
     "tax_id_rfc", "date_of_birth", "full_legal_name", "full_name",
     "content", "summary_notes", "reason_or_note", "approval_notes", "disbursement_notes"
@@ -1461,6 +1462,15 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str = Field(..., min_length=20, max_length=256)
+    new_password: str = Field(..., min_length=8, max_length=128)
 
 
 class UserUpdateByAdmin(BaseModel):
@@ -1798,24 +1808,103 @@ class AIService:
             return "⚠️ Nura Assistant is busy right now. Your message has been saved."
 
 
+# --- TRANSACTIONAL EMAIL DELIVERY INTERFACE (PROVIDER-AGNOSTIC & PROD-SAFE) ---
+GENERIC_PASSWORD_RESET_MESSAGE = (
+    "If an active account is associated with that email address, "
+    "password reset instructions have been sent."
+)
+
+
+class EmailDeliveryService:
+    """
+    Provider-agnostic email delivery interface.
+    STRICT SECURITY POLICY:
+    - In production (IS_PRODUCTION == True), raw tokens, reset links, or secrets
+      are NEVER written to logs under any circumstance.
+    - If no real transactional email provider is configured in production,
+      delivery fails safely (returns False) without faking success.
+    """
+    @staticmethod
+    def send_password_reset_email(recipient_email: str, raw_token: str, request: Request) -> bool:
+        provider = os.getenv("EMAIL_PROVIDER", "NONE").strip().upper()
+        base_url = os.getenv("PASSWORD_RESET_BASE_URL", "").strip().rstrip("/")
+        if not base_url:
+            base_url = f"{request.url.scheme}://{request.url.netloc}"
+
+        reset_link = f"{base_url}/?reset_token={raw_token}"
+
+        if IS_PRODUCTION:
+            # Mock/console logging is strictly forbidden in production
+            if provider in ("", "NONE", "DEV_CONSOLE", "MOCK"):
+                logger.error("Password reset email delivery aborted: EMAIL_PROVIDER is not configured in production.")
+                return False
+            # Hook for authorized external transactional provider (e.g., Resend / SendGrid / SES)
+            logger.error(f"Password reset email delivery aborted: provider '{provider}' adapter not yet active.")
+            return False
+
+        # Local / development environment only (IS_PRODUCTION == False)
+        if provider in ("", "NONE", "DEV_CONSOLE", "MOCK"):
+            logger.info(
+                "[DEV ONLY - LOCAL PASSWORD RESET] Account=%s | Reset Link: %s",
+                mask_email_for_audit(recipient_email),
+                reset_link
+            )
+            return True
+
+        return False
+
+
 # --- AUTHENTICATION & ATOMIC BOOTSTRAP ENDPOINTS ---
 @app.post("/api/auth/login")
 def login(user_data: UserLogin, request: Request, response: Response, db: Session = Depends(get_db)):
     ip = get_client_ip(request)
     email_clean = user_data.email.strip().lower()
+    masked_email = mask_email_for_audit(email_clean)
+    now_utc = datetime.now(timezone.utc)
 
-    if not check_rate_limit(f"login:{ip}:{email_clean}", max_attempts=6, window_seconds=300):
+    try:
+        email_bucket, prev_email_bucket = compute_email_hmac_buckets("LOGIN_EMAIL", email_clean)
+    except RuntimeError:
+        record_audit_event(
+            db, "AUTH_CONFIG_MISSING_HMAC_SECRET", "security", "ERROR",
+            resource_id="LOGIN", ip_address=ip, commit=True
+        )
+        raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable.")
+
+    ip_bucket = f"LOGIN_IP:{ip}"
+
+    ip_allowed, ip_retry = consume_rate_limit_atomic(
+        db, bucket_key=ip_bucket, max_attempts=5, window_seconds=60, now_utc=now_utc
+    )
+    email_allowed, email_retry = consume_rate_limit_atomic(
+        db, bucket_key=email_bucket, max_attempts=5, window_seconds=300,
+        previous_bucket_key=prev_email_bucket, now_utc=now_utc
+    )
+
+    if not ip_allowed or not email_allowed:
+        retry_after = max(ip_retry, email_retry, 1)
+        limit_scope = "IP_AND_EMAIL" if (not ip_allowed and not email_allowed) else ("IP" if not ip_allowed else "EMAIL")
         record_audit_event(
             db, "LOGIN_RATE_LIMITED", "auth", "DENIED",
-            resource_id=mask_email_for_audit(email_clean), ip_address=ip, commit=True
+            resource_id=masked_email, ip_address=ip,
+            details={"scope": limit_scope, "retry_after_sec": retry_after}, commit=True
         )
-        raise HTTPException(status_code=429, detail="Too many login attempts. Please wait 5 minutes.")
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many login attempts. Please wait {retry_after} seconds before trying again.",
+            headers={"Retry-After": str(retry_after)}
+        )
 
     user = db.query(UserModel).filter(UserModel.email == email_clean).first()
-    if not user or not pwd_context.verify(user_data.password, user.password_hash):
+
+    # Constant-time bcrypt execution regardless of whether the email exists
+    target_hash = user.password_hash if user else DUMMY_BCRYPT_HASH
+    password_ok = pwd_context.verify(user_data.password, target_hash)
+
+    if not user or not password_ok:
         record_audit_event(
             db, "LOGIN_FAILED", "auth", "ERROR",
-            resource_id=mask_email_for_audit(email_clean), ip_address=ip, commit=True
+            resource_id=masked_email, ip_address=ip, commit=True
         )
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
@@ -1824,11 +1913,14 @@ def login(user_data: UserLogin, request: Request, response: Response, db: Sessio
             db, "LOGIN_BLOCKED_INACTIVE", "auth", "DENIED",
             actor=user, resource_id=str(user.id), ip_address=ip, commit=True
         )
-        raise HTTPException(status_code=403, detail="Account is deactivated")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # Clear email failure counter upon successful authentication
+    reset_rate_limit_bucket(db, email_bucket, prev_email_bucket)
 
     token = secrets.token_hex(32)
     csrf_token = secrets.token_urlsafe(32)
-    expires = datetime.now(timezone.utc) + timedelta(days=7)
+    expires = now_utc + timedelta(days=7)
 
     db.add(SessionModel(token=hash_token(token), user_id=user.id, expires_at=expires))
     db.commit()
@@ -1853,6 +1945,241 @@ def login(user_data: UserLogin, request: Request, response: Response, db: Sessio
         "full_name": user.full_name,
         "role": user.role
     }
+
+
+@app.post("/api/auth/password-reset/request")
+def request_password_reset(
+    payload: PasswordResetRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    email_clean = payload.email.strip().lower()
+    masked_email = mask_email_for_audit(email_clean)
+    now_utc = datetime.now(timezone.utc)
+
+    try:
+        email_bucket, prev_email_bucket = compute_email_hmac_buckets("PASSWORD_RESET_EMAIL", email_clean)
+    except RuntimeError:
+        record_audit_event(
+            db, "AUTH_CONFIG_MISSING_HMAC_SECRET", "security", "ERROR",
+            resource_id="PASSWORD_RESET_REQUEST", ip_address=ip, commit=True
+        )
+        return {"message": GENERIC_PASSWORD_RESET_MESSAGE}
+
+    ip_bucket = f"PASSWORD_RESET_IP:{ip}"
+
+    ip_allowed, ip_retry = consume_rate_limit_atomic(
+        db, bucket_key=ip_bucket, max_attempts=5, window_seconds=300, now_utc=now_utc
+    )
+    email_allowed, email_retry = consume_rate_limit_atomic(
+        db, bucket_key=email_bucket, max_attempts=3, window_seconds=900,
+        previous_bucket_key=prev_email_bucket, now_utc=now_utc
+    )
+
+    if not ip_allowed or not email_allowed:
+        retry_after = max(ip_retry, email_retry, 1)
+        limit_scope = "IP_AND_EMAIL" if (not ip_allowed and not email_allowed) else ("IP" if not ip_allowed else "EMAIL")
+        record_audit_event(
+            db, "PASSWORD_RESET_RATE_LIMITED", "auth", "DENIED",
+            resource_id=masked_email, ip_address=ip,
+            details={"scope": limit_scope, "retry_after_sec": retry_after}, commit=True
+        )
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many password recovery requests. Please wait {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)}
+        )
+
+    if not is_auth_security_schema_ready(db):
+        record_audit_event(
+            db, "PASSWORD_RESET_SCHEMA_NOT_READY", "auth", "ERROR",
+            resource_id=masked_email, ip_address=ip, commit=True
+        )
+        return {"message": GENERIC_PASSWORD_RESET_MESSAGE}
+
+    try:
+        # Serialize token issuance per user by locking the UserModel row first
+        user = (
+            db.query(UserModel)
+            .filter(UserModel.email == email_clean)
+            .with_for_update()
+            .first()
+        )
+
+        if not user or not user.is_active:
+            # Perform dummy token hash calculation to keep response timing consistent
+            _ = hash_token(secrets.token_urlsafe(32))
+            record_audit_event(
+                db, "PASSWORD_RESET_REQUEST_IGNORED", "auth", "SUCCESS",
+                resource_id=masked_email, ip_address=ip, commit=True
+            )
+            return {"message": GENERIC_PASSWORD_RESET_MESSAGE}
+
+        # Invalidate ALL prior unconsumed tokens for this user (including expired ones)
+        # so uq_password_reset_tokens_active_user (WHERE used_at IS NULL) is always freed.
+        db.execute(
+            text("""
+                UPDATE password_reset_tokens
+                SET used_at = :now_utc
+                WHERE user_id = :user_id
+                  AND used_at IS NULL
+            """),
+            {"now_utc": now_utc, "user_id": user.id}
+        )
+
+        raw_token = secrets.token_urlsafe(32)
+        token_hash_val = hash_token(raw_token)
+        expires_at = now_utc + timedelta(minutes=30)
+
+        reset_record = PasswordResetTokenModel(
+            user_id=user.id,
+            token_hash=token_hash_val,
+            created_at=now_utc,
+            expires_at=expires_at,
+            used_at=None,
+            request_ip=ip
+        )
+        db.add(reset_record)
+        db.flush()
+
+        delivered = EmailDeliveryService.send_password_reset_email(
+            recipient_email=user.email,
+            raw_token=raw_token,
+            request=request
+        )
+        if not delivered:
+            db.rollback()
+            record_audit_event(
+                db, "PASSWORD_RESET_DELIVERY_FAILED", "auth", "ERROR",
+                actor=user, resource_id=str(user.id), ip_address=ip, commit=True
+            )
+            return {"message": GENERIC_PASSWORD_RESET_MESSAGE}
+
+        record_audit_event(
+            db, "PASSWORD_RESET_REQUESTED", "auth", "SUCCESS",
+            actor=user, resource_id=str(user.id), ip_address=ip,
+            details={"expires_in_minutes": 30}, commit=False
+        )
+        db.commit()
+        return {"message": GENERIC_PASSWORD_RESET_MESSAGE}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Password reset request failed: {type(e).__name__}")
+        return {"message": GENERIC_PASSWORD_RESET_MESSAGE}
+
+
+@app.post("/api/auth/password-reset/confirm")
+def confirm_password_reset(
+    payload: PasswordResetConfirmRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    now_utc = datetime.now(timezone.utc)
+
+    confirm_ip_bucket = f"PASSWORD_RESET_CONFIRM_IP:{ip}"
+    ip_allowed, ip_retry = consume_rate_limit_atomic(
+        db, bucket_key=confirm_ip_bucket, max_attempts=5, window_seconds=300, now_utc=now_utc
+    )
+    if not ip_allowed:
+        record_audit_event(
+            db, "PASSWORD_RESET_CONFIRM_RATE_LIMITED", "auth", "DENIED",
+            ip_address=ip, details={"retry_after_sec": ip_retry}, commit=True
+        )
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many password reset attempts. Please wait {ip_retry} seconds.",
+            headers={"Retry-After": str(ip_retry)}
+        )
+
+    if not is_auth_security_schema_ready(db):
+        raise HTTPException(status_code=503, detail="Password recovery service is not active yet.")
+
+    new_pw = payload.new_password
+    if len(new_pw.strip()) < 8:
+        raise HTTPException(status_code=422, detail="Password must be at least 8 characters long.")
+
+    raw_token = payload.token.strip()
+    token_hash_val = hash_token(raw_token)
+
+    try:
+        # Atomic single-use token consumption (works identically in PostgreSQL & SQLite)
+        consume_res = db.execute(
+            text("""
+                UPDATE password_reset_tokens
+                SET used_at = :now_utc
+                WHERE token_hash = :token_hash
+                  AND used_at IS NULL
+                  AND expires_at > :now_utc
+            """),
+            {"now_utc": now_utc, "token_hash": token_hash_val}
+        )
+
+        if consume_res.rowcount != 1:
+            db.rollback()
+            record_audit_event(
+                db, "PASSWORD_RESET_CONFIRM_INVALID", "auth", "DENIED",
+                ip_address=ip, commit=True
+            )
+            raise HTTPException(status_code=400, detail="Invalid or expired password reset token.")
+
+        token_record = (
+            db.query(PasswordResetTokenModel)
+            .filter(PasswordResetTokenModel.token_hash == token_hash_val)
+            .first()
+        )
+        user = (
+            db.query(UserModel)
+            .filter(UserModel.id == token_record.user_id)
+            .with_for_update()
+            .first()
+            if token_record else None
+        )
+
+        if not user or not user.is_active:
+            db.rollback()
+            record_audit_event(
+                db, "PASSWORD_RESET_CONFIRM_INACTIVE_USER", "auth", "DENIED",
+                ip_address=ip, commit=True
+            )
+            raise HTTPException(status_code=400, detail="Invalid or expired password reset token.")
+
+        # Update password hash using NURA's authoritative bcrypt context
+        user.password_hash = pwd_context.hash(new_pw)
+
+        # Revoke all prior active sessions for this user in PostgreSQL
+        revoked_sessions = (
+            db.query(SessionModel)
+            .filter(SessionModel.user_id == user.id)
+            .delete(synchronize_session=False)
+        )
+
+        record_audit_event(
+            db, "PASSWORD_RESET_COMPLETED", "auth", "SUCCESS",
+            actor=user, resource_id=str(user.id), ip_address=ip,
+            details={"sessions_revoked": revoked_sessions}, commit=False
+        )
+        db.commit()
+
+        # Clear any active login rate limit bucket for this user's email
+        try:
+            login_email_bucket, prev_login_bucket = compute_email_hmac_buckets("LOGIN_EMAIL", user.email)
+            reset_rate_limit_bucket(db, login_email_bucket, prev_login_bucket)
+        except Exception:
+            pass
+
+        response.delete_cookie(key="session_token", path="/")
+        response.delete_cookie(key="csrf_token", path="/")
+
+        return {"message": "Password has been updated successfully. Please sign in with your new password."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Password reset confirmation error: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Could not complete password reset.")
 
 
 @app.post("/api/auth/bootstrap-admin", dependencies=[Depends(verify_csrf)])
