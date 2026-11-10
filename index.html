@@ -93,17 +93,64 @@
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Credit Origination & Portfolio System</p>
             </div>
             <div id="auth-error" class="hidden p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl"></div>
+            <!-- LOGIN FORM VIEW -->
             <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3.5 text-xs">
                 <div>
                     <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Email Address</label>
                     <input type="email" id="auth-email" required class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="name@email.com">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Password</label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase">Password</label>
+                        <button type="button" onclick="showAuthSubView('forgot')" class="text-[11px] font-semibold text-blue-600 hover:underline">Forgot Password?</button>
+                    </div>
                     <input type="password" id="auth-password" required class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="••••••••">
                 </div>
                 <button type="submit" id="auth-submit-btn" class="w-full btn-primary py-3.5 rounded-xl text-xs mt-2">Sign In to NURA CRM</button>
             </form>
+
+            <!-- FORGOT PASSWORD REQUEST VIEW (HIDDEN BY DEFAULT) -->
+            <div id="auth-forgot-view" class="hidden space-y-4 text-xs">
+                <div class="space-y-1">
+                    <h2 class="text-sm font-bold text-slate-900">Reset Your Password</h2>
+                    <p class="text-[11px] text-slate-500">Enter your account email address and we'll send you secure recovery instructions.</p>
+                </div>
+                <div id="forgot-alert-box" class="hidden p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs"></div>
+                <form id="forgot-form" onsubmit="handlePasswordResetRequest(event)" class="space-y-3.5">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Account Email Address</label>
+                        <input type="email" id="forgot-email" required class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="name@email.com">
+                    </div>
+                    <button type="submit" id="forgot-submit-btn" class="w-full btn-primary py-3.5 rounded-xl text-xs">Send Recovery Instructions</button>
+                </form>
+                <div class="text-center pt-1">
+                    <button type="button" onclick="showAuthSubView('login')" class="text-xs font-semibold text-slate-600 hover:underline">← Back to Sign In</button>
+                </div>
+            </div>
+
+            <!-- SET NEW PASSWORD CONFIRM VIEW (HIDDEN BY DEFAULT) -->
+            <div id="auth-reset-confirm-view" class="hidden space-y-4 text-xs">
+                <div class="space-y-1">
+                    <h2 class="text-sm font-bold text-slate-900">Set New Password</h2>
+                    <p class="text-[11px] text-slate-500">Choose a secure password with at least 8 characters.</p>
+                </div>
+                <div id="reset-confirm-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs"></div>
+                <form id="reset-confirm-form" onsubmit="handlePasswordResetConfirm(event)" class="space-y-3.5">
+                    <input type="hidden" id="reset-token-input">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">New Password *</label>
+                        <input type="password" id="reset-new-pw" required minlength="8" class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="Minimum 8 characters">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Confirm New Password *</label>
+                        <input type="password" id="reset-confirm-pw" required minlength="8" class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="Re-enter new password">
+                    </div>
+                    <button type="submit" id="reset-confirm-submit-btn" class="w-full btn-primary py-3.5 rounded-xl text-xs">Update Password &amp; Sign In</button>
+                </form>
+                <div class="text-center pt-1">
+                    <button type="button" onclick="showAuthSubView('login')" class="text-xs font-semibold text-slate-600 hover:underline">← Back to Sign In</button>
+                </div>
+            </div>
             <div class="text-center pt-2 border-t border-slate-100">
                 <p class="text-[11px] text-slate-400">Authorized team access only. Public registration is disabled.</p>
             </div>
@@ -3057,8 +3104,112 @@
         window.addEventListener('DOMContentLoaded', async () => {
             initializeSimulatorDates();
             runLoanSimulation();
-            await checkAuthStatus();
+
+            // Check if URL contains a password reset token parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const tokenParam = urlParams.get('reset_token');
+            if (tokenParam && tokenParam.trim().length > 15) {
+                document.getElementById('auth-view').classList.remove('hidden');
+                document.getElementById('app-view').classList.add('hidden');
+                showAuthSubView('reset-confirm');
+                document.getElementById('reset-token-input').value = tokenParam.trim();
+                // Clean URL query parameter without reloading page
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else {
+                await checkAuthStatus();
+            }
         });
+
+        function showAuthSubView(viewName) {
+            const loginForm = document.getElementById('auth-form');
+            const forgotView = document.getElementById('auth-forgot-view');
+            const resetView = document.getElementById('auth-reset-confirm-view');
+            const errBox = document.getElementById('auth-error');
+            if (errBox) errBox.classList.add('hidden');
+
+            loginForm.classList.add('hidden');
+            forgotView.classList.add('hidden');
+            resetView.classList.add('hidden');
+
+            if (viewName === 'login') {
+                loginForm.classList.remove('hidden');
+            } else if (viewName === 'forgot') {
+                document.getElementById('forgot-form').reset();
+                document.getElementById('forgot-alert-box').classList.add('hidden');
+                forgotView.classList.remove('hidden');
+            } else if (viewName === 'reset-confirm') {
+                document.getElementById('reset-confirm-form').reset();
+                document.getElementById('reset-confirm-error').classList.add('hidden');
+                resetView.classList.remove('hidden');
+            }
+        }
+
+        async function handlePasswordResetRequest(e) {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value;
+            const alertBox = document.getElementById('forgot-alert-box');
+            const submitBtn = document.getElementById('forgot-submit-btn');
+            alertBox.classList.add('hidden');
+            submitBtn.disabled = true;
+
+            try {
+                const res = await fetch('/api/auth/password-reset/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                // Always displays identical generic message to prevent account enumeration
+                alertBox.innerText = data.message || "If an active account is associated with that email address, password reset instructions have been sent.";
+                alertBox.classList.remove('hidden');
+                document.getElementById('forgot-form').reset();
+            } catch (err) {
+                alertBox.innerText = "If an active account is associated with that email address, password reset instructions have been sent.";
+                alertBox.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        async function handlePasswordResetConfirm(e) {
+            e.preventDefault();
+            const token = document.getElementById('reset-token-input').value;
+            const new_password = document.getElementById('reset-new-pw').value;
+            const confirm_pw = document.getElementById('reset-confirm-pw').value;
+            const errBox = document.getElementById('reset-confirm-error');
+            const submitBtn = document.getElementById('reset-confirm-submit-btn');
+            errBox.classList.add('hidden');
+
+            if (new_password !== confirm_pw) {
+                errBox.innerText = "New passwords do not match.";
+                errBox.classList.remove('hidden');
+                return;
+            }
+            if (new_password.length < 8) {
+                errBox.innerText = "Password must be at least 8 characters long.";
+                errBox.classList.remove('hidden');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            try {
+                const res = await fetch('/api/auth/password-reset/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, new_password })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Failed to update password");
+                
+                alert(data.message || "Password updated successfully. Please sign in.");
+                showAuthSubView('login');
+            } catch (err) {
+                errBox.innerText = err.message;
+                errBox.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
 
         async function checkAuthStatus() {
             try {
