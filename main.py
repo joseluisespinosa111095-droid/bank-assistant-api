@@ -1632,6 +1632,19 @@ class LoanPaymentReverseRequest(BaseModel):
     reversal_reason: str = Field(..., min_length=3, max_length=255)
 
 
+class LoanDefaultRequest(BaseModel):
+    confirm_default: bool = Field(...)
+    default_reason: str = Field(..., min_length=5, max_length=500)
+
+
+class LoanCollectionLogRequest(BaseModel):
+    interaction_type: str = Field(default="CALL")
+    outcome: str = Field(default="FOLLOW_UP_REQUIRED")
+    promised_amount_pesos: Optional[float] = Field(default=None, ge=0)
+    next_follow_up_at: Optional[str] = None
+    notes: str = Field(..., min_length=3, max_length=2000)
+
+
 # --- CSRF PROTECTION WITH AUDIT ---
 def verify_csrf(request: Request, db: Session = Depends(get_db)):
     if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
@@ -3969,28 +3982,39 @@ def convert_lead_to_customer(
         raise HTTPException(status_code=500, detail="Could not complete lead conversion.")
 
 
-# --- STAGE 3: LOANS & AMORTIZATION SCHEDULES ---
+# --- STAGE 3 & BLOCK J: LOANS, AMORTIZATION SCHEDULES & DELINQUENCY METRICS ---
 def serialize_loan_summary(l: LoanModel, today_local: date) -> dict:
-    is_active = (l.status == "ACTIVE")
+    is_live_obligation = l.status in ("ACTIVE", "DEFAULTED")
     overdue_amt = 0
     due_today_amt = 0
     accrued_int = 0
+    overdue_inst_count = 0
+    oldest_overdue_date: Optional[date] = None
 
-    if (is_active or l.status == "PAID_OFF") and l.installments:
+    if (is_live_obligation or l.status == "PAID_OFF") and l.installments:
         for inst in l.installments:
             if inst.remaining_amount_cents > 0:
                 if inst.due_date < today_local:
                     overdue_amt += inst.remaining_amount_cents
+                    overdue_inst_count += 1
+                    if oldest_overdue_date is None or inst.due_date < oldest_overdue_date:
+                        oldest_overdue_date = inst.due_date
                 elif inst.due_date == today_local:
                     due_today_amt += inst.remaining_amount_cents
 
             if inst.due_date <= today_local:
                 accrued_int += max(0, inst.interest_due_cents - inst.interest_paid_cents)
 
+    days_past_due = (today_local - oldest_overdue_date).days if oldest_overdue_date else 0
+    cust = l.customer
+
     return {
         "id": l.id,
         "loan_number": l.loan_number,
         "customer_id": l.customer_id,
+        "customer_number": cust.customer_number if cust else f"CUST-{l.customer_id:05d}",
+        "customer_name": cust.full_legal_name if cust else f"Customer #{l.customer_id}",
+        "customer_phone": cust.phone_primary if cust else None,
         "status": l.status,
         "product_name": l.product_name,
         "currency": l.currency,
@@ -4003,6 +4027,8 @@ def serialize_loan_summary(l: LoanModel, today_local: date) -> dict:
         "accrued_interest_cents": accrued_int,
         "due_today_cents": due_today_amt,
         "overdue_amount_cents": overdue_amt,
+        "overdue_installments_count": overdue_inst_count,
+        "days_past_due": days_past_due,
         "current_payable_amount_cents": due_today_amt + overdue_amt,
         "start_date": l.start_date.isoformat(),
         "first_payment_date": l.first_payment_date.isoformat(),
@@ -4010,8 +4036,34 @@ def serialize_loan_summary(l: LoanModel, today_local: date) -> dict:
         "created_at": l.created_at.isoformat() if l.created_at else None
     }
 
-def serialize_loan_detail(l: LoanModel, today_local: date) -> dict:
+
+def serialize_loan_detail(l: LoanModel, today_local: date, db: Optional[Session] = None) -> dict:
     base = serialize_loan_summary(l, today_local)
+
+    defaulted_at_iso = None
+    defaulted_by_user_id = None
+    default_reason_str = None
+
+    if l.status == "DEFAULTED" and db is not None:
+        audit_row = (
+            db.query(AuditLogModel)
+            .filter(
+                AuditLogModel.event_type == "LOAN_MARKED_DEFAULTED",
+                AuditLogModel.resource_id == l.loan_number
+            )
+            .order_by(AuditLogModel.id.desc())
+            .first()
+        )
+        if audit_row:
+            defaulted_at_iso = audit_row.created_at.isoformat() if audit_row.created_at else None
+            defaulted_by_user_id = audit_row.actor_user_id
+            if audit_row.details_json:
+                try:
+                    parsed_det = json.loads(audit_row.details_json)
+                    default_reason_str = parsed_det.get("default_reason")
+                except Exception:
+                    pass
+
     base.update({
         "source_lead_id": l.source_lead_id,
         "product_version": l.product_version,
@@ -4042,22 +4094,25 @@ def serialize_loan_detail(l: LoanModel, today_local: date) -> dict:
         "cancelled_by_user_id": l.cancelled_by_user_id,
         "cancelled_at": l.cancelled_at.isoformat() if l.cancelled_at else None,
         "cancellation_reason": l.cancellation_reason,
+        "defaulted_by_user_id": defaulted_by_user_id,
+        "defaulted_at": defaulted_at_iso,
+        "default_reason": default_reason_str,
         "notes": l.notes,
         "installments": []
     })
-    
+
     for inst in l.installments:
         if inst.remaining_amount_cents == 0:
             status = "PAID"
-        elif l.status == "ACTIVE" and inst.due_date < today_local:
+        elif l.status in ("ACTIVE", "DEFAULTED") and inst.due_date < today_local:
             status = "OVERDUE"
-        elif l.status == "ACTIVE" and inst.due_date == today_local:
+        elif l.status in ("ACTIVE", "DEFAULTED") and inst.due_date == today_local:
             status = "DUE_TODAY"
         elif inst.amount_paid_cents > 0 and inst.remaining_amount_cents > 0:
             status = "PARTIALLY_PAID"
         else:
             status = "SCHEDULED"
-            
+
         base["installments"].append({
             "id": inst.id,
             "installment_number": inst.installment_number,
@@ -4366,7 +4421,7 @@ def get_loan_detail(
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found.")
     _, _, _, today_local = get_local_day_bounds_utc()
-    return serialize_loan_detail(loan, today_local)
+    return serialize_loan_detail(loan, today_local, db=db)
 
 
 @app.post("/api/loans/{loan_id}/approve", dependencies=[Depends(verify_csrf)])
@@ -4535,7 +4590,7 @@ def cancel_loan(
         db.commit()
         db.refresh(loan)
         _, _, _, today_local = get_local_day_bounds_utc()
-        return serialize_loan_detail(loan, today_local)
+        return serialize_loan_detail(loan, today_local, db=db)
     except HTTPException:
         db.rollback()
         raise
@@ -4543,6 +4598,258 @@ def cancel_loan(
         db.rollback()
         logger.exception("Failed to cancel loan")
         raise HTTPException(status_code=500, detail=f"Could not cancel loan: {type(e).__name__}")
+
+
+@app.post("/api/loans/{loan_id}/default", dependencies=[Depends(verify_csrf)])
+def mark_loan_defaulted(
+    loan_id: int,
+    payload: LoanDefaultRequest,
+    request: Request,
+    current_user: UserModel = Depends(
+        require_roles("OWNER_ADMIN", "CREDIT_ADVISOR")
+    ),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    if not payload.confirm_default:
+        raise HTTPException(status_code=422, detail="Explicit confirmation is required to mark a loan as DEFAULTED.")
+
+    reason = payload.default_reason.strip()
+    if len(reason) < 5:
+        raise HTTPException(status_code=422, detail="Default reason must be at least 5 characters.")
+
+    try:
+        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found.")
+        if loan.status == "DEFAULTED":
+            raise HTTPException(status_code=409, detail=f"Loan {loan.loan_number} is already marked as DEFAULTED.")
+        if loan.status != "ACTIVE":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Only ACTIVE loans can be transitioned to DEFAULTED. Current status: {loan.status}"
+            )
+        if loan.remaining_contract_total_cents <= 0:
+            raise HTTPException(status_code=409, detail="Cannot default a loan with zero remaining balance.")
+
+        now_utc = datetime.now(timezone.utc)
+        _, _, _, today_local = get_local_day_bounds_utc()
+        summary_snapshot = serialize_loan_summary(loan, today_local)
+
+        loan.status = "DEFAULTED"
+        stamp_str = now_utc.strftime("%Y-%m-%d %H:%M UTC")
+        actor_label = current_user.full_name or current_user.email
+        default_note_line = f"[DEFAULTED {stamp_str} by {actor_label}]: {reason}"
+        loan.notes = f"{loan.notes}\n{default_note_line}".strip() if loan.notes else default_note_line
+        loan.updated_at = now_utc
+
+        db.add(InteractionModel(
+            lead_id=loan.source_lead_id,
+            customer_id=loan.customer_id,
+            interaction_type="NOTE",
+            direction="INTERNAL",
+            visibility="INTERNAL",
+            outcome="FOLLOW_UP_REQUIRED",
+            content=(
+                f"⚠️ LOAN MARKED AS DEFAULTED ({loan.loan_number}) — "
+                f"Unpaid Principal: ${loan.unpaid_principal_cents / 100:,.2f} MXN | "
+                f"Remaining Total: ${loan.remaining_contract_total_cents / 100:,.2f} MXN | "
+                f"Days Past Due: {summary_snapshot['days_past_due']}d | "
+                f"Reason: {reason}"
+            ),
+            created_by_user_id=current_user.id
+        ))
+
+        record_audit_event(
+            db, "LOAN_MARKED_DEFAULTED", "loan", "SUCCESS",
+            actor=current_user, resource_id=loan.loan_number, ip_address=ip,
+            details={
+                "loan_number": loan.loan_number,
+                "customer_id": loan.customer_id,
+                "unpaid_principal_cents": loan.unpaid_principal_cents,
+                "remaining_total_cents": loan.remaining_contract_total_cents,
+                "overdue_amount_cents": summary_snapshot["overdue_amount_cents"],
+                "days_past_due": summary_snapshot["days_past_due"],
+                "default_reason": reason[:200]
+            },
+            commit=False
+        )
+        db.commit()
+        db.refresh(loan)
+        return serialize_loan_detail(loan, today_local, db=db)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception("Failed to mark loan as defaulted")
+        raise HTTPException(status_code=500, detail=f"Could not mark loan as defaulted: {type(e).__name__}")
+
+
+@app.post("/api/loans/{loan_id}/collections-log", dependencies=[Depends(verify_csrf)])
+def create_loan_collection_log(
+    loan_id: int,
+    payload: LoanCollectionLogRequest,
+    request: Request,
+    current_user: UserModel = Depends(
+        require_roles("OWNER_ADMIN", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")
+    ),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    loan = db.query(LoanModel).filter(LoanModel.id == loan_id).first()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found.")
+    if loan.status not in ("ACTIVE", "DEFAULTED"):
+        raise HTTPException(status_code=409, detail="Collection logs can only be recorded on ACTIVE or DEFAULTED loans.")
+
+    itype = payload.interaction_type.strip().upper()
+    outcome = payload.outcome.strip().upper()
+    if itype not in VALID_INTERACTION_TYPES:
+        raise HTTPException(status_code=422, detail="Invalid interaction_type.")
+    if outcome not in VALID_CALL_OUTCOMES:
+        raise HTTPException(status_code=422, detail="Invalid call outcome.")
+
+    follow_up_utc = parse_optional_datetime_utc(payload.next_follow_up_at)
+    promised_cents = parse_pesos_to_cents(payload.promised_amount_pesos, None) if payload.promised_amount_pesos else 0
+
+    header_parts = [f"[COLLECTION {loan.loan_number}]"]
+    if promised_cents > 0:
+        header_parts.append(f"Promised: ${promised_cents / 100:,.2f} MXN")
+    if follow_up_utc:
+        header_parts.append(f"Follow-up: {follow_up_utc.astimezone(get_crm_timezone()).strftime('%Y-%m-%d %H:%M')}")
+    formatted_content = f"{' • '.join(header_parts)} — {payload.notes.strip()}"
+
+    try:
+        interaction = InteractionModel(
+            lead_id=loan.source_lead_id,
+            customer_id=loan.customer_id,
+            interaction_type=itype,
+            direction="OUTBOUND",
+            visibility="INTERNAL",
+            outcome=outcome,
+            content=formatted_content,
+            next_follow_up_at=follow_up_utc,
+            created_by_user_id=current_user.id
+        )
+        db.add(interaction)
+        db.flush()
+
+        record_audit_event(
+            db, "LOAN_COLLECTION_LOGGED", "loan", "SUCCESS",
+            actor=current_user, resource_id=loan.loan_number, ip_address=ip,
+            details={
+                "loan_number": loan.loan_number,
+                "customer_id": loan.customer_id,
+                "interaction_type": itype,
+                "outcome": outcome,
+                "promised_cents": promised_cents
+            },
+            commit=False
+        )
+        db.commit()
+        db.refresh(interaction)
+        return serialize_interaction(interaction, {current_user.id: current_user})
+    except Exception as e:
+        db.rollback()
+        logger.exception("Failed to record collection log")
+        raise HTTPException(status_code=500, detail=f"Could not save collection log: {type(e).__name__}")
+
+
+@app.get("/api/collections/queue")
+def get_collections_queue(
+    bucket: str = Query(default="ALL"),
+    current_user: UserModel = Depends(
+        require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")
+    ),
+    db: Session = Depends(get_db)
+):
+    _, _, _, today_local = get_local_day_bounds_utc()
+    candidate_loans = (
+        db.query(LoanModel)
+        .filter(LoanModel.status.in_(["ACTIVE", "DEFAULTED"]))
+        .order_by(LoanModel.id.desc())
+        .all()
+    )
+
+    cust_ids = {l.customer_id for l in candidate_loans}
+    latest_interactions = {}
+    if cust_ids:
+        int_rows = (
+            db.query(InteractionModel)
+            .filter(InteractionModel.customer_id.in_(cust_ids))
+            .order_by(InteractionModel.created_at.desc(), InteractionModel.id.desc())
+            .all()
+        )
+        for ir in int_rows:
+            if ir.customer_id not in latest_interactions:
+                latest_interactions[ir.customer_id] = ir
+
+    queue_items = []
+    overdue_active_count = 0
+    due_today_active_count = 0
+    defaulted_count = 0
+    total_overdue_cents = 0
+    total_defaulted_cents = 0
+
+    bucket_norm = (bucket or "ALL").strip().upper()
+
+    for l in candidate_loans:
+        s = serialize_loan_summary(l, today_local)
+        is_defaulted = (l.status == "DEFAULTED")
+        is_overdue = (l.status == "ACTIVE" and s["overdue_amount_cents"] > 0)
+        is_due_today = (l.status == "ACTIVE" and s["overdue_amount_cents"] == 0 and s["due_today_cents"] > 0)
+
+        if not (is_defaulted or is_overdue or is_due_today):
+            continue
+
+        if is_defaulted:
+            defaulted_count += 1
+            total_defaulted_cents += l.remaining_contract_total_cents
+        elif is_overdue:
+            overdue_active_count += 1
+            total_overdue_cents += s["overdue_amount_cents"]
+        elif is_due_today:
+            due_today_active_count += 1
+
+        if bucket_norm == "OVERDUE" and not is_overdue:
+            continue
+        if bucket_norm == "DEFAULTED" and not is_defaulted:
+            continue
+        if bucket_norm == "DUE_TODAY" and not is_due_today:
+            continue
+
+        last_int = latest_interactions.get(l.customer_id)
+        s["last_collection_outcome"] = last_int.outcome if last_int else None
+        s["last_collection_note"] = last_int.content[:180] if last_int else None
+        s["last_contacted_at"] = last_int.created_at.isoformat() if last_int and last_int.created_at else None
+        s["next_follow_up_at"] = last_int.next_follow_up_at.isoformat() if last_int and last_int.next_follow_up_at else None
+        queue_items.append(s)
+
+    queue_items.sort(
+        key=lambda x: (
+            1 if x["status"] == "DEFAULTED" else 0,
+            x["days_past_due"],
+            x["overdue_amount_cents"],
+            x["current_payable_amount_cents"]
+        ),
+        reverse=True
+    )
+
+    return {
+        "counts": {
+            "overdue_active": overdue_active_count,
+            "due_today_active": due_today_active_count,
+            "defaulted": defaulted_count,
+            "total_actionable": overdue_active_count + due_today_active_count + defaulted_count
+        },
+        "totals": {
+            "overdue_active_cents": total_overdue_cents,
+            "defaulted_remaining_cents": total_defaulted_cents
+        },
+        "items": queue_items
+    }
+
 
 @app.get("/api/loans/{loan_id}/payments")
 def list_loan_payments(
@@ -4704,6 +5011,8 @@ def get_dashboard_summary(
 ):
     _, _, _, today_local = get_local_day_bounds_utc()
     active_loans = db.query(LoanModel).filter(LoanModel.status == "ACTIVE").all()
+    paid_off_loans_count = db.query(LoanModel).filter(LoanModel.status == "PAID_OFF").count()
+    defaulted_loans_count = db.query(LoanModel).filter(LoanModel.status == "DEFAULTED").count()
 
     active_portfolio_cents = sum(l.unpaid_principal_cents for l in active_loans)
     total_outstanding_principal_cents = active_portfolio_cents
@@ -4711,6 +5020,9 @@ def get_dashboard_summary(
 
     due_today_cents = 0
     overdue_amount_cents = 0
+    due_today_installments_count = 0
+    overdue_installments_count = 0
+    overdue_loan_ids = set()
 
     if active_loans:
         loan_ids = [l.id for l in active_loans]
@@ -4722,24 +5034,35 @@ def get_dashboard_summary(
         for inst in unpaid_insts:
             if inst.due_date == today_local:
                 due_today_cents += inst.remaining_amount_cents
+                due_today_installments_count += 1
             elif inst.due_date < today_local:
                 overdue_amount_cents += inst.remaining_amount_cents
+                overdue_installments_count += 1
+                overdue_loan_ids.add(inst.loan_id)
 
     customers_count = db.query(CustomerModel).count()
     open_leads_count = db.query(LeadModel).filter(LeadModel.stage.notin_(["CONVERTED", "LOST"])).count()
     active_loans_count = len(active_loans)
+    overdue_loans_count = len(overdue_loan_ids)
+    current_loans_count = max(0, active_loans_count - overdue_loans_count)
 
     # Bloque G-2: Semana ISO para pagos cobrados
     crm_tz = get_crm_timezone()
     now_local = datetime.now(crm_tz)
     monday_local = (now_local - timedelta(days=now_local.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     sunday_local = (monday_local + timedelta(days=6)).replace(hour=23, minute=59, second=59, microsecond=999999)
-    
-    collected_week_cents = db.query(func.sum(LoanPaymentModel.amount_cents)).filter(
+
+    collected_week_query = db.query(
+        func.coalesce(func.sum(LoanPaymentModel.amount_cents), 0),
+        func.count(LoanPaymentModel.id)
+    ).filter(
         LoanPaymentModel.status == 'POSTED',
         LoanPaymentModel.paid_at >= monday_local.astimezone(timezone.utc),
         LoanPaymentModel.paid_at <= sunday_local.astimezone(timezone.utc)
-    ).scalar() or 0
+    ).first()
+
+    collected_week_cents = int(collected_week_query[0] or 0) if collected_week_query else 0
+    collected_week_payments_count = int(collected_week_query[1] or 0) if collected_week_query else 0
 
     return {
         "active_loan_portfolio_cents": active_portfolio_cents,
@@ -4751,6 +5074,13 @@ def get_dashboard_summary(
         "collected_this_week_cents": collected_week_cents,
         "counts": {
             "active_loans": active_loans_count,
+            "current_loans": current_loans_count,
+            "overdue_loans": overdue_loans_count,
+            "paid_off_loans": paid_off_loans_count,
+            "defaulted_loans": defaulted_loans_count,
+            "due_today_installments": due_today_installments_count,
+            "overdue_installments": overdue_installments_count,
+            "collected_week_payments": collected_week_payments_count,
             "customers": customers_count,
             "open_leads": open_leads_count
         }
