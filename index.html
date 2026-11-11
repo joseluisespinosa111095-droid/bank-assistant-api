@@ -7933,7 +7933,7 @@ async function loadDashboardSummary() {
 
         function syncOriginationPresetHighlight(weeks, months) {
             const presets = [
-                [4, 1], [8, 2], [12, 3], [16, 4], [24, 6], [52, 12]
+                [4, 1], [8, 2], [12, 3], [16, 4], [26, 6], [52, 12]
             ];
             presets.forEach(([w, m]) => {
                 const btn = document.getElementById(`lo-preset-${w}-${m}`);
@@ -9204,6 +9204,37 @@ async function loadDashboardSummary() {
             runLoanSimulation();
         }
 
+        function renderComparisonScenariosTable() {
+            const card = document.getElementById('sim-comparison-card');
+            const tbody = document.getElementById('sim-comparison-tbody');
+            if (!card || !tbody) return;
+            if (!savedComparisonScenarios || savedComparisonScenarios.length === 0) {
+                card.classList.add('hidden');
+                tbody.innerHTML = '';
+                return;
+            }
+            card.classList.remove('hidden');
+            tbody.innerHTML = '';
+            const isEs = (NuraI18n.currentLang === 'es');
+
+            savedComparisonScenarios.forEach(s => {
+                const tr = document.createElement('tr');
+                const termLabel = isEs
+                    ? `${s.installmentsCount} sem / ${s.monthsCount} mes`
+                    : `${s.installmentsCount} wks / ${s.monthsCount} mo`;
+                tr.innerHTML = `
+                    <td class="py-2 px-3 font-bold text-slate-900">${escapeHtml(s.simulationId)} (${escapeHtml(tEnum(s.product))})</td>
+                    <td class="py-2 px-3 text-right font-mono">${NuraFinancialEngine.formatMXNFromCents(s.principalCents)}</td>
+                    <td class="py-2 px-3 text-right font-mono">${s.monthlyRatePercent.toFixed(2)}%</td>
+                    <td class="py-2 px-3 text-center">${escapeHtml(termLabel)}</td>
+                    <td class="py-2 px-3 text-right font-mono font-bold text-blue-700">${NuraFinancialEngine.formatMXNFromCents(s.regularPaymentCents)}</td>
+                    <td class="py-2 px-3 text-right font-mono">${NuraFinancialEngine.formatMXNFromCents(s.totalInterestCents)}</td>
+                    <td class="py-2 px-3 text-right font-mono font-bold">${NuraFinancialEngine.formatMXNFromCents(s.totalRepaymentCents)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
         function runLoanSimulation() {
             const product = document.getElementById('sim-product')?.value || 'Personal Loan';
             const principalPesos = parseFloat(document.getElementById('sim-principal')?.value || '50000') || 0;
@@ -9211,33 +9242,43 @@ async function loadDashboardSummary() {
             const termWeeks = parseInt(document.getElementById('sim-term-weeks')?.value || '16', 10) || 16;
             const assumedInterestMonths = parseInt(document.getElementById('sim-interest-months')?.value || '4', 10) || 4;
             const firstPaymentDateISO = document.getElementById('sim-first-payment-date')?.value || new Date().toISOString().split('T')[0];
+            const methodVal = document.getElementById('sim-interest-method')?.value || 'FLAT_ORIGINAL_PRINCIPAL';
 
             const res = NuraFinancialEngine.calculateFlatSchedule({
                 principalPesos,
                 monthlyRatePercent,
                 assumedInterestMonths,
                 termWeeks,
-                firstPaymentDateISO
+                firstPaymentDateISO,
+                interestCalculationMethod: methodVal
             });
             res.product = product;
             res.simulationId = currentSimulationId;
             currentSimulationResult = res;
 
+            const isEs = (NuraI18n.currentLang === 'es');
+            const perMoSuffix = isEs ? '/mes' : '/mo';
+            const subtitleKey = (res.interestCalculationMethod === 'DECLINING_BALANCE')
+                ? 'sim.sum.subtitle_declining'
+                : 'sim.sum.subtitle_flat';
+
             document.getElementById('sim-badge-id').innerText = currentSimulationId;
             document.getElementById('print-sim-id').innerText = currentSimulationId;
-            document.getElementById('print-sim-date').innerText = new Date().toLocaleString('en-US');
-            document.getElementById('sim-summary-subtitle').innerText = `${product} • Flat Interest on Original Principal (MXN)`;
-            document.getElementById('sim-regular-payment-pill').innerText = `${NuraFinancialEngine.formatMXNFromCents(res.regularPaymentCents)} / week`;
+            document.getElementById('print-sim-date').innerText = new Date().toLocaleString(NuraI18n.getLocale());
+            document.getElementById('sim-summary-subtitle').innerText = t(subtitleKey, { product: tEnum(product) });
+            document.getElementById('sim-regular-payment-pill').innerText = t('sim.sum.per_week', {
+                amount: NuraFinancialEngine.formatMXNFromCents(res.regularPaymentCents)
+            });
 
             document.getElementById('sum-principal').innerText = NuraFinancialEngine.formatMXNFromCents(res.principalCents);
-            document.getElementById('sum-rate').innerText = `${res.monthlyRatePercent.toFixed(2)}% (${NuraFinancialEngine.formatMXNFromCents(res.monthlyInterestCents)}/mo)`;
+            document.getElementById('sum-rate').innerText = `${res.monthlyRatePercent.toFixed(2)}% (${NuraFinancialEngine.formatMXNFromCents(res.monthlyInterestCents)}${perMoSuffix})`;
             document.getElementById('sum-months-count').innerText = String(res.monthsCount);
             document.getElementById('sum-total-interest').innerText = NuraFinancialEngine.formatMXNFromCents(res.totalInterestCents);
             document.getElementById('sum-total-repayment').innerText = NuraFinancialEngine.formatMXNFromCents(res.totalRepaymentCents);
             document.getElementById('sum-regular-payment').innerText = NuraFinancialEngine.formatMXNFromCents(res.regularPaymentCents);
             document.getElementById('sum-inst-count').innerText = String(res.installmentsCount);
             document.getElementById('sum-final-payment').innerText = NuraFinancialEngine.formatMXNFromCents(res.finalPaymentCents);
-            document.getElementById('sum-term-freq').innerText = `${res.installmentsCount} Weekly Installments`;
+            document.getElementById('sum-term-freq').innerText = t('sim.sum.weekly_inst_fmt', { count: res.installmentsCount });
             document.getElementById('sum-first-date').innerText = res.firstPaymentDateISO;
             document.getElementById('sum-payoff-date').innerText = res.estimatedPayoffDate;
             document.getElementById('disc-months').innerText = String(res.monthsCount);
@@ -9272,13 +9313,15 @@ async function loadDashboardSummary() {
 
             tfoot.innerHTML = `
                 <tr>
-                    <td colspan="3" class="py-3 px-3 text-right uppercase tracking-wider text-[10px]">Total Reconciled Schedule (${res.installmentsCount} Installments):</td>
+                    <td colspan="3" class="py-3 px-3 text-right uppercase tracking-wider text-[10px]">${escapeHtml(t('sim.table.tfoot_total', { count: res.installmentsCount }))}</td>
                     <td class="py-3 px-3 text-right font-mono">${NuraFinancialEngine.formatMXNFromCents(sumPrincipal)}</td>
                     <td class="py-3 px-3 text-right font-mono text-amber-300">${NuraFinancialEngine.formatMXNFromCents(sumInterest)}</td>
                     <td class="py-3 px-3 text-right font-mono text-emerald-300">${NuraFinancialEngine.formatMXNFromCents(sumPayment)}</td>
                     <td class="py-3 px-3 text-right font-mono">$0.00 MXN</td>
                 </tr>
             `;
+
+            renderComparisonScenariosTable();
         }
 
         function resetLoanSimulation() {
@@ -9296,25 +9339,7 @@ async function loadDashboardSummary() {
             const snapshot = { ...currentSimulationResult, simulationId: generateSimulationId() };
             savedComparisonScenarios.unshift(snapshot);
             if (savedComparisonScenarios.length > 4) savedComparisonScenarios.pop();
-
-            const card = document.getElementById('sim-comparison-card');
-            const tbody = document.getElementById('sim-comparison-tbody');
-            card.classList.remove('hidden');
-            tbody.innerHTML = '';
-
-            savedComparisonScenarios.forEach(s => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="py-2 px-3 font-bold text-slate-900">${escapeHtml(s.simulationId)} (${escapeHtml(s.product)})</td>
-                    <td class="py-2 px-3 text-right font-mono">${NuraFinancialEngine.formatMXNFromCents(s.principalCents)}</td>
-                    <td class="py-2 px-3 text-right font-mono">${s.monthlyRatePercent.toFixed(2)}%</td>
-                    <td class="py-2 px-3 text-center">${s.installmentsCount} wks / ${s.monthsCount} mo</td>
-                    <td class="py-2 px-3 text-right font-mono font-bold text-blue-700">${NuraFinancialEngine.formatMXNFromCents(s.regularPaymentCents)}</td>
-                    <td class="py-2 px-3 text-right font-mono">${NuraFinancialEngine.formatMXNFromCents(s.totalInterestCents)}</td>
-                    <td class="py-2 px-3 text-right font-mono font-bold">${NuraFinancialEngine.formatMXNFromCents(s.totalRepaymentCents)}</td>
-                `;
-                tbody.appendChild(tr);
-            });
+            renderComparisonScenariosTable();
         }
 
         function clearScenarioComparisons() {
@@ -9843,12 +9868,12 @@ if (typeof openCustomerDetail === 'function') {
     };
 }
 
-// --- BLOQUE I: IMPRESIÓN INSTITUCIONAL DE RECIBOS Y ESTADOS DE CUENTA ---
+// --- BLOQUE I: IMPRESIÓN INSTITUCIONAL DE RECIBOS Y ESTADOS DE CUENTA (BILINGÜE EN / ES) ---
 function executePrint(title, metaId, contentHtml) {
     const appView = document.getElementById('app-view');
     appView.classList.add('no-print');
     
-    document.getElementById('print-meta-date').innerText = new Date().toLocaleString('en-US', {
+    document.getElementById('print-meta-date').innerText = new Date().toLocaleString(NuraI18n.getLocale(), {
         year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit'
     });
     document.getElementById('print-meta-id').innerText = metaId;
@@ -9864,40 +9889,41 @@ function printPaymentReceipt(btnElement) {
     const tds = tr ? tr.querySelectorAll('td') : null;
     if (!currentSelectedLoan || !tds || tds.length < 6) return;
     const l = currentSelectedLoan;
+    const custLabel = (NuraI18n.currentLang === 'es') ? `Cliente #${l.customer_id}` : `Customer #${l.customer_id}`;
 
     const content = `
         <div class="space-y-5">
             <div class="flex items-center justify-between bg-slate-50 border border-slate-300 rounded-lg p-4">
                 <div>
-                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Official Loan Payment Receipt</p>
-                    <h2 class="text-lg font-extrabold text-slate-900 mt-0.5">${escapeHtml(l.loan_number)} • ${escapeHtml(l.product_name || 'Credit Contract')}</h2>
-                    <p class="text-xs text-slate-600 mt-0.5">Borrower ID: <strong>Customer #${escapeHtml(l.customer_id)}</strong> • Currency: <strong>MXN</strong></p>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">${escapeHtml(t('print.receipt.title'))}</p>
+                    <h2 class="text-lg font-extrabold text-slate-900 mt-0.5">${escapeHtml(l.loan_number)} • ${escapeHtml(tEnum(l.product_name || 'Personal Loan'))}</h2>
+                    <p class="text-xs text-slate-600 mt-0.5">${escapeHtml(t('print.receipt.borrower_id'))} <strong>${escapeHtml(custLabel)}</strong> • ${escapeHtml(t('print.receipt.currency'))} <strong>MXN</strong></p>
                 </div>
                 <div class="text-right text-xs">
-                    <p class="text-[10px] font-bold uppercase text-slate-500">Ledger Receipt Status</p>
+                    <p class="text-[10px] font-bold uppercase text-slate-500">${escapeHtml(t('print.receipt.status'))}</p>
                     <div class="mt-1">${tds[5].innerHTML}</div>
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4 text-xs border border-slate-300 rounded-lg p-4">
                 <div>
-                    <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">Receipt &amp; Installment Allocations</p>
+                    <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">${escapeHtml(t('print.receipt.allocations'))}</p>
                     <div class="text-slate-900">${tds[0].innerHTML}</div>
                 </div>
                 <div>
-                    <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">Effective Date, Method &amp; Reference</p>
+                    <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">${escapeHtml(t('print.receipt.date_method'))}</p>
                     <div class="text-slate-900">${tds[1].innerHTML}</div>
                 </div>
             </div>
 
             <div>
-                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Waterfall Payment Breakdown (MXN)</p>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">${escapeHtml(t('print.receipt.breakdown'))}</p>
                 <table class="w-full text-left text-xs border border-slate-300">
                     <thead>
                         <tr class="bg-slate-100 text-[10px] font-bold uppercase text-slate-600">
-                            <th class="p-2.5 border border-slate-300 text-right">Interest Applied</th>
-                            <th class="p-2.5 border border-slate-300 text-right">Principal Applied</th>
-                            <th class="p-2.5 border border-slate-300 text-right">Total Payment Received</th>
+                            <th class="p-2.5 border border-slate-300 text-right">${escapeHtml(t('print.receipt.int_applied'))}</th>
+                            <th class="p-2.5 border border-slate-300 text-right">${escapeHtml(t('print.receipt.prin_applied'))}</th>
+                            <th class="p-2.5 border border-slate-300 text-right">${escapeHtml(t('print.receipt.total_received'))}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -9912,86 +9938,87 @@ function printPaymentReceipt(btnElement) {
 
             <div class="grid grid-cols-3 gap-3 text-xs bg-slate-50 border border-slate-300 rounded-lg p-3.5">
                 <div>
-                    <p class="text-[10px] font-bold uppercase text-slate-500">Current Loan Unpaid Principal</p>
+                    <p class="text-[10px] font-bold uppercase text-slate-500">${escapeHtml(t('print.receipt.unpaid_prin'))}</p>
                     <p class="font-mono font-bold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.unpaid_principal_cents)}</p>
                 </div>
                 <div>
-                    <p class="text-[10px] font-bold uppercase text-slate-500">Current Remaining Interest</p>
+                    <p class="text-[10px] font-bold uppercase text-slate-500">${escapeHtml(t('print.receipt.rem_int'))}</p>
                     <p class="font-mono font-bold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.remaining_contractual_interest_cents)}</p>
                 </div>
                 <div>
-                    <p class="text-[10px] font-bold uppercase text-slate-500">Current Remaining Contract Total</p>
+                    <p class="text-[10px] font-bold uppercase text-slate-500">${escapeHtml(t('print.receipt.rem_total'))}</p>
                     <p class="font-mono font-extrabold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.remaining_contract_total_cents)}</p>
                 </div>
             </div>
 
             <div class="pt-6 mt-4 border-t border-slate-300 flex items-end justify-between text-[10px] text-slate-500">
                 <p class="max-w-md leading-relaxed">
-                    Authoritative receipt generated from the NURA CRM PostgreSQL immutable payment ledger. Allocations follow chronological waterfall priority (Interest first, then Principal).
+                    ${escapeHtml(t('print.receipt.footer_note'))}
                 </p>
                 <div class="text-center w-48 border-t border-slate-400 pt-1 font-semibold text-slate-700">
-                    Authorized Operations Stamp
+                    ${escapeHtml(t('print.receipt.stamp'))}
                 </div>
             </div>
         </div>
     `;
-    executePrint('Payment Receipt', l.loan_number, content);
+    executePrint(t('print.receipt.title'), l.loan_number, content);
 }
 
 function printLoanStatement() {
     if (!currentSelectedLoan) return;
     const l = currentSelectedLoan;
+    const custLabel = (NuraI18n.currentLang === 'es') ? `Cliente #${l.customer_id}` : `Customer #${l.customer_id}`;
     
     const content = `
         <div class="space-y-5">
             <div class="flex items-center justify-between bg-slate-50 border border-slate-300 rounded-lg p-4">
                 <div>
-                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Official Loan Account Statement</p>
-                    <h2 class="text-lg font-extrabold text-slate-900 mt-0.5">${escapeHtml(l.loan_number)} — ${escapeHtml(l.product_name || 'Personal Loan')}</h2>
-                    <p class="text-xs text-slate-600 mt-0.5">Borrower: <strong>Customer #${escapeHtml(l.customer_id)}</strong> • Start: <strong>${escapeHtml(l.start_date)}</strong> • Maturity: <strong>${escapeHtml(l.maturity_date)}</strong></p>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">${escapeHtml(t('print.stmt.title'))}</p>
+                    <h2 class="text-lg font-extrabold text-slate-900 mt-0.5">${escapeHtml(l.loan_number)} — ${escapeHtml(tEnum(l.product_name || 'Personal Loan'))}</h2>
+                    <p class="text-xs text-slate-600 mt-0.5">${escapeHtml(t('print.stmt.borrower'))} <strong>${escapeHtml(custLabel)}</strong> • ${escapeHtml(t('print.stmt.start'))} <strong>${escapeHtml(l.start_date)}</strong> • ${escapeHtml(t('print.stmt.maturity'))} <strong>${escapeHtml(l.maturity_date)}</strong></p>
                 </div>
                 <div class="text-right text-xs">
-                    <p class="text-[10px] font-bold uppercase text-slate-500">Contract Status</p>
-                    <p class="text-sm font-extrabold font-mono text-slate-900 mt-0.5">${escapeHtml(l.status)}</p>
+                    <p class="text-[10px] font-bold uppercase text-slate-500">${escapeHtml(t('print.stmt.contract_status'))}</p>
+                    <p class="text-sm font-extrabold font-mono text-slate-900 mt-0.5">${escapeHtml(tEnum(l.status))}</p>
                 </div>
             </div>
 
             <div class="grid grid-cols-3 gap-3 text-xs border border-slate-300 rounded-lg p-4 bg-white">
                 <div>
-                    <p class="text-[10px] font-bold text-slate-500 uppercase">Original Principal</p>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">${escapeHtml(t('print.stmt.orig_prin'))}</p>
                     <p class="font-mono font-bold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.principal_cents)}</p>
                 </div>
                 <div>
-                    <p class="text-[10px] font-bold text-slate-500 uppercase">Total Contractual Repayment</p>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">${escapeHtml(t('print.stmt.total_repay'))}</p>
                     <p class="font-mono font-bold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.total_repayment_cents)}</p>
                 </div>
                 <div>
-                    <p class="text-[10px] font-bold text-slate-500 uppercase">Total Amount Paid to Date</p>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">${escapeHtml(t('print.stmt.total_paid'))}</p>
                     <p class="font-mono font-extrabold text-emerald-700 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.amount_paid_cents)}</p>
                 </div>
                 <div>
-                    <p class="text-[10px] font-bold text-slate-500 uppercase">Unpaid Principal Balance</p>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">${escapeHtml(t('print.stmt.unpaid_prin'))}</p>
                     <p class="font-mono font-extrabold text-slate-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.unpaid_principal_cents)}</p>
                 </div>
                 <div>
-                    <p class="text-[10px] font-bold text-slate-500 uppercase">Remaining Contract Total</p>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">${escapeHtml(t('print.stmt.rem_total'))}</p>
                     <p class="font-mono font-extrabold text-blue-900 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.remaining_contract_total_cents)}</p>
                 </div>
                 <div>
-                    <p class="text-[10px] font-bold text-slate-500 uppercase">Current Payable Today</p>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">${escapeHtml(t('print.stmt.payable_today'))}</p>
                     <p class="font-mono font-extrabold text-red-700 mt-0.5">${NuraFinancialEngine.formatMXNFromCents(l.current_payable_amount_cents)}</p>
                 </div>
             </div>
 
             <div>
-                <h3 class="font-bold mb-2 text-xs uppercase tracking-wider text-slate-700">Amortization Schedule &amp; Installment Ledger</h3>
+                <h3 class="font-bold mb-2 text-xs uppercase tracking-wider text-slate-700">${escapeHtml(t('print.stmt.schedule_heading'))}</h3>
                 <table class="w-full text-left text-xs border border-collapse">
                     ${document.getElementById('ld-schedule-tbody').parentElement.innerHTML}
                 </table>
             </div>
         </div>
     `;
-    executePrint('Loan Statement', l.loan_number, content);
+    executePrint(t('print.stmt.title'), l.loan_number, content);
 }
 
 setTimeout(() => {
@@ -10001,8 +10028,9 @@ setTimeout(() => {
         const printStmtBtn = document.createElement('button');
         printStmtBtn.id = 'btn-print-statement';
         printStmtBtn.type = 'button';
+        printStmtBtn.setAttribute('data-i18n', 'loans.detail.print_statement');
         printStmtBtn.className = "py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-sm transition";
-        printStmtBtn.innerHTML = "🖨️ Print Statement";
+        printStmtBtn.innerText = t('loans.detail.print_statement');
         printStmtBtn.onclick = printLoanStatement;
         parent.insertBefore(printStmtBtn, parent.firstChild);
     }
@@ -10016,13 +10044,278 @@ if (typeof loadLoanPayments === 'function') {
         if (!tbody) return;
         const rows = tbody.querySelectorAll('tr');
         rows.forEach(row => {
-            if (row.children.length === 7 && !row.innerHTML.includes('No payments recorded') && !row.innerHTML.includes('printPaymentReceipt')) {
+            if (row.children.length === 7 && !row.querySelector('td[colspan]') && !row.innerHTML.includes('printPaymentReceipt')) {
                 const actionTd = row.children[6];
-                actionTd.innerHTML += ` <button type="button" onclick="printPaymentReceipt(this)" class="text-[10px] text-slate-700 hover:text-slate-900 ml-1.5 font-bold bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition" title="Print Official Receipt">🖨️ Receipt</button>`;
+                actionTd.innerHTML += ` <button type="button" onclick="printPaymentReceipt(this)" data-i18n="loans.payments.receipt_btn" class="text-[10px] text-slate-700 hover:text-slate-900 ml-1.5 font-bold bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition" title="Print Official Receipt">${escapeHtml(t('loans.payments.receipt_btn'))}</button>`;
             }
         });
     };
 }
+
+// --- DYNAMIC CONTENT & PATTERN TRANSLATOR (ZERO NETWORK OVERHEAD) ---
+(function initNuraDynamicI18nObserver() {
+    let isMutatingI18n = false;
+
+    const dynamicPatternRules = [
+        [/^Showing (\d+)–(\d+) of (\d+) leads$/i, (m) => `Mostrando ${m[1]}–${m[2]} de ${m[3]} prospectos`],
+        [/^Showing (\d+) of (\d+) leads$/i, (m) => `Mostrando ${m[1]} de ${m[2]} prospectos`],
+        [/^Showing (\d+)–(\d+) of (\d+) customers$/i, (m) => `Mostrando ${m[1]}–${m[2]} de ${m[3]} clientes`],
+        [/^Showing (\d+) of (\d+) customers$/i, (m) => `Mostrando ${m[1]} de ${m[2]} clientes`],
+        [/^Showing (\d+)–(\d+) of (\d+) loans$/i, (m) => `Mostrando ${m[1]}–${m[2]} de ${m[3]} préstamos`],
+        [/^Showing (\d+) of (\d+) loans$/i, (m) => `Mostrando ${m[1]} de ${m[2]} préstamos`],
+        [/^Showing (\d+)–(\d+) of (\d+) evaluated loans \((\d+) active total in DB — narrow search for definitive figures\)$/i, (m) => `Mostrando ${m[1]}–${m[2]} de ${m[3]} préstamos evaluados (${m[4]} activos totales en BD — acota la búsqueda)`],
+        [/^(\d+) Live Loan$/i, (m) => `${m[1]} Préstamo Activo`],
+        [/^(\d+) Live Loans$/i, (m) => `${m[1]} Préstamos Activos`],
+        [/^C\. Loans \((\d+)\)$/i, (m) => `C. Préstamos (${m[1]})`],
+        [/^(\d+) Posted \/ (\d+) Total$/i, (m) => `${m[1]} Aplicados / ${m[2]} Totales`],
+        [/^(\d+) Payments$/i, (m) => `${m[1]} Pagos`],
+        [/^(INDIVIDUAL|BUSINESS) • Priority: (LOW|MEDIUM|HIGH)$/i, (m) => `${tEnum(m[1].toUpperCase())} • Prioridad: ${tEnum(m[2].toUpperCase())}`],
+        [/^PRIORITY: (LOW|MEDIUM|HIGH)$/i, (m) => `PRIORIDAD: ${tEnum(m[1].toUpperCase())}`],
+        [/^Last: ([A-Z_]+)$/i, (m) => `Último: ${tEnum(m[1])}`],
+        [/^BUSINESS \(Rep: (.+)\)$/i, (m) => `PERSONA MORAL (Rep: ${m[1]})`],
+        [/^Business • Rep: (.+)$/i, (m) => `Persona Moral • Rep: ${m[1]}`],
+        [/^Individual • No email$/i, () => `Persona Física • Sin correo`],
+        [/^Individual • (.+)$/i, (m) => `Persona Física • ${m[1]}`],
+        [/^Since ([^•]+) • RFC: (.+)$/i, (m) => `Desde ${m[1].trim()} • RFC: ${m[2].trim() === 'Not Provided' ? 'No Proporcionado' : m[2].trim()}`],
+        [/^(.*?)• By (.+)$/i, (m) => `${m[1]}• Por ${m[2]}`],
+        [/^Edit Lead (LD-\d+)$/i, (m) => `Editar Prospecto ${m[1]}`],
+        [/^Edit Customer (CUST-\d+)$/i, (m) => `Editar Cliente ${m[1]}`],
+        [/^Showing: (.+)$/i, (m) => {
+            const map = {
+                "All Loans": "Todos los Préstamos",
+                "Active Loans (Unliquidated)": "Préstamos Activos (Sin Liquidar)",
+                "Current / On-Time Loans (0 Overdue Installments)": "Préstamos al Corriente (0 Cuotas Vencidas)",
+                "Overdue Loans (≥ 1 Past-Due Installment)": "Préstamos en Mora (≥ 1 Cuota Vencida)",
+                "Draft Loans (Pending Approval)": "Préstamos en Borrador (Pendientes de Aprobación)",
+                "Approved Loans (Pending Disbursement)": "Préstamos Aprobados (Pendientes de Desembolso)",
+                "Paid Off / Closed Loans": "Préstamos Liquidados / Cerrados",
+                "Cancelled Loans": "Préstamos Cancelados",
+                "Defaulted Loans": "Préstamos en Cartera Vencida"
+            };
+            return `Mostrando: ${map[m[1].trim()] || m[1]}`;
+        }],
+        [/^([\d.]+)% \/ mo • (\d+) wks$/i, (m) => `${m[1]}% / mes • ${m[2]} sem`],
+        [/^([\d.]+)% \/ mo$/i, (m) => `${m[1]}% / mes`],
+        [/^([\d.]+)% \/ month$/i, (m) => `${m[1]}% / mes`],
+        [/^(\d+) wks \((\d+) mo\)$/i, (m) => `${m[1]} sem (${m[2]} mes)`],
+        [/^(\d+) weeks$/i, (m) => `${m[1]} semanas`],
+        [/^(\d+) days$/i, (m) => `${m[1]} días`],
+        [/^(\d+) weekly installments$/i, (m) => `${m[1]} cuotas semanales`],
+        [/^(\d+) monthly periods$/i, (m) => `${m[1]} periodos mensuales`],
+        [/^(\d+)d DPD$/i, (m) => `${m[1]}d Mora`],
+        [/^(\d+)d DPD \((\d+) inst\.\)$/i, (m) => `${m[1]}d Mora (${m[2]} cuotas)`],
+        [/^Customer #(.+)$/i, (m) => `Cliente #${m[1]}`],
+        [/^User #(\d+)$/i, (m) => `Usuario #${m[1]}`],
+        [/^(\d+) contractual installments listed(.*)$/i, (m) => `${m[1]} cuotas contractuales listadas${m[2]}`],
+        [/^Latest recorded settlement timestamp: (.+)$/i, (m) => `Última marca de tiempo de liquidación: ${m[1]}`],
+        [/^Inst: (.+)$/i, (m) => `Cuotas: ${m[1]}`],
+        [/^Reversed: (.+)$/i, (m) => `Revertido: ${m[1]}`],
+        [/^Method: ([^•]+) • Paid at: (.+)$/i, (m) => `Método: ${tEnum(m[1].trim())} • Pagado: ${m[2].trim()}`],
+        [/^(INDIVIDUAL|BUSINESS) • Phone: (.+) • Active Loans: (\d+)$/i, (m) => `${tEnum(m[1].toUpperCase())} • Tel: ${m[2]} • Préstamos Activos: ${m[3]}`],
+        [/^Phone: (.+) • Active Loans: (\d+) • Current Unpaid Principal: (.+)$/i, (m) => `Tel: ${m[1]} • Préstamos Activos: ${m[2]} • Capital Insoluto Actual: ${m[3]}`],
+        [/^KYC: ([A-Z_]+)$/i, (m) => `KYC: ${tEnum(m[1])}`],
+        [/^(\$[\d,]+\.\d{2} MXN) \/ wk$/i, (m) => `${m[1]} / sem`],
+        [/^Projected Installments \((\d+) Weeks \/ (\d+) Interest Months\)$/i, (m) => `Cuotas Proyectadas (${m[1]} Semanas / ${m[2]} Meses de Interés)`],
+        [/^Projected Installments \((\d+) Weeks\)$/i, (m) => `Cuotas Proyectadas (${m[1]} Semanas)`],
+        [/^Show Summary View \(First 3 & Final\) ↑$/i, () => `Mostrar Vista Resumen (Primeras 3 y Final) ↑`],
+        [/^Show All (\d+) Installments ↓$/i, (m) => `Mostrar las ${m[1]} Cuotas ↓`],
+        [/^••• (\d+) intermediate weekly installments \(#4 to #(\d+)\) hidden in summary view — Click to expand all (\d+) installments •••$/i, (m) => `••• ${m[1]} cuotas semanales intermedias (#4 a #${m[2]}) ocultas en vista resumen — Haz clic para expandir las ${m[3]} cuotas •••`],
+        [/^Last Interaction \((.+)\)$/i, (m) => `Última Interacción (${tEnum(m[1].trim())})`],
+        [/^Rem\. Total: (.+)$/i, (m) => `Total Rest.: ${m[1]}`],
+        [/^Actor ID: ([^•]+) • Role: ([^•]+) • (.+)$/i, (m) => `ID Actor: ${m[1].trim()} • Rol: ${m[2].trim()} • ${m[3].trim()}`]
+    ];
+
+    const dynamicExactEs = {
+        "No leads found": "No se encontraron prospectos",
+        "Click \"+ New Lead\" to register a prospect in PostgreSQL.": "Haz clic en \"+ Nuevo Prospecto\" para registrar un prospecto en PostgreSQL.",
+        "No call scheduled": "Sin llamada programada",
+        "Open →": "Abrir →",
+        "Queue: Overdue Calls (Requires Immediate Follow-up)": "Cola: Llamadas Vencidas (Requiere Seguimiento Inmediato)",
+        "Queue: Today's Scheduled Calls & Uncontacted New Leads": "Cola: Llamadas Programadas para Hoy y Prospectos Nuevos",
+        "Queue: Upcoming Scheduled Calls": "Cola: Próximas Llamadas Programadas",
+        "Loading call queue...": "Cargando cola de llamadas...",
+        "No leads in this call queue": "No hay prospectos en esta cola de llamadas",
+        "All scheduled calls for this bucket are clear.": "Todas las llamadas programadas para esta bandeja están al día.",
+        "New Lead (First Contact Pending)": "Prospecto Nuevo (1er Contacto Pendiente)",
+        "📞 Dial": "📞 Llamar",
+        "Log Call": "Registrar Llamada",
+        "Details →": "Detalles →",
+        "None Scheduled": "Sin Programar",
+        "Not Provided": "No Proporcionado",
+        "Not available": "No disponible",
+        "Not specified": "No especificado",
+        "No summary notes provided.": "Sin notas de resumen registradas.",
+        "No calls or notes logged yet. Click \"+ Add Entry\" to record your first interaction.": "Aún no hay llamadas ni notas registradas. Haz clic en \"+ Agregar Registro\" para capturar tu primera interacción.",
+        "Logged by": "Registrado por",
+        "No customers found": "No se encontraron clientes",
+        "Click \"+ New Customer\" or convert a qualified Lead.": "Haz clic en \"+ Nuevo Cliente\" o convierte un Prospecto calificado.",
+        "View Profile →": "Ver Perfil →",
+        "No Phone": "Sin Teléfono",
+        "No RFC": "Sin RFC",
+        "Pending Stage 4": "Pendiente Etapa 4",
+        "Inspect →": "Inspeccionar →",
+        "Loading customer interactions...": "Cargando interacciones del cliente...",
+        "No interactions or notes recorded for this customer yet.": "Aún no hay interacciones ni notas registradas para este cliente.",
+        "Inherited from Lead": "Heredado de Prospecto",
+        "Recorded by": "Registrado por",
+        "Legal Entity Name (Razón Social) *": "Denominación o Razón Social *",
+        "Loading documents from PostgreSQL...": "Cargando documentos desde PostgreSQL...",
+        "No KYC or contractual documents uploaded for this customer yet.": "Aún no se han subido documentos KYC o contractuales para este cliente.",
+        "View / Download": "Ver / Descargar",
+        "✓ Hash Copied": "✓ Hash Copiado",
+        "Partial sample:": "Muestra parcial:",
+        "No loans found": "No se encontraron préstamos",
+        "There are no loans matching the selected filter.": "No existen préstamos que coincidan con el filtro seleccionado.",
+        "No loans in this category within the first 100 evaluated active records. Narrow your search to evaluate specific loans.": "No hay préstamos en esta categoría dentro de los primeros 100 registros activos evaluados. Acota tu búsqueda.",
+        "No contractual notes recorded.": "Sin notas contractuales registradas.",
+        "Loading amortization schedule...": "Cargando tabla de amortización...",
+        "Loading schedule...": "Cargando calendario...",
+        "Unable to load amortization schedule.": "No fue posible cargar la tabla de amortización.",
+        "Schedule unavailable": "Calendario no disponible",
+        "No full installment settlements recorded yet": "Aún no se registran cuotas liquidadas en su totalidad",
+        "PARTIAL PAYMENT": "PAGO PARCIAL",
+        "ACTIVE / DISBURSED": "ACTIVO / DESEMBOLSADO",
+        "No approval notes recorded.": "Sin notas de aprobación registradas.",
+        "Approval not yet granted.": "Aprobación aún no otorgada.",
+        "No disbursement notes recorded.": "Sin notas de desembolso registradas.",
+        "Disbursement not yet executed.": "Desembolso aún no ejecutado.",
+        "Authorized Underwriter": "Suscriptor Autorizado",
+        "See customer interactions log.": "Consultar bitácora de interacciones del cliente.",
+        "Loading payment ledger...": "Cargando libro de pagos...",
+        "↩ Reverse": "↩ Revertir",
+        "Locked (LIFO)": "Bloqueado (LIFO)",
+        "Reversed": "Revertido",
+        "🖨️ Receipt": "🖨️ Recibo",
+        "🖨️ Print Statement": "🖨️ Imprimir Estado de Cuenta",
+        "Searching active customers in PostgreSQL...": "Buscando clientes activos en PostgreSQL...",
+        "No ACTIVE customers found matching your search.": "No se encontraron clientes ACTIVOS que coincidan con tu búsqueda.",
+        "Select": "Seleccionar",
+        "Invalid Parameters": "Parámetros Inválidos",
+        "Schedule Preview Unavailable (Check Input Ranges)": "Vista Previa No Disponible (Verifica los Rangos)",
+        "Queue: All Actionable Delinquent & Due Loans": "Cola: Todos los Préstamos en Mora y que Vencen Hoy",
+        "Queue: Active Overdue Loans (Immediate Collection Required)": "Cola: Préstamos Activos en Mora (Cobranza Inmediata)",
+        "Queue: Installments Maturing Today": "Cola: Cuotas que Vencen el Día de Hoy",
+        "Queue: Defaulted Portfolio (Cartera Vencida / Legal Recovery)": "Cola: Cartera Vencida / Recuperación Legal",
+        "Loading collections queue from PostgreSQL...": "Cargando cola de cobranza desde PostgreSQL...",
+        "No delinquent or due loans in this queue": "No hay préstamos vencidos ni exigibles en esta cola",
+        "All scheduled installments for this filter are up to date.": "Todas las cuotas programadas para este filtro están al corriente.",
+        "No collection calls logged yet.": "Aún no se han registrado llamadas de cobranza.",
+        "📞 Log Call": "📞 Registrar Llamada",
+        "💳 Payment": "💳 Abonar Pago",
+        "Loading team...": "Cargando equipo...",
+        "Loading security audit trail...": "Cargando bitácora de auditoría de seguridad...",
+        "New Consultation": "Nueva Consulta",
+        "Hello, I'm Nura. How can I help you with your leads, customers, or credit simulations today?": "Hola, soy Nura. ¿Cómo puedo ayudarte hoy con tus prospectos, clientes o simulaciones de crédito?"
+    };
+
+    function translateSingleDynamicStringToEs(norm) {
+        if (dynamicExactEs[norm]) return dynamicExactEs[norm];
+        if (NuraI18n.staticEnToEs && NuraI18n.staticEnToEs[norm]) return NuraI18n.staticEnToEs[norm];
+        if (`enum.${norm}` in NuraI18n.dictionaries.es) return NuraI18n.dictionaries.es[`enum.${norm}`];
+
+        const apiTranslated = NuraI18n.translateApiError(norm);
+        if (apiTranslated !== norm) return apiTranslated;
+
+        for (const [regex, replacer] of dynamicPatternRules) {
+            const match = norm.match(regex);
+            if (match) return replacer(match);
+        }
+        return null;
+    }
+
+    function processDynamicSubtree(rootEl) {
+        if (!rootEl) return;
+        const isEs = (NuraI18n.currentLang === 'es');
+        const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT, {
+            acceptNode(node) {
+                const p = node.parentElement;
+                if (!p) return NodeFilter.FILTER_REJECT;
+                const tag = p.tagName;
+                if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'TEXTAREA') {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        });
+
+        let node;
+        while ((node = walker.nextNode())) {
+            const raw = node.nodeValue || '';
+            const norm = raw.replace(/\s+/g, ' ').trim();
+            if (!norm) continue;
+
+            if (node.__nuraDynOrigEn === undefined) {
+                const candidateEs = translateSingleDynamicStringToEs(norm);
+                if (candidateEs && candidateEs !== norm) {
+                    node.__nuraDynOrigEn = raw;
+                    node.__nuraDynNormEn = norm;
+                }
+            }
+
+            if (node.__nuraDynOrigEn) {
+                if (!isEs) {
+                    if (node.nodeValue !== node.__nuraDynOrigEn) {
+                        node.nodeValue = node.__nuraDynOrigEn;
+                    }
+                } else {
+                    const targetEs = translateSingleDynamicStringToEs(node.__nuraDynNormEn);
+                    if (targetEs) {
+                        const lead = (node.__nuraDynOrigEn.match(/^\s*/) || [''])[0];
+                        const trail = (node.__nuraDynOrigEn.match(/\s*$/) || [''])[0];
+                        const fullEs = `${lead}${targetEs}${trail}`;
+                        if (node.nodeValue !== fullEs) {
+                            node.nodeValue = fullEs;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    window.rerenderCachedCrmViewsOnLangChange = function() {
+        isMutatingI18n = true;
+        try {
+            const appView = document.getElementById('app-view');
+            if (appView) processDynamicSubtree(appView);
+        } finally {
+            isMutatingI18n = false;
+        }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const appView = document.getElementById('app-view');
+        if (!appView || typeof MutationObserver === 'undefined') return;
+
+        const observer = new MutationObserver((mutations) => {
+            if (isMutatingI18n || NuraI18n.currentLang !== 'es') return;
+            isMutatingI18n = true;
+            try {
+                mutations.forEach(m => {
+                    if (m.type === 'childList') {
+                        m.addedNodes.forEach(n => {
+                            if (n.nodeType === Node.ELEMENT_NODE) {
+                                NuraI18n.applyStaticTranslations(n);
+                                processDynamicSubtree(n);
+                            } else if (n.nodeType === Node.TEXT_NODE && n.parentElement) {
+                                processDynamicSubtree(n.parentElement);
+                            }
+                        });
+                    } else if (m.type === 'characterData' && m.target && m.target.parentElement) {
+                        processDynamicSubtree(m.target.parentElement);
+                    }
+                });
+            } finally {
+                isMutatingI18n = false;
+            }
+        });
+
+        observer.observe(appView, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    });
+})();
         // --- BLOQUE J: COBRANZA, SEGUIMIENTO DE MORA Y CARTERA VENCIDA (DEFAULTED) ---
 let activeLoansSubView = 'book';
 let activeCollectionsBucket = 'ALL';
