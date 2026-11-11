@@ -66,6 +66,8 @@ VALID_ROLES = {
     "OPERATIONS_OFFICER"   # Collections / Operations
 }
 
+VALID_LANGUAGES = {"en", "es"}
+
 SUPPORTED_PRODUCTS = ["Personal Loan", "Business Loan"]
 
 VALID_ENTITY_TYPES = {"INDIVIDUAL", "BUSINESS"}
@@ -108,11 +110,15 @@ VALID_DOCUMENT_TYPES = {"INE_ID", "PROOF_OF_ADDRESS", "BANK_STATEMENT", "SIGNED_
 # --- SQLALCHEMY MODELS ---
 class UserModel(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint("preferred_language IN ('en', 'es')", name="ck_users_preferred_language_valid"),
+    )
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String(120), nullable=True)
     password_hash = Column(String, nullable=False)
     role = Column(String(30), default="SALES_AGENT", nullable=False, index=True)
+    preferred_language = Column(String(10), default="en", server_default="en", nullable=False)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -800,9 +806,9 @@ def verify_database_schema_compatibility(db_engine):
             if not res:
                 raise RuntimeError("No alembic_version record found in database.")
             rev = res[0]
-            if rev != "008":
+            if rev != "009":
                 raise RuntimeError(
-                    f"Database schema is at revision '{rev}', expected '008' (Auth Security). Run 'alembic upgrade head'."
+                    f"Database schema is at revision '{rev}', expected '009' (User Preferred Language). Run 'alembic upgrade head'."
                 )
             _AUTH_SECURITY_SCHEMA_READY = True
 
@@ -1576,6 +1582,10 @@ class UserUpdateByAdmin(BaseModel):
     is_active: Optional[bool] = None
 
 
+class UserLanguageUpdateRequest(BaseModel):
+    preferred_language: str = Field(..., min_length=2, max_length=10)
+
+
 class BootstrapAdminRequest(BaseModel):
     secret: str = Field(..., min_length=12)
 
@@ -2054,7 +2064,8 @@ def login(user_data: UserLogin, request: Request, response: Response, db: Sessio
         "message": "Login successful",
         "email": user.email,
         "full_name": user.full_name,
-        "role": user.role
+        "role": user.role,
+        "preferred_language": user.preferred_language if user.preferred_language in VALID_LANGUAGES else "en"
     }
 
 
@@ -2409,9 +2420,59 @@ def get_me(current_user: UserModel = Depends(get_current_user)):
         "email": current_user.email,
         "full_name": current_user.full_name,
         "role": current_user.role,
+        "preferred_language": current_user.preferred_language if current_user.preferred_language in VALID_LANGUAGES else "en",
         "is_active": current_user.is_active,
         "supported_products": SUPPORTED_PRODUCTS
     }
+
+
+@app.patch("/api/auth/me/language", dependencies=[Depends(verify_csrf)])
+def update_my_language(
+    payload: UserLanguageUpdateRequest,
+    request: Request,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    lang = (payload.preferred_language or "").strip().lower()
+    if lang not in VALID_LANGUAGES:
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid preferred_language. Allowed values: en, es."
+        )
+
+    try:
+        target_user = (
+            db.query(UserModel)
+            .filter(UserModel.id == current_user.id)
+            .with_for_update()
+            .first()
+        )
+        if not target_user or not target_user.is_active:
+            raise HTTPException(status_code=403, detail="Account has been deactivated.")
+
+        previous_lang = target_user.preferred_language
+        target_user.preferred_language = lang
+
+        record_audit_event(
+            db, "USER_LANGUAGE_UPDATED", "user", "SUCCESS",
+            actor=target_user, resource_id=str(target_user.id), ip_address=ip,
+            details={"from_language": previous_lang, "to_language": lang},
+            commit=False
+        )
+        db.commit()
+        db.refresh(target_user)
+        return {
+            "message": "Language preference updated",
+            "preferred_language": target_user.preferred_language
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Language preference update failed: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Could not update language preference.")
 
 
 # --- TEAM MANAGEMENT ENDPOINTS ---
