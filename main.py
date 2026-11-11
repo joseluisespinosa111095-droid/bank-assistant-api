@@ -23,7 +23,7 @@ from sqlalchemy import (
     DateTime, Date, Boolean, ForeignKey, UniqueConstraint,
     CheckConstraint, Index, event, text, or_, inspect, func, LargeBinary
 )
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session, joinedload, selectinload
 from passlib.context import CryptContext
 
 # --- SERVER LOGGING ---
@@ -2577,7 +2577,7 @@ def list_customers(
     if cust_ids:
         active_loans = (
             db.query(LoanModel)
-            .filter(LoanModel.customer_id.in_(cust_ids), LoanModel.status == "ACTIVE")
+            .filter(LoanModel.customer_id.in_(cust_ids), LoanModel.status.in_(["ACTIVE", "DEFAULTED"]))
             .all()
         )
         for l in active_loans:
@@ -2722,7 +2722,7 @@ def get_customer_detail(
 
     active_loans = (
         db.query(LoanModel)
-        .filter(LoanModel.customer_id == customer.id, LoanModel.status == "ACTIVE")
+        .filter(LoanModel.customer_id == customer.id, LoanModel.status.in_(["ACTIVE", "DEFAULTED"]))
         .all()
     )
     all_loans = (
@@ -4057,12 +4057,18 @@ def serialize_loan_detail(l: LoanModel, today_local: date, db: Optional[Session]
         if audit_row:
             defaulted_at_iso = audit_row.created_at.isoformat() if audit_row.created_at else None
             defaulted_by_user_id = audit_row.actor_user_id
-            if audit_row.details_json:
-                try:
-                    parsed_det = json.loads(audit_row.details_json)
-                    default_reason_str = parsed_det.get("default_reason")
-                except Exception:
-                    pass
+
+        default_int = (
+            db.query(InteractionModel)
+            .filter(
+                InteractionModel.customer_id == l.customer_id,
+                InteractionModel.content.like(f"%LOAN MARKED AS DEFAULTED ({l.loan_number})%")
+            )
+            .order_by(InteractionModel.id.desc())
+            .first()
+        )
+        if default_int and "Reason: " in default_int.content:
+            default_reason_str = default_int.content.split("Reason: ", 1)[1].strip()
 
     base.update({
         "source_lead_id": l.source_lead_id,
@@ -4191,7 +4197,13 @@ def list_loans(
 
     total = query.count()
     offset = (page - 1) * page_size
-    items = query.order_by(LoanModel.id.desc()).offset(offset).limit(page_size).all()
+    items = (
+        query.options(joinedload(LoanModel.customer), selectinload(LoanModel.installments))
+        .order_by(LoanModel.id.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
 
     return {
         "total": total,
@@ -4636,11 +4648,8 @@ def mark_loan_defaulted(
         _, _, _, today_local = get_local_day_bounds_utc()
         summary_snapshot = serialize_loan_summary(loan, today_local)
 
+        # Keep immutable origination loan.notes untouched
         loan.status = "DEFAULTED"
-        stamp_str = now_utc.strftime("%Y-%m-%d %H:%M UTC")
-        actor_label = current_user.full_name or current_user.email
-        default_note_line = f"[DEFAULTED {stamp_str} by {actor_label}]: {reason}"
-        loan.notes = f"{loan.notes}\n{default_note_line}".strip() if loan.notes else default_note_line
         loan.updated_at = now_utc
 
         db.add(InteractionModel(
@@ -4669,8 +4678,7 @@ def mark_loan_defaulted(
                 "unpaid_principal_cents": loan.unpaid_principal_cents,
                 "remaining_total_cents": loan.remaining_contract_total_cents,
                 "overdue_amount_cents": summary_snapshot["overdue_amount_cents"],
-                "days_past_due": summary_snapshot["days_past_due"],
-                "default_reason": reason[:200]
+                "days_past_due": summary_snapshot["days_past_due"]
             },
             commit=False
         )
@@ -4767,6 +4775,7 @@ def get_collections_queue(
     _, _, _, today_local = get_local_day_bounds_utc()
     candidate_loans = (
         db.query(LoanModel)
+        .options(joinedload(LoanModel.customer), selectinload(LoanModel.installments))
         .filter(LoanModel.status.in_(["ACTIVE", "DEFAULTED"]))
         .order_by(LoanModel.id.desc())
         .all()
@@ -4967,6 +4976,8 @@ def reverse_loan_payment(
         loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
         if not loan:
             raise HTTPException(status_code=404, detail="Loan not found.")
+        if loan.status == "DEFAULTED":
+            raise HTTPException(status_code=409, detail="Cannot reverse payments on a DEFAULTED loan.")
 
         target_payment = db.query(LoanPaymentModel).filter(
             LoanPaymentModel.id == payment_id, LoanPaymentModel.loan_id == loan_id
