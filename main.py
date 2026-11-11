@@ -727,7 +727,8 @@ def verify_database_schema_compatibility(db_engine):
             "users", "sessions", "conversations", "chat_messages", "audit_logs",
             "customers", "customer_documents", "leads", "lead_stage_history",
             "interactions", "loans", "loan_installments",
-            "loan_payments", "loan_payment_allocations"
+            "loan_payments", "loan_payment_allocations",
+            "rate_limits", "password_reset_tokens"
         }
         if not base_required_tables.issubset(tables):
             missing = base_required_tables - tables
@@ -738,19 +739,11 @@ def verify_database_schema_compatibility(db_engine):
             if not res:
                 raise RuntimeError("No alembic_version record found in database.")
             rev = res[0]
-            if rev == "007":
-                _AUTH_SECURITY_SCHEMA_READY = False
-                logger.info("Schema compatibility guard: running in transitional revision '007' mode.")
-            elif rev == "008":
-                auth_tables = {"rate_limits", "password_reset_tokens"}
-                if not auth_tables.issubset(tables):
-                    missing_auth = auth_tables - tables
-                    raise RuntimeError(f"Revision '008' active but missing auth security tables: {missing_auth}")
-                _AUTH_SECURITY_SCHEMA_READY = True
-            else:
+            if rev != "008":
                 raise RuntimeError(
-                    f"Database schema is at revision '{rev}', expected '007' (transitional) or '008' (Auth Security). Run 'alembic upgrade head'."
+                    f"Database schema is at revision '{rev}', expected '008' (Auth Security). Run 'alembic upgrade head'."
                 )
+            _AUTH_SECURITY_SCHEMA_READY = True
 
             if db_engine.dialect.name == "postgresql":
                 conn.execute(text("""
@@ -2501,6 +2494,7 @@ def serialize_customer(c: CustomerModel, active_loans_count: int = 0, unpaid_pri
         "created_at": c.created_at.isoformat() if c.created_at else None,
         "updated_at": c.updated_at.isoformat() if c.updated_at else None,
         "current_outstanding_balance_cents": unpaid_principal_cents,
+        "current_outstanding_principal_cents": unpaid_principal_cents,
         "active_loans_count": active_loans_count,
         "last_payment_date": None
     }
