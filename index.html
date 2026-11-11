@@ -1685,12 +1685,12 @@
                                         <input type="number" id="sim-monthly-rate" value="10" min="0" max="100" step="0.5" oninput="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Loan Term (Weeks)</label>
-                                        <input type="number" id="sim-term-weeks" value="16" min="1" max="104" step="1" oninput="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold">
+                                        <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Loan Term (Months)</label>
+                                        <input type="number" id="sim-interest-months" value="4" min="1" max="26" step="1" oninput="const m = Math.max(1, Math.min(26, parseInt(this.value, 10) || 1)); document.getElementById('sim-term-weeks').value = m * 4; runLoanSimulation();" class="w-full fintech-input rounded-xl p-2.5 text-xs font-extrabold border-blue-300 bg-blue-50/30">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Full Monthly Periods</label>
-                                        <input type="number" id="sim-interest-months" value="4" min="1" max="36" step="1" oninput="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold border-amber-300 bg-amber-50/40">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Weekly Payments (Auto: 4/mo)</label>
+                                        <input type="number" id="sim-term-weeks" value="16" min="4" max="104" step="4" readonly tabindex="-1" class="w-full rounded-xl p-2.5 text-xs font-bold font-mono bg-slate-100 border border-slate-200 text-slate-600 cursor-not-allowed select-none">
                                     </div>
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Start Date</label>
@@ -2148,31 +2148,31 @@
                                     </div>
                                 </div>
 
-                                <!-- Group 2: Term Presets, Installments, Interest Months & Payment Frequency -->
+                                <!-- Group 2: Term Presets, Loan Term in Months & Auto-Calculated Weeks -->
                                 <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-3">
                                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
-                                        <label class="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Quick Duration Presets (Weeks / Assumed Interest Months)</label>
-                                        <span class="text-[10px] text-blue-600 font-semibold">16 Weeks / 4 Months Standard</span>
+                                        <label class="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Quick Duration Presets (Months → Auto 4 Weeks / Month)</label>
+                                        <span class="text-[10px] text-blue-600 font-semibold">4 Months (16 Weeks) Standard</span>
                                     </div>
                                     <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                                        <button type="button" id="lo-preset-4-1" onclick="applyLoanOriginationTermPreset(4, 1)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">4w / 1m</button>
-                                        <button type="button" id="lo-preset-8-2" onclick="applyLoanOriginationTermPreset(8, 2)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">8w / 2m</button>
-                                        <button type="button" id="lo-preset-12-3" onclick="applyLoanOriginationTermPreset(12, 3)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">12w / 3m</button>
-                                        <button type="button" id="lo-preset-16-4" onclick="applyLoanOriginationTermPreset(16, 4)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-blue-400 bg-blue-50 text-[10px] font-extrabold text-blue-700 transition">16w / 4m</button>
-                                        <button type="button" id="lo-preset-24-6" onclick="applyLoanOriginationTermPreset(24, 6)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">24w / 6m</button>
-                                        <button type="button" id="lo-preset-52-12" onclick="applyLoanOriginationTermPreset(52, 12)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">52w / 12m</button>
+                                        <button type="button" id="lo-preset-4-1" onclick="applyLoanOriginationTermPreset(4, 1)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">1m (4w)</button>
+                                        <button type="button" id="lo-preset-8-2" onclick="applyLoanOriginationTermPreset(8, 2)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">2m (8w)</button>
+                                        <button type="button" id="lo-preset-12-3" onclick="applyLoanOriginationTermPreset(12, 3)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">3m (12w)</button>
+                                        <button type="button" id="lo-preset-16-4" onclick="applyLoanOriginationTermPreset(16, 4)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-blue-400 bg-blue-50 text-[10px] font-extrabold text-blue-700 transition">4m (16w)</button>
+                                        <button type="button" id="lo-preset-24-6" onclick="applyLoanOriginationTermPreset(24, 6)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">6m (24w)</button>
+                                        <button type="button" id="lo-preset-48-12" onclick="applyLoanOriginationTermPreset(48, 12)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">12m (48w)</button>
                                     </div>
 
                                     <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
                                         <div class="sm:col-span-4">
-                                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">4. Loan Term (Weeks) *</label>
-                                            <input type="number" id="lo-term-weeks" required min="1" max="104" step="1" value="16" oninput="onLoanOriginationParamChange()" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs font-bold font-mono">
-                                            <span class="text-[10px] text-slate-400 mt-0.5 block">1 to 104 weekly installments</span>
+                                            <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">4. Loan Term (Months) *</label>
+                                            <input type="number" id="lo-interest-months" required min="1" max="26" step="1" value="4" oninput="const m = Math.max(1, Math.min(26, parseInt(this.value, 10) || 1)); document.getElementById('lo-term-weeks').value = m * 4; onLoanOriginationParamChange();" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs font-extrabold font-mono border-blue-300">
+                                            <span class="text-[10px] text-slate-400 mt-0.5 block">1 to 26 monthly periods</span>
                                         </div>
                                         <div class="sm:col-span-4">
-                                            <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Assumed Interest Months *</label>
-                                            <input type="number" id="lo-interest-months" required min="1" max="36" step="1" value="4" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold font-mono border-amber-300 bg-amber-50/40">
-                                            <span class="text-[10px] text-slate-400 mt-0.5 block">1 to 36 full monthly periods</span>
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Weekly Installments (Auto)</label>
+                                            <input type="number" id="lo-term-weeks" required min="4" max="104" step="4" value="16" readonly tabindex="-1" class="w-full rounded-xl p-2.5 text-xs font-bold font-mono bg-slate-100 border border-slate-200 text-slate-600 cursor-not-allowed select-none">
+                                            <span class="text-[10px] text-slate-400 mt-0.5 block">Auto-calculated (Months × 4)</span>
                                         </div>
                                         <div class="sm:col-span-4">
                                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">5. Payment Frequency</label>
