@@ -771,8 +771,16 @@
                                         <span id="detail-cust-entity-badge" class="bg-blue-50 text-blue-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">INDIVIDUAL</span>
                                         <span id="detail-cust-status-badge" class="bg-emerald-50 text-emerald-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">ACTIVE</span>
                                     </div>
+                                    <!-- NUEVA TIRA DE DATOS RÁPIDOS -->
+                                    <div id="cd-quick-stats" class="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-600 font-medium">
+                                        <span class="flex items-center gap-1">📞 <span id="cd-qs-phone">N/A</span></span>
+                                        <span class="text-slate-300 hidden sm:inline">|</span>
+                                        <span class="flex items-center gap-1 font-mono">📄 <span id="cd-qs-rfc">N/A</span></span>
+                                        <span class="text-slate-300 hidden sm:inline">|</span>
+                                        <span class="flex items-center gap-1 text-slate-900 font-bold">Balance: <span id="cd-qs-balance" class="font-mono text-slate-400">$0.00 MXN</span></span>
+                                    </div>
                                 </div>
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2 shrink-0">
                                     <button type="button" id="btn-edit-customer" onclick="openCustomerFormModal('edit')" class="btn-primary py-2 px-4 rounded-xl text-xs shadow-sm">
                                         Edit Customer Information
                                     </button>
@@ -4302,6 +4310,18 @@ async function loadDashboardSummary() {
                 document.getElementById('detail-cust-entity-badge').innerText = c.entity_type;
                 document.getElementById('detail-cust-status-badge').innerText = c.status;
                 document.getElementById('detail-verification-badge').innerText = c.verification_status;
+                // Llenar datos de la tira de resumen rápido
+                const qsPhone = document.getElementById('cd-qs-phone');
+                const qsRfc = document.getElementById('cd-qs-rfc');
+                const qsBalance = document.getElementById('cd-qs-balance');
+                
+                if (qsPhone) qsPhone.innerText = c.phone_primary || 'No Phone';
+                if (qsRfc) qsRfc.innerText = c.tax_id_rfc || 'No RFC';
+                if (qsBalance) {
+                    const bal = Number(c.current_outstanding_principal_cents) || 0;
+                    qsBalance.innerText = NuraFinancialEngine.formatMXNFromCents(bal);
+                    qsBalance.className = bal > 0 ? 'font-mono text-red-600 font-extrabold' : 'font-mono text-emerald-600 font-extrabold';
+                }
 
                 const valOrNP = v => (v && String(v).trim()) ? String(v) : 'Not Provided';
                 document.getElementById('det-customer-number').innerText = c.customer_number;
