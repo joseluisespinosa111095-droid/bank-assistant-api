@@ -1508,7 +1508,6 @@ def record_audit_event(
 
 # --- LIFESPAN & FASTAPI INIT ---
 @asynccontextmanager
-@asynccontextmanager
 async def lifespan(app: FastAPI):
     verify_database_schema_compatibility(engine)
     
