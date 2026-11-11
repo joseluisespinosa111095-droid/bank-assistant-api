@@ -1669,7 +1669,7 @@
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                                    <div class="sm:col-span-2">
+                                    <div>
                                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Credit Product</label>
                                         <select id="sim-product" onchange="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
                                             <option value="Personal Loan">Personal Loan</option>
@@ -1677,20 +1677,27 @@
                                         </select>
                                     </div>
                                     <div>
+                                        <label class="block text-[10px] font-bold text-indigo-800 uppercase mb-1">Interest Calculation Method</label>
+                                        <select id="sim-interest-method" onchange="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold border-indigo-300 bg-indigo-50/40 text-indigo-950">
+                                            <option value="FLAT_ORIGINAL_PRINCIPAL">Tasa Global / Flat (Capital Original)</option>
+                                            <option value="DECLINING_BALANCE">Saldos Insolutos (Pagos Fijos / Francés)</option>
+                                        </select>
+                                    </div>
+                                    <div>
                                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Loan Amount (MXN)</label>
                                         <input type="number" id="sim-principal" value="50000" min="1000" max="10000000" step="500" oninput="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Monthly Flat Rate (%)</label>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Monthly Rate (%)</label>
                                         <input type="number" id="sim-monthly-rate" value="10" min="0" max="100" step="0.5" oninput="runLoanSimulation()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold">
                                     </div>
                                     <div>
                                         <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Loan Term (Months)</label>
-                                        <input type="number" id="sim-interest-months" value="4" min="1" max="26" step="1" oninput="const m = Math.max(1, Math.min(26, parseInt(this.value, 10) || 1)); document.getElementById('sim-term-weeks').value = m * 4; runLoanSimulation();" class="w-full fintech-input rounded-xl p-2.5 text-xs font-extrabold border-blue-300 bg-blue-50/30">
+                                        <input type="number" id="sim-interest-months" value="4" min="1" max="24" step="1" oninput="const m = Math.max(1, Math.min(24, parseInt(this.value, 10) || 1)); document.getElementById('sim-term-weeks').value = NuraFinancialEngine.monthsToWeeks(m); runLoanSimulation();" class="w-full fintech-input rounded-xl p-2.5 text-xs font-extrabold border-blue-300 bg-blue-50/30">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Weekly Payments (Auto: 4/mo)</label>
-                                        <input type="number" id="sim-term-weeks" value="16" min="4" max="104" step="4" readonly tabindex="-1" class="w-full rounded-xl p-2.5 text-xs font-bold font-mono bg-slate-100 border border-slate-200 text-slate-600 cursor-not-allowed select-none">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Weekly Payments (Auto Calendar)</label>
+                                        <input type="number" id="sim-term-weeks" value="16" min="4" max="104" step="1" readonly tabindex="-1" class="w-full rounded-xl p-2.5 text-xs font-bold font-mono bg-slate-100 border border-slate-200 text-slate-600 cursor-not-allowed select-none">
                                     </div>
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Start Date</label>
@@ -2124,34 +2131,43 @@
 
                             <!-- 1B. CONTRACTUAL LOAN PARAMETERS (COHERENT 8-FIELD ORGANIZATION) -->
                             <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 space-y-4 text-xs">
-                                <!-- Group 1: Product, Principal & Rate -->
+                                <!-- Group 1: Product, Interest Method, Principal & Rate -->
                                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
-                                    <div class="sm:col-span-4">
+                                    <div class="sm:col-span-3">
                                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">1. Credit Product *</label>
                                         <select id="lo-product" onchange="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
                                             <option value="Personal Loan">Personal Loan</option>
                                             <option value="Business Loan">Business Loan</option>
                                         </select>
-                                        <span class="text-[10px] text-slate-400 mt-0.5 block">Flat interest on original principal</span>
+                                        <span class="text-[10px] text-slate-400 mt-0.5 block">Authorized product line</span>
                                     </div>
 
-                                    <div class="sm:col-span-4">
+                                    <div class="sm:col-span-3">
+                                        <label class="block text-[10px] font-bold text-indigo-800 uppercase mb-1">Interest Method *</label>
+                                        <select id="lo-interest-method" onchange="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold border-indigo-300 bg-indigo-50/40 text-indigo-950">
+                                            <option value="FLAT_ORIGINAL_PRINCIPAL">Tasa Global / Flat</option>
+                                            <option value="DECLINING_BALANCE">Saldos Insolutos</option>
+                                        </select>
+                                        <span class="text-[10px] text-indigo-700 mt-0.5 block">Flat vs. Amortización Francesa</span>
+                                    </div>
+
+                                    <div class="sm:col-span-3">
                                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">2. Principal Amount (MXN) *</label>
                                         <input type="number" id="lo-principal" required min="1" max="10000000" step="0.01" value="50000" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-extrabold font-mono text-slate-900">
-                                        <span class="text-[10px] text-slate-400 mt-0.5 block">Allowed: $1.00 – $10,000,000.00 MXN</span>
+                                        <span class="text-[10px] text-slate-400 mt-0.5 block">$1.00 – $10,000,000.00 MXN</span>
                                     </div>
 
-                                    <div class="sm:col-span-4">
-                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">3. Monthly Flat Rate (%) *</label>
+                                    <div class="sm:col-span-3">
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">3. Monthly Rate (%) *</label>
                                         <input type="number" id="lo-rate" required min="0" max="100" step="0.01" value="10" oninput="onLoanOriginationParamChange()" class="w-full fintech-input rounded-xl p-2.5 text-xs font-extrabold font-mono text-slate-900">
-                                        <span class="text-[10px] text-slate-400 mt-0.5 block">Allowed: 0.00% to 100.00% / month</span>
+                                        <span class="text-[10px] text-slate-400 mt-0.5 block">0.00% to 100.00% / month</span>
                                     </div>
                                 </div>
 
                                 <!-- Group 2: Term Presets, Loan Term in Months & Auto-Calculated Weeks -->
                                 <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-3">
                                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
-                                        <label class="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Quick Duration Presets (Months → Auto 4 Weeks / Month)</label>
+                                        <label class="block text-[10px] font-bold text-slate-600 uppercase tracking-wider">Quick Duration Presets (1–4m Commercial / 6–12m 52-Week Calendar)</label>
                                         <span class="text-[10px] text-blue-600 font-semibold">4 Months (16 Weeks) Standard</span>
                                     </div>
                                     <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
@@ -2159,20 +2175,20 @@
                                         <button type="button" id="lo-preset-8-2" onclick="applyLoanOriginationTermPreset(8, 2)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">2m (8w)</button>
                                         <button type="button" id="lo-preset-12-3" onclick="applyLoanOriginationTermPreset(12, 3)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">3m (12w)</button>
                                         <button type="button" id="lo-preset-16-4" onclick="applyLoanOriginationTermPreset(16, 4)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-blue-400 bg-blue-50 text-[10px] font-extrabold text-blue-700 transition">4m (16w)</button>
-                                        <button type="button" id="lo-preset-24-6" onclick="applyLoanOriginationTermPreset(24, 6)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">6m (24w)</button>
-                                        <button type="button" id="lo-preset-48-12" onclick="applyLoanOriginationTermPreset(48, 12)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">12m (48w)</button>
+                                        <button type="button" id="lo-preset-26-6" onclick="applyLoanOriginationTermPreset(26, 6)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">6m (26w)</button>
+                                        <button type="button" id="lo-preset-52-12" onclick="applyLoanOriginationTermPreset(52, 12)" class="lo-preset-btn py-1.5 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[10px] font-bold text-slate-700 transition">12m (52w)</button>
                                     </div>
 
                                     <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
                                         <div class="sm:col-span-4">
                                             <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">4. Loan Term (Months) *</label>
-                                            <input type="number" id="lo-interest-months" required min="1" max="26" step="1" value="4" oninput="const m = Math.max(1, Math.min(26, parseInt(this.value, 10) || 1)); document.getElementById('lo-term-weeks').value = m * 4; onLoanOriginationParamChange();" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs font-extrabold font-mono border-blue-300">
-                                            <span class="text-[10px] text-slate-400 mt-0.5 block">1 to 26 monthly periods</span>
+                                            <input type="number" id="lo-interest-months" required min="1" max="24" step="1" value="4" oninput="const m = Math.max(1, Math.min(24, parseInt(this.value, 10) || 1)); document.getElementById('lo-term-weeks').value = NuraFinancialEngine.monthsToWeeks(m); onLoanOriginationParamChange();" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs font-extrabold font-mono border-blue-300">
+                                            <span class="text-[10px] text-slate-400 mt-0.5 block">1 to 24 months (max 104 wks)</span>
                                         </div>
                                         <div class="sm:col-span-4">
                                             <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Weekly Installments (Auto)</label>
-                                            <input type="number" id="lo-term-weeks" required min="4" max="104" step="4" value="16" readonly tabindex="-1" class="w-full rounded-xl p-2.5 text-xs font-bold font-mono bg-slate-100 border border-slate-200 text-slate-600 cursor-not-allowed select-none">
-                                            <span class="text-[10px] text-slate-400 mt-0.5 block">Auto-calculated (Months × 4)</span>
+                                            <input type="number" id="lo-term-weeks" required min="4" max="104" step="1" value="16" readonly tabindex="-1" class="w-full rounded-xl p-2.5 text-xs font-bold font-mono bg-slate-100 border border-slate-200 text-slate-600 cursor-not-allowed select-none">
+                                            <span class="text-[10px] text-slate-400 mt-0.5 block">1–4m: ×4 | 5–24m: 52w/yr</span>
                                         </div>
                                         <div class="sm:col-span-4">
                                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">5. Payment Frequency</label>
@@ -3181,6 +3197,12 @@
                 return `${sign}$${pesos.toLocaleString('en-US')}.${centavos} MXN`;
             },
 
+            monthsToWeeks(months) {
+                const m = Math.max(1, Math.min(24, parseInt(months, 10) || 1));
+                if (m <= 4) return m * 4;
+                return Math.min(104, Math.round((m * 52) / 12));
+            },
+
             addDaysISO(isoDateStr, daysToAdd) {
                 const parts = isoDateStr.split('-').map(Number);
                 const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
@@ -3193,57 +3215,112 @@
                 monthlyRatePercent,
                 assumedInterestMonths,
                 termWeeks,
-                firstPaymentDateISO
+                firstPaymentDateISO,
+                interestCalculationMethod
             }) {
+                let resolvedMethod = interestCalculationMethod;
+                if (!resolvedMethod) {
+                    const origModal = document.getElementById('loan-origination-modal');
+                    const isOrigOpen = origModal && !origModal.classList.contains('hidden');
+                    resolvedMethod = isOrigOpen
+                        ? (document.getElementById('lo-interest-method')?.value || 'FLAT_ORIGINAL_PRINCIPAL')
+                        : (document.getElementById('sim-interest-method')?.value || 'FLAT_ORIGINAL_PRINCIPAL');
+                }
+                const method = String(resolvedMethod).trim().toUpperCase() === 'DECLINING_BALANCE'
+                    ? 'DECLINING_BALANCE'
+                    : 'FLAT_ORIGINAL_PRINCIPAL';
+
                 const principalCents = Math.max(0, Math.round(Number(principalPesos) * 100));
                 const rateBasisPoints = Math.max(0, Math.round(Number(monthlyRatePercent) * 100));
                 const monthsCount = Math.max(1, parseInt(assumedInterestMonths, 10) || 4);
                 const installmentsCount = Math.max(1, parseInt(termWeeks, 10) || 16);
 
-                const monthlyInterestCents = Math.round((principalCents * rateBasisPoints) / 10000);
-                const totalInterestCents = monthlyInterestCents * monthsCount;
-                const totalRepaymentCents = principalCents + totalInterestCents;
-
-                const regularPrincipalCents = Math.floor(principalCents / installmentsCount);
-                const regularInterestCents = Math.floor(totalInterestCents / installmentsCount);
-
                 const schedule = [];
                 let remainingPrincipalCents = principalCents;
                 let accumulatedPrincipalCents = 0;
                 let accumulatedInterestCents = 0;
+                let monthlyInterestCents = 0;
+                let totalInterestCents = 0;
+                let totalRepaymentCents = 0;
 
-                for (let i = 1; i <= installmentsCount; i++) {
-                    const isFinal = (i === installmentsCount);
-                    const dueDate = this.addDaysISO(firstPaymentDateISO, (i - 1) * 7);
-                    const beginningPrincipalCents = remainingPrincipalCents;
+                if (method === 'DECLINING_BALANCE' && rateBasisPoints > 0 && principalCents > 0) {
+                    const periodicRate = (rateBasisPoints * monthsCount) / (10000.0 * installmentsCount);
+                    const factor = Math.pow(1.0 + periodicRate, installmentsCount);
+                    const regularPaymentCents = Math.round(principalCents * (periodicRate * factor) / (factor - 1.0));
 
-                    const principalComponentCents = isFinal
-                        ? (principalCents - accumulatedPrincipalCents)
-                        : regularPrincipalCents;
+                    for (let i = 1; i <= installmentsCount; i++) {
+                        const isFinal = (i === installmentsCount);
+                        const dueDate = this.addDaysISO(firstPaymentDateISO, (i - 1) * 7);
+                        const beginningPrincipalCents = remainingPrincipalCents;
 
-                    const interestComponentCents = isFinal
-                        ? (totalInterestCents - accumulatedInterestCents)
-                        : regularInterestCents;
+                        const interestComponentCents = Math.round(beginningPrincipalCents * periodicRate);
+                        const principalComponentCents = isFinal
+                            ? beginningPrincipalCents
+                            : Math.max(0, Math.min(beginningPrincipalCents, regularPaymentCents - interestComponentCents));
 
-                    const scheduledPaymentCents = principalComponentCents + interestComponentCents;
-                    const endingPrincipalCents = beginningPrincipalCents - principalComponentCents;
+                        const scheduledPaymentCents = principalComponentCents + interestComponentCents;
+                        const endingPrincipalCents = beginningPrincipalCents - principalComponentCents;
 
-                    accumulatedPrincipalCents += principalComponentCents;
-                    accumulatedInterestCents += interestComponentCents;
-                    remainingPrincipalCents = endingPrincipalCents;
+                        accumulatedPrincipalCents += principalComponentCents;
+                        accumulatedInterestCents += interestComponentCents;
+                        remainingPrincipalCents = endingPrincipalCents;
 
-                    schedule.push({
-                        installmentNumber: i,
-                        dueDate,
-                        beginningPrincipalCents,
-                        principalComponentCents,
-                        interestComponentCents,
-                        scheduledPaymentCents,
-                        endingPrincipalCents
-                    });
+                        schedule.push({
+                            installmentNumber: i,
+                            dueDate,
+                            beginningPrincipalCents,
+                            principalComponentCents,
+                            interestComponentCents,
+                            scheduledPaymentCents,
+                            endingPrincipalCents
+                        });
+                    }
+
+                    totalInterestCents = accumulatedInterestCents;
+                    totalRepaymentCents = principalCents + totalInterestCents;
+                    monthlyInterestCents = Math.round(totalInterestCents / monthsCount);
+                } else {
+                    monthlyInterestCents = Math.round((principalCents * rateBasisPoints) / 10000);
+                    totalInterestCents = monthlyInterestCents * monthsCount;
+                    totalRepaymentCents = principalCents + totalInterestCents;
+
+                    const regularPrincipalCents = Math.floor(principalCents / installmentsCount);
+                    const regularInterestCents = Math.floor(totalInterestCents / installmentsCount);
+
+                    for (let i = 1; i <= installmentsCount; i++) {
+                        const isFinal = (i === installmentsCount);
+                        const dueDate = this.addDaysISO(firstPaymentDateISO, (i - 1) * 7);
+                        const beginningPrincipalCents = remainingPrincipalCents;
+
+                        const principalComponentCents = isFinal
+                            ? (principalCents - accumulatedPrincipalCents)
+                            : regularPrincipalCents;
+
+                        const interestComponentCents = isFinal
+                            ? (totalInterestCents - accumulatedInterestCents)
+                            : regularInterestCents;
+
+                        const scheduledPaymentCents = principalComponentCents + interestComponentCents;
+                        const endingPrincipalCents = beginningPrincipalCents - principalComponentCents;
+
+                        accumulatedPrincipalCents += principalComponentCents;
+                        accumulatedInterestCents += interestComponentCents;
+                        remainingPrincipalCents = endingPrincipalCents;
+
+                        schedule.push({
+                            installmentNumber: i,
+                            dueDate,
+                            beginningPrincipalCents,
+                            principalComponentCents,
+                            interestComponentCents,
+                            scheduledPaymentCents,
+                            endingPrincipalCents
+                        });
+                    }
                 }
 
                 return {
+                    interestCalculationMethod: method,
                     principalCents,
                     monthlyRatePercent: Number(monthlyRatePercent),
                     monthlyInterestCents,
@@ -3260,6 +3337,20 @@
             }
         };
 
+        // Automatically attach selected interest_calculation_method when originating a loan via POST /api/loans
+        const _originalNuraFetch = window.fetch.bind(window);
+        window.fetch = function(resource, config) {
+            if (typeof resource === 'string' && resource === '/api/loans' && config && config.method === 'POST' && typeof config.body === 'string') {
+                try {
+                    const parsed = JSON.parse(config.body);
+                    if (!parsed.interest_calculation_method) {
+                        parsed.interest_calculation_method = document.getElementById('lo-interest-method')?.value || 'FLAT_ORIGINAL_PRINCIPAL';
+                        config.body = JSON.stringify(parsed);
+                    }
+                } catch (e) {}
+            }
+            return _originalNuraFetch(resource, config);
+        };
         /* =========================================================================
            2. APPLICATION STATE & AUTHENTICATION
            ========================================================================= */
