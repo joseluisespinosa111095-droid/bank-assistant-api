@@ -335,21 +335,21 @@
                                         <span class="h-2 w-2 rounded-full bg-amber-500"></span>
                                     </div>
                                     <p id="dash-due-today-val" class="privacy-metric text-xl font-extrabold text-slate-900 mt-2" data-real-value="$0.00 MXN">$0.00 MXN</p>
-                                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Scheduled installments maturing today still pending collection (0 due).</p>
+                                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Scheduled installments maturing today (<span id="dash-due-today-inst-count" class="font-bold">0</span> due).</p>
                                 </div>
                                 <span class="text-[10px] font-bold text-blue-600 group-hover:underline mt-3 inline-block">View Current Schedule →</span>
                             </button>
 
-                            <button type="button" onclick="navigateToLoansFilter('overdue')" class="fintech-card p-4 bg-white hover:border-red-400 text-left transition flex flex-col justify-between group">
+                            <button type="button" onclick="openCollectionsQueueFromDashboard()" class="fintech-card p-4 bg-white hover:border-red-400 text-left transition flex flex-col justify-between group">
                                 <div>
                                     <div class="flex items-center justify-between gap-2">
                                         <span class="text-[10px] font-bold uppercase tracking-wider text-red-600">C. Overdue Payments</span>
                                         <span class="h-2 w-2 rounded-full bg-red-600"></span>
                                     </div>
                                     <p id="dash-overdue-val" class="privacy-metric text-xl font-extrabold text-red-600 mt-2" data-real-value="$0.00 MXN">$0.00 MXN</p>
-                                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">0 past-due installments across 0 affected loans.</p>
+                                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed"><span id="dash-overdue-inst-count" class="font-bold">0</span> past-due installments across <span id="dash-overdue-loans-badge" class="font-bold">0</span> loans.</p>
                                 </div>
-                                <span class="text-[10px] font-bold text-red-600 group-hover:underline mt-3 inline-block">Filter Overdue Loans →</span>
+                                <span class="text-[10px] font-bold text-red-600 group-hover:underline mt-3 inline-block">Open Collections Queue →</span>
                             </button>
 
                             <button type="button" onclick="navigateToLoansFilter('all')" class="fintech-card p-4 bg-white hover:border-indigo-400 text-left transition flex flex-col justify-between group">
@@ -359,7 +359,7 @@
                                         <span class="h-2 w-2 rounded-full bg-indigo-600"></span>
                                     </div>
                                     <p id="dash-outstanding-principal-val" class="privacy-metric text-xl font-extrabold text-slate-900 mt-2" data-real-value="$0.00 MXN">$0.00 MXN</p>
-                                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Principal pending recovery (Total contractual installments due: <span id="dash-total-amount-due-val" class="privacy-metric font-semibold" data-real-value="$0.00 MXN">$0.00 MXN</span>).</p>
+                                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Principal pending recovery (Total due: <span id="dash-total-amount-due-val" class="privacy-metric font-semibold" data-real-value="$0.00 MXN">$0.00 MXN</span>).</p>
                                 </div>
                                 <span class="text-[10px] font-bold text-blue-600 group-hover:underline mt-3 inline-block">Inspect All Loans →</span>
                             </button>
@@ -370,8 +370,8 @@
                                         <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">E. Collected This Week</span>
                                         <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
                                     </div>
-                                    <p id="dash-collected-week-val" class="text-xl font-extrabold text-slate-400 mt-2">Pending Stage 4</p>
-                                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Confirmed payments received Mon–Sun of current ISO week (0 payments).</p>
+                                    <p id="dash-collected-week-val" class="text-xl font-extrabold text-slate-400 mt-2">$0.00 MXN</p>
+                                    <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Payments Mon–Sun (<span id="dash-collected-week-count" class="font-bold">0</span> receipts posted).</p>
                                 </div>
                                 <span class="text-[10px] font-bold text-emerald-700 group-hover:underline mt-3 inline-block">View Payment Ledger →</span>
                             </button>
@@ -387,26 +387,31 @@
                                     <span id="dash-live-loans-badge" class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-full">0 Live Loans</span>
                                 </div>
 
-                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                    <button type="button" onclick="navigateToLoansFilter('active')" class="p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 text-left transition">
-                                        <p class="text-[10px] font-bold text-slate-500 uppercase">Active Loans</p>
+                                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                                    <button type="button" onclick="navigateToLoansFilter('active')" class="p-3 rounded-2xl bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 text-left transition">
+                                        <p class="text-[10px] font-bold text-slate-500 uppercase">Active</p>
                                         <p id="dash-active-loans-count" class="text-xl font-extrabold text-slate-900 mt-1">0</p>
-                                        <p class="text-[10px] text-slate-400 mt-0.5">Unliquidated obligations</p>
+                                        <p class="text-[9px] text-slate-400 mt-0.5">Unliquidated</p>
                                     </button>
-                                    <button type="button" onclick="navigateToLoansFilter('current')" class="p-3.5 rounded-2xl bg-slate-50 hover:bg-emerald-50/50 border border-slate-200/80 text-left transition">
-                                        <p class="text-[10px] font-bold text-emerald-700 uppercase">Current / On-Time</p>
-                                        <p class="text-xl font-extrabold text-emerald-700 mt-1">0</p>
-                                        <p class="text-[10px] text-slate-400 mt-0.5">0 overdue installments</p>
+                                    <button type="button" onclick="navigateToLoansFilter('current')" class="p-3 rounded-2xl bg-slate-50 hover:bg-emerald-50/50 border border-slate-200/80 text-left transition">
+                                        <p class="text-[10px] font-bold text-emerald-700 uppercase">Current</p>
+                                        <p id="dash-current-loans-count" class="text-xl font-extrabold text-emerald-700 mt-1">0</p>
+                                        <p class="text-[9px] text-slate-400 mt-0.5">0 overdue</p>
                                     </button>
-                                    <button type="button" onclick="navigateToLoansFilter('overdue')" class="p-3.5 rounded-2xl bg-slate-50 hover:bg-red-50/50 border border-slate-200/80 text-left transition">
-                                        <p class="text-[10px] font-bold text-red-600 uppercase">Overdue Loans</p>
-                                        <p class="text-xl font-extrabold text-red-600 mt-1">0</p>
-                                        <p class="text-[10px] text-slate-400 mt-0.5">≥ 1 past-due installment</p>
+                                    <button type="button" onclick="navigateToLoansFilter('overdue')" class="p-3 rounded-2xl bg-slate-50 hover:bg-red-50/50 border border-slate-200/80 text-left transition">
+                                        <p class="text-[10px] font-bold text-red-600 uppercase">Overdue</p>
+                                        <p id="dash-overdue-loans-count" class="text-xl font-extrabold text-red-600 mt-1">0</p>
+                                        <p class="text-[9px] text-slate-400 mt-0.5">&ge; 1 past-due</p>
                                     </button>
-                                    <button type="button" onclick="navigateToLoansFilter('paidoff')" class="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-left transition">
-                                        <p class="text-[10px] font-bold text-slate-600 uppercase">Paid Off / Closed</p>
-                                        <p class="text-xl font-extrabold text-slate-700 mt-1">0</p>
-                                        <p class="text-[10px] text-slate-400 mt-0.5">100% obligations settled</p>
+                                    <button type="button" onclick="navigateToLoansFilter('paidoff')" class="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-left transition">
+                                        <p class="text-[10px] font-bold text-slate-600 uppercase">Paid Off</p>
+                                        <p id="dash-paidoff-loans-count" class="text-xl font-extrabold text-slate-700 mt-1">0</p>
+                                        <p class="text-[9px] text-slate-400 mt-0.5">Settled</p>
+                                    </button>
+                                    <button type="button" onclick="navigateToLoansFilter('defaulted')" class="p-3 rounded-2xl bg-rose-50/60 hover:bg-rose-100/60 border border-rose-200 text-left transition">
+                                        <p class="text-[10px] font-bold text-rose-800 uppercase">Defaulted</p>
+                                        <p id="dash-defaulted-loans-count" class="text-xl font-extrabold text-rose-900 mt-1">0</p>
+                                        <p class="text-[9px] text-rose-700/80 mt-0.5">Cartera Vencida</p>
                                     </button>
                                 </div>
                             </div>
@@ -1059,17 +1064,22 @@
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div>
                                     <div class="flex items-center gap-2">
-                                        <h1 class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Loans & Servicing (Book of Business)</h1>
+                                        <h1 class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Loans &amp; Portfolio Servicing</h1>
                                         <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">Live PostgreSQL</span>
                                     </div>
-                                    <p class="text-xs text-slate-500 mt-0.5">Authoritative loan accounting, schedule status derivation, and portfolio servicing</p>
+                                    <p class="text-xs text-slate-500 mt-0.5">Authoritative loan accounting, waterfall collections queue, and delinquency management</p>
                                 </div>
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <button type="button" onclick="loadLoans(1)" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
+                                    <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-2 gap-1" role="tablist">
+                                        <button type="button" id="seg-loans-book-btn" onclick="switchLoansSubView('book')" class="py-2 px-3.5 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm">
+                                            Book of Business
+                                        </button>
+                                        <button type="button" id="seg-loans-col-btn" onclick="switchLoansSubView('collections')" class="py-2 px-3.5 rounded-xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900">
+                                            Collections Queue 📞
+                                        </button>
+                                    </div>
+                                    <button type="button" onclick="refreshLoansOrCollectionsView()" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
                                         Refresh
-                                    </button>
-                                    <button type="button" onclick="switchTab('simulator')" class="py-2.5 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
-                                        Loan Simulator
                                     </button>
                                     <button type="button" id="btn-new-loan" onclick="openLoanOriginationModal()" class="btn-primary py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
                                         <span>+ New Loan</span>
@@ -1077,84 +1087,133 @@
                                 </div>
                             </div>
 
-                            <!-- DERIVED FILTER CAPACITY & PARTIAL RESULTS WARNING -->
-                            <div id="loans-derived-warning" class="hidden p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
-                                <div class="space-y-1">
-                                    <p class="font-bold flex items-center gap-1.5 text-amber-900">
-                                        <span>⚠️</span>
-                                        <span>Partial Sample: Matching Active Portfolio Exceeds 100 Loans</span>
-                                    </p>
-                                    <p id="loans-derived-warning-text" class="text-[11px] text-amber-800 leading-relaxed">
-                                        The active portfolio contains more than 100 records matching this query. Results and counts below represent an incomplete evaluation of the first 100 active records only and do not reflect definitive portfolio figures. Please narrow your search (by loan number or product) to evaluate a complete set of 100 or fewer records.
-                                    </p>
+                            <!-- SUB-VIEW 4A: BOOK OF BUSINESS (FILTERS + TABLE) -->
+                            <div id="loans-book-view" class="space-y-5">
+                                <!-- DERIVED FILTER CAPACITY & PARTIAL RESULTS WARNING -->
+                                <div id="loans-derived-warning" class="hidden p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                                    <div class="space-y-1">
+                                        <p class="font-bold flex items-center gap-1.5 text-amber-900">
+                                            <span>⚠️</span>
+                                            <span>Partial Sample: Matching Active Portfolio Exceeds 100 Loans</span>
+                                        </p>
+                                        <p id="loans-derived-warning-text" class="text-[11px] text-amber-800 leading-relaxed">
+                                            The active portfolio contains more than 100 records matching this query. Results and counts below represent an incomplete evaluation of the first 100 active records only and do not reflect definitive portfolio figures. Please narrow your search (by loan number or product) to evaluate a complete set of 100 or fewer records.
+                                        </p>
+                                    </div>
+                                    <button type="button" onclick="document.getElementById('loans-derived-warning').classList.add('hidden')" class="text-[10px] font-bold uppercase tracking-wider text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-xl transition shrink-0">
+                                        Dismiss
+                                    </button>
                                 </div>
-                                <button type="button" onclick="document.getElementById('loans-derived-warning').classList.add('hidden')" class="text-[10px] font-bold uppercase tracking-wider text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-xl transition shrink-0">
-                                    Dismiss
-                                </button>
+
+                                <!-- SEARCH & FILTERS -->
+                                <div class="fintech-card p-4 bg-white space-y-3">
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div class="sm:col-span-2">
+                                            <input type="text" id="loan-search-input" oninput="debounceLoanSearch()" placeholder="Search by Loan Number (LN-00001) or Product..." class="w-full fintech-input rounded-xl px-3.5 py-2 text-xs">
+                                        </div>
+                                        <select id="loan-status-filter" onchange="setLoansFilterUI(this.value)" class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
+                                            <option value="all">Status: All Loans</option>
+                                            <option value="active">ACTIVE (All Active)</option>
+                                            <option value="current">CURRENT (0 Overdue Installments)</option>
+                                            <option value="overdue">OVERDUE (&ge; 1 Overdue Installment)</option>
+                                            <option value="draft">DRAFT</option>
+                                            <option value="approved">APPROVED</option>
+                                            <option value="paidoff">PAID_OFF (Closed)</option>
+                                            <option value="cancelled">CANCELLED</option>
+                                            <option value="defaulted">DEFAULTED (Cartera Vencida)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                                        <div class="flex gap-1.5 overflow-x-auto no-scrollbar text-xs">
+                                            <button type="button" id="lf-pill-all" onclick="setLoansFilterUI('all')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-900 text-white">All Loans</button>
+                                            <button type="button" id="lf-pill-active" onclick="setLoansFilterUI('active')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Active</button>
+                                            <button type="button" id="lf-pill-current" onclick="setLoansFilterUI('current')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Current / On-Time</button>
+                                            <button type="button" id="lf-pill-overdue" onclick="setLoansFilterUI('overdue')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-red-50 text-red-600 hover:bg-red-100">Overdue</button>
+                                            <button type="button" id="lf-pill-paidoff" onclick="setLoansFilterUI('paidoff')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200">Paid Off</button>
+                                            <button type="button" id="lf-pill-defaulted" onclick="setLoansFilterUI('defaulted')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-rose-50 text-rose-800 hover:bg-rose-100">Defaulted</button>
+                                        </div>
+                                        <span id="loans-active-filter-label" class="text-[11px] font-semibold text-blue-600">Showing: All Loans</span>
+                                    </div>
+                                </div>
+
+                                <!-- LOANS TABLE -->
+                                <div class="fintech-card bg-white overflow-hidden">
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left border-collapse text-xs">
+                                            <thead>
+                                                <tr class="bg-slate-50/90 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                                    <th class="py-3.5 px-4">Loan Number</th>
+                                                    <th class="py-3.5 px-4">Customer</th>
+                                                    <th class="py-3.5 px-4">Product &amp; Rate</th>
+                                                    <th class="py-3.5 px-4">Status &amp; DPD</th>
+                                                    <th class="py-3.5 px-4 text-right">Original Principal</th>
+                                                    <th class="py-3.5 px-4 text-right">Unpaid Principal</th>
+                                                    <th class="py-3.5 px-4 text-right">Current Payable</th>
+                                                    <th class="py-3.5 px-4">Maturity Date</th>
+                                                    <th class="py-3.5 px-4 text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="loans-table-tbody" class="divide-y divide-slate-100">
+                                                <tr>
+                                                    <td colspan="9" class="py-10 text-center text-slate-400">Loading loans from PostgreSQL...</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="px-4 py-3 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                                        <span id="loans-pagination-info">Showing 0 of 0 loans</span>
+                                        <div class="flex gap-1.5">
+                                            <button type="button" id="loan-prev-btn" onclick="changeLoanPage(-1)" disabled class="px-3 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed">Previous</button>
+                                            <button type="button" id="loan-next-btn" onclick="changeLoanPage(1)" disabled class="px-3 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed">Next</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <!-- SEARCH & FILTERS -->
-                            <div class="fintech-card p-4 bg-white space-y-3">
+                            <!-- SUB-VIEW 4B (BLOCK J): COLLECTIONS QUEUE -->
+                            <div id="loans-collections-view" class="hidden space-y-4">
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <div class="sm:col-span-2">
-                                        <input type="text" id="loan-search-input" oninput="debounceLoanSearch()" placeholder="Search by Loan Number (LN-00001) or Product..." class="w-full fintech-input rounded-xl px-3.5 py-2 text-xs">
-                                    </div>
-                                    <select id="loan-status-filter" onchange="setLoansFilterUI(this.value)" class="fintech-input rounded-xl px-3.5 py-2 text-xs font-medium">
-                                        <option value="all">Status: All Loans</option>
-                                        <option value="active">ACTIVE (All Active)</option>
-                                        <option value="current">CURRENT (0 Overdue Installments)</option>
-                                        <option value="overdue">OVERDUE (≥ 1 Overdue Installment)</option>
-                                        <option value="draft">DRAFT</option>
-                                        <option value="approved">APPROVED</option>
-                                        <option value="paidoff">PAID_OFF (Closed)</option>
-                                        <option value="cancelled">CANCELLED</option>
-                                        <option value="defaulted">DEFAULTED</option>
-                                    </select>
+                                    <button type="button" onclick="loadCollectionsQueue('OVERDUE')" class="p-4 rounded-2xl bg-red-50 hover:bg-red-100/70 border border-red-200 flex items-center justify-between text-left transition">
+                                        <div>
+                                            <p class="text-[10px] font-bold uppercase text-red-700">Active Overdue Loans</p>
+                                            <p id="cq-count-overdue" class="text-2xl font-extrabold text-red-800 mt-0.5">0</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p id="cq-sum-overdue" class="text-sm font-extrabold font-mono text-red-900">$0.00 MXN</p>
+                                            <span class="text-[10px] font-semibold text-red-700">Filter Overdue →</span>
+                                        </div>
+                                    </button>
+                                    <button type="button" onclick="loadCollectionsQueue('DUE_TODAY')" class="p-4 rounded-2xl bg-amber-50 hover:bg-amber-100/70 border border-amber-200 flex items-center justify-between text-left transition">
+                                        <div>
+                                            <p class="text-[10px] font-bold uppercase text-amber-800">Maturing Today (Due)</p>
+                                            <p id="cq-count-today" class="text-2xl font-extrabold text-amber-900 mt-0.5">0</p>
+                                        </div>
+                                        <span class="text-[10px] font-semibold text-amber-800">Filter Due Today →</span>
+                                    </button>
+                                    <button type="button" onclick="loadCollectionsQueue('DEFAULTED')" class="p-4 rounded-2xl bg-rose-50 hover:bg-rose-100/70 border border-rose-200 flex items-center justify-between text-left transition">
+                                        <div>
+                                            <p class="text-[10px] font-bold uppercase text-rose-800">Defaulted (Cartera Vencida)</p>
+                                            <p id="cq-count-defaulted" class="text-2xl font-extrabold text-rose-900 mt-0.5">0</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p id="cq-sum-defaulted" class="text-sm font-extrabold font-mono text-rose-900">$0.00 MXN</p>
+                                            <span class="text-[10px] font-semibold text-rose-800">Filter Defaulted →</span>
+                                        </div>
+                                    </button>
                                 </div>
 
-                                <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                                    <div class="flex gap-1.5 overflow-x-auto no-scrollbar text-xs">
-                                        <button type="button" id="lf-pill-all" onclick="setLoansFilterUI('all')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-900 text-white">All Loans</button>
-                                        <button type="button" id="lf-pill-active" onclick="setLoansFilterUI('active')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Active</button>
-                                        <button type="button" id="lf-pill-current" onclick="setLoansFilterUI('current')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Current / On-Time</button>
-                                        <button type="button" id="lf-pill-overdue" onclick="setLoansFilterUI('overdue')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-red-50 text-red-600 hover:bg-red-100">Overdue</button>
-                                        <button type="button" id="lf-pill-paidoff" onclick="setLoansFilterUI('paidoff')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200">Paid Off</button>
-                                    </div>
-                                    <span id="loans-active-filter-label" class="text-[11px] font-semibold text-blue-600">Showing: All Loans</span>
-                                </div>
-                            </div>
-
-                            <!-- LOANS TABLE -->
-                            <div class="fintech-card bg-white overflow-hidden">
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-left border-collapse text-xs">
-                                        <thead>
-                                            <tr class="bg-slate-50/90 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                                <th class="py-3.5 px-4">Loan Number</th>
-                                                <th class="py-3.5 px-4">Customer</th>
-                                                <th class="py-3.5 px-4">Product & Rate</th>
-                                                <th class="py-3.5 px-4">Status</th>
-                                                <th class="py-3.5 px-4 text-right">Original Principal</th>
-                                                <th class="py-3.5 px-4 text-right">Unpaid Principal</th>
-                                                <th class="py-3.5 px-4 text-right">Current Payable</th>
-                                                <th class="py-3.5 px-4">Maturity Date</th>
-                                                <th class="py-3.5 px-4 text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="loans-table-tbody" class="divide-y divide-slate-100">
-                                            <tr>
-                                                <td colspan="9" class="py-10 text-center text-slate-400">Loading loans from PostgreSQL...</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="px-4 py-3 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                                    <span id="loans-pagination-info">Showing 0 of 0 loans</span>
+                                <div class="fintech-card p-3.5 bg-white flex flex-wrap items-center justify-between gap-2 text-xs">
                                     <div class="flex gap-1.5">
-                                        <button type="button" id="loan-prev-btn" onclick="changeLoanPage(-1)" disabled class="px-3 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed">Previous</button>
-                                        <button type="button" id="loan-next-btn" onclick="changeLoanPage(1)" disabled class="px-3 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed">Next</button>
+                                        <button type="button" id="cq-pill-ALL" onclick="loadCollectionsQueue('ALL')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-slate-900 text-white">All Actionable</button>
+                                        <button type="button" id="cq-pill-OVERDUE" onclick="loadCollectionsQueue('OVERDUE')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-red-50 text-red-700 hover:bg-red-100">Overdue</button>
+                                        <button type="button" id="cq-pill-DUE_TODAY" onclick="loadCollectionsQueue('DUE_TODAY')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-amber-50 text-amber-800 hover:bg-amber-100">Due Today</button>
+                                        <button type="button" id="cq-pill-DEFAULTED" onclick="loadCollectionsQueue('DEFAULTED')" class="px-3.5 py-1.5 rounded-xl font-semibold bg-rose-50 text-rose-800 hover:bg-rose-100">Defaulted</button>
                                     </div>
+                                    <span id="cq-active-bucket-label" class="text-[11px] font-semibold text-blue-600">Queue: All Actionable Delinquent &amp; Due Loans</span>
                                 </div>
+
+                                <div id="collections-queue-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                             </div>
                         </div>
 
@@ -1189,8 +1248,14 @@
                                         <button type="button" id="ld-btn-cancel" onclick="openLoanCancelModal()" class="hidden py-2 px-3.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-semibold text-xs transition">
                                             ✕ Cancel Loan
                                         </button>
+                                        <button type="button" id="ld-btn-collection" onclick="openLoanCollectionModal()" class="hidden py-2 px-3.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold text-xs transition shadow-sm">
+                                            📞 Log Collection
+                                        </button>
                                         <button type="button" id="ld-btn-payment" onclick="openLoanPaymentModal()" class="hidden py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-sm">
                                             💳 Record Payment
+                                        </button>
+                                        <button type="button" id="ld-btn-default" onclick="openLoanDefaultModal()" class="hidden py-2 px-3.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-semibold text-xs transition shadow-sm">
+                                            ⚠️ Mark Defaulted
                                         </button>
                                     </div>
                                     <button type="button" id="ld-btn-customer" class="py-2 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-sm transition">
@@ -1505,6 +1570,7 @@
                                     </div>
 
                                     <!-- CANCELLATION AUDIT (HIDDEN BY DEFAULT UNLESS CANCELLED) -->
+                                    <!-- CANCELLATION AUDIT (HIDDEN BY DEFAULT UNLESS CANCELLED) -->
                                     <div id="ld-canc-container" class="hidden md:col-span-2 p-4 rounded-2xl bg-red-50/70 border border-red-200 space-y-2">
                                         <div class="flex items-center justify-between">
                                             <span class="text-[10px] font-bold text-red-700 uppercase tracking-wider">3. Cancellation Audit Record</span>
@@ -1512,6 +1578,16 @@
                                         </div>
                                         <p class="text-[11px] text-red-900">Cancelled Date: <strong id="ld-canc-date">Not available</strong></p>
                                         <p class="text-[11px] text-red-900">Cancellation Reason: <strong id="ld-canc-reason">Not specified</strong></p>
+                                    </div>
+
+                                    <!-- DEFAULTED CARTERA VENCIDA AUDIT (HIDDEN UNLESS DEFAULTED) -->
+                                    <div id="ld-default-container" class="hidden md:col-span-2 p-4 rounded-2xl bg-rose-50 border border-rose-300 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[10px] font-bold text-rose-800 uppercase tracking-wider">4. Delinquency Audit: Defaulted / Cartera Vencida</span>
+                                            <span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-200 text-rose-900 border border-rose-300">DEFAULTED</span>
+                                        </div>
+                                        <p class="text-[11px] text-rose-950">Default Declared: <strong id="ld-default-date">Not available</strong> &bull; Declared By: <strong id="ld-default-user">Not available</strong></p>
+                                        <p class="text-[11px] text-rose-950">Default Reason: <strong id="ld-default-reason" class="italic">Not specified</strong></p>
                                     </div>
                                 </div>
                             </div>
@@ -2850,6 +2926,134 @@
             </div>
         </div>
 
+        <!-- 6. MARK LOAN DEFAULTED MODAL (BLOCK J) -->
+        <div id="loan-default-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[500px] max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-extrabold text-slate-900 text-base">Transition to DEFAULTED</h3>
+                            <span class="bg-rose-50 text-rose-800 border border-rose-300 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">ACTIVE → DEFAULTED</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Declare severely delinquent loan as defaulted cartera vencida</p>
+                    </div>
+                    <button type="button" onclick="closeLoanDefaultModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">✕</button>
+                </div>
+
+                <div id="loan-default-error" class="hidden p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <form id="loan-default-form" onsubmit="handleLoanDefaultSubmit(event)" class="space-y-4 text-xs">
+                    <div class="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span id="ldef-loan-header" class="font-extrabold text-slate-900 text-sm">LN-00000</span>
+                            <span id="ldef-customer-label" class="text-xs font-bold text-slate-700">Customer Name</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-700 pt-1">
+                            <div>Unpaid Principal: <strong id="ldef-principal" class="font-mono text-slate-900">$0.00 MXN</strong></div>
+                            <div>Remaining Total: <strong id="ldef-rem-total" class="font-mono text-slate-900">$0.00 MXN</strong></div>
+                            <div>Overdue Amount: <strong id="ldef-overdue" class="font-mono text-red-600">$0.00 MXN</strong></div>
+                            <div>Days Past Due: <strong id="ldef-dpd" class="font-mono text-red-600">0d</strong></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-rose-900 uppercase mb-1">Mandatory Default / Castigo Reason (min. 5 chars) *</label>
+                        <textarea id="ldef-reason" required minlength="5" maxlength="500" rows="3" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="e.g., Unreachable after 90 days past due, borrower refusal to pay, legal recovery initiated..."></textarea>
+                    </div>
+
+                    <div class="p-3.5 rounded-2xl bg-rose-50 border border-rose-200">
+                        <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                            <input type="checkbox" id="ldef-confirm-check" required class="mt-0.5 h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500">
+                            <span class="text-[11px] text-rose-950 leading-snug">
+                                <strong>Confirm Irreversible Default Status:</strong> I confirm this loan is transitioning to <code>DEFAULTED</code>. Ordinary teller waterfall payments and reversals are locked once defaulted, while full unpaid balances remain recorded for legal/collections recovery.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeLoanDefaultModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs">Back</button>
+                        <button type="submit" id="ldef-submit-btn" class="py-2.5 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-sm transition">
+                            Confirm Defaulted →
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 7. RECORD LOAN COLLECTION CALL / PROMISE MODAL (BLOCK J) -->
+        <div id="loan-collection-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[520px] max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-extrabold text-slate-900 text-base">Log Collection &amp; Promise of Payment</h3>
+                            <span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">COLLECTIONS</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Record borrower interaction, payment commitment and callback schedule</p>
+                    </div>
+                    <button type="button" onclick="closeLoanCollectionModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">✕</button>
+                </div>
+
+                <div id="loan-collection-error" class="hidden p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <form id="loan-collection-form" onsubmit="handleLoanCollectionSubmit(event)" class="space-y-3.5 text-xs">
+                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <p id="lcol-loan-header" class="font-extrabold text-slate-900 text-sm">LN-00000</p>
+                            <p id="lcol-customer-header" class="text-xs text-slate-600 mt-0.5">Customer Name &bull; Phone: —</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-bold text-red-600 uppercase">Current Payable</p>
+                            <p id="lcol-payable" class="font-extrabold font-mono text-red-600 text-sm">$0.00 MXN</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Contact Channel *</label>
+                            <select id="lcol-type" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="CALL">CALL (Phone Call)</option>
+                                <option value="WHATSAPP">WHATSAPP</option>
+                                <option value="MEETING">MEETING (In-Person / Branch)</option>
+                                <option value="EMAIL">EMAIL</option>
+                                <option value="NOTE">INTERNAL NOTE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Call / Collection Outcome *</label>
+                            <select id="lcol-outcome" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="INTERESTED">PROMISE OF PAYMENT (Compromiso)</option>
+                                <option value="FOLLOW_UP_REQUIRED">FOLLOW_UP_REQUIRED</option>
+                                <option value="REQUESTED_CALLBACK">REQUESTED_CALLBACK</option>
+                                <option value="ANSWERED">ANSWERED (Negotiation Pending)</option>
+                                <option value="NO_ANSWER">NO_ANSWER</option>
+                                <option value="VOICEMAIL">VOICEMAIL</option>
+                                <option value="NOT_INTERESTED">REFUSED TO PAY (Negativa de pago)</option>
+                                <option value="WRONG_NUMBER">WRONG_NUMBER</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-emerald-800 uppercase mb-1">Promised Payment Amount (MXN)</label>
+                            <input type="number" id="lcol-promised" min="0" step="0.01" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold font-mono" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Next Follow-up Call / Date</label>
+                            <input type="datetime-local" id="lcol-followup" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Collection Observations &amp; Agreements *</label>
+                            <textarea id="lcol-notes" required minlength="3" maxlength="2000" rows="3" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Record agreement terms, borrower justification, promise date or reminder note..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeLoanCollectionModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs">Cancel</button>
+                        <button type="submit" id="lcol-submit-btn" class="btn-primary py-2.5 px-5 rounded-xl text-xs shadow-sm">Save Collection Log</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- PROFILE DETAIL MODAL -->
         <div id="profile-detail-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-end sm:items-center justify-center opacity-0 transition-opacity duration-200 p-4 no-print">
             <div class="bg-white rounded-3xl p-6 w-full max-w-[400px] shadow-2xl transform translate-y-4 sm:translate-y-0 scale-95 transition-all duration-200" id="profile-detail-card">
@@ -3941,21 +4145,23 @@ async function loadDashboardSummary() {
 
             if (Number.isSafeInteger(activeLoans) && activeLoans >= 0) {
                 if (countEl) countEl.innerText = String(activeLoans);
-
                 if (badgeEl) {
-                    badgeEl.innerText =
-                        `${activeLoans} Live ${activeLoans === 1 ? 'Loan' : 'Loans'}`;
+                    badgeEl.innerText = `${activeLoans} Live ${activeLoans === 1 ? 'Loan' : 'Loans'}`;
                 }
-            } else {
-                if (countEl) countEl.innerText = 'N/A';
-                if (badgeEl) badgeEl.innerText = 'N/A Live Loans';
             }
-        } else {
-            const countEl = document.getElementById('dash-active-loans-count');
-            const badgeEl = document.getElementById('dash-live-loans-badge');
 
-            if (countEl) countEl.innerText = 'N/A';
-            if (badgeEl) badgeEl.innerText = 'N/A Live Loans';
+            const setIntText = (id, val) => {
+                const el = document.getElementById(id);
+                if (el && Number.isSafeInteger(val) && val >= 0) el.innerText = String(val);
+            };
+            setIntText('dash-current-loans-count', counts.current_loans);
+            setIntText('dash-overdue-loans-count', counts.overdue_loans);
+            setIntText('dash-overdue-loans-badge', counts.overdue_loans);
+            setIntText('dash-paidoff-loans-count', counts.paid_off_loans);
+            setIntText('dash-defaulted-loans-count', counts.defaulted_loans);
+            setIntText('dash-due-today-inst-count', counts.due_today_installments);
+            setIntText('dash-overdue-inst-count', counts.overdue_installments);
+            setIntText('dash-collected-week-count', counts.collected_week_payments);
         }
 
     } catch (err) {
@@ -4484,7 +4690,11 @@ async function loadDashboardSummary() {
                 selectEl.value = currentLoanFilter;
             }
 
-            ['all', 'active', 'current', 'overdue', 'paidoff'].forEach(k => {
+            if (typeof switchLoansSubView === 'function') {
+                switchLoansSubView('book', false);
+            }
+
+            ['all', 'active', 'current', 'overdue', 'paidoff', 'defaulted'].forEach(k => {
                 const pill = document.getElementById('lf-pill-' + k);
                 if (!pill) return;
                 if (k === currentLoanFilter) {
@@ -4493,6 +4703,8 @@ async function loadDashboardSummary() {
                     pill.className = 'px-3.5 py-1.5 rounded-xl font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100';
                 } else if (k === 'overdue') {
                     pill.className = 'px-3.5 py-1.5 rounded-xl font-semibold bg-red-50 text-red-600 hover:bg-red-100';
+                } else if (k === 'defaulted') {
+                    pill.className = 'px-3.5 py-1.5 rounded-xl font-semibold bg-rose-50 text-rose-800 hover:bg-rose-100';
                 } else {
                     pill.className = 'px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200';
                 }
@@ -4641,9 +4853,19 @@ async function loadDashboardSummary() {
                             : 'N/A';
                         const isStrictlyOverdue = Number.isFinite(l.overdue_amount_cents) && l.overdue_amount_cents > 0;
 
+                        const custNameLabel = l.customer_name || `Customer #${l.customer_id}`;
+                        const custNumLabel = l.customer_number || `CUST-${l.customer_id}`;
                         const customerCellHtml = hasValidCustomerId
-                            ? `<button type="button" onclick="event.stopPropagation(); switchTab('customers'); openCustomerDetail(${l.customer_id});" class="font-bold text-blue-600 hover:underline">Customer #${escapeHtml(l.customer_id)}</button>`
+                            ? `<button type="button" onclick="event.stopPropagation(); switchTab('customers'); openCustomerDetail(${l.customer_id});" class="text-left group">
+                                   <p class="font-bold text-slate-900 group-hover:text-blue-600 group-hover:underline">${escapeHtml(custNameLabel)}</p>
+                                   <p class="font-mono text-[10px] text-blue-700 font-semibold">${escapeHtml(custNumLabel)}</p>
+                               </button>`
                             : `<span class="text-slate-400 font-mono">Customer #N/A</span>`;
+
+                        const dpdVal = Number.isSafeInteger(l.days_past_due) ? l.days_past_due : 0;
+                        const dpdBadgeHtml = dpdVal > 0
+                            ? `<span class="ml-1 inline-block text-[9px] font-extrabold font-mono px-1.5 py-0.5 rounded bg-red-100 text-red-800 border border-red-200">${dpdVal}d DPD</span>`
+                            : '';
 
                         const actionBtnHtml = hasValidLoanId
                             ? `<button type="button" class="text-xs font-bold text-blue-600 hover:underline">Inspect →</button>`
@@ -4658,6 +4880,7 @@ async function loadDashboardSummary() {
                             </td>
                             <td class="py-3.5 px-4">
                                 <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${badgeClass}">${escapeHtml(l.status || 'UNKNOWN')}</span>
+                                ${dpdBadgeHtml}
                             </td>
                             <td class="py-3.5 px-4 text-right font-mono text-slate-800">${escapeHtml(origPrincipal)}</td>
                             <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-900">${escapeHtml(unpaidPrincipal)}</td>
@@ -5118,6 +5341,21 @@ async function loadDashboardSummary() {
                     if (cancReasonEl) cancReasonEl.innerText = data.cancellation_reason || 'Not specified';
                 } else {
                     if (cancBox) cancBox.classList.add('hidden');
+                }
+
+                // 3D. Defaulted (Cartera Vencida) Audit
+                const defBox = document.getElementById('ld-default-container');
+                const defDateEl = document.getElementById('ld-default-date');
+                const defUserEl = document.getElementById('ld-default-user');
+                const defReasonEl = document.getElementById('ld-default-reason');
+
+                if (data.status === 'DEFAULTED') {
+                    if (defBox) defBox.classList.remove('hidden');
+                    if (defDateEl) defDateEl.innerText = formatDateTimeShort(data.defaulted_at || data.updated_at);
+                    if (defUserEl) defUserEl.innerText = data.defaulted_by_user_id ? `User #${data.defaulted_by_user_id}` : 'Authorized Underwriter';
+                    if (defReasonEl) defReasonEl.innerText = data.default_reason || 'See customer interactions log.';
+                } else {
+                    if (defBox) defBox.classList.add('hidden');
                 }
 
                 // Update Block F lifecycle action buttons based on status and RBAC
@@ -7439,6 +7677,329 @@ if (typeof loadLoanPayments === 'function') {
                 actionTd.innerHTML += ` <button type="button" onclick="printPaymentReceipt(this)" class="text-[10px] text-slate-700 hover:text-slate-900 ml-1.5 font-bold bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition" title="Print Official Receipt">🖨️ Receipt</button>`;
             }
         });
+    };
+}
+        // --- BLOQUE J: COBRANZA, SEGUIMIENTO DE MORA Y CARTERA VENCIDA (DEFAULTED) ---
+let activeLoansSubView = 'book';
+let activeCollectionsBucket = 'ALL';
+
+function switchLoansSubView(subView, triggerLoad = true) {
+    activeLoansSubView = (subView === 'collections') ? 'collections' : 'book';
+    const bookView = document.getElementById('loans-book-view');
+    const colView = document.getElementById('loans-collections-view');
+    const bookBtn = document.getElementById('seg-loans-book-btn');
+    const colBtn = document.getElementById('seg-loans-col-btn');
+
+    if (activeLoansSubView === 'collections') {
+        bookView?.classList.add('hidden');
+        colView?.classList.remove('hidden');
+        if (colBtn) colBtn.className = 'py-2 px-3.5 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm';
+        if (bookBtn) bookBtn.className = 'py-2 px-3.5 rounded-xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900';
+        if (triggerLoad) loadCollectionsQueue(activeCollectionsBucket);
+    } else {
+        colView?.classList.add('hidden');
+        bookView?.classList.remove('hidden');
+        if (bookBtn) bookBtn.className = 'py-2 px-3.5 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm';
+        if (colBtn) colBtn.className = 'py-2 px-3.5 rounded-xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900';
+        if (triggerLoad) loadLoans(currentLoansPage || 1);
+    }
+}
+
+function refreshLoansOrCollectionsView() {
+    if (activeLoansSubView === 'collections') {
+        loadCollectionsQueue(activeCollectionsBucket);
+    } else {
+        loadLoans(1);
+    }
+}
+
+function openCollectionsQueueFromDashboard() {
+    switchTab('loans');
+    closeLoanDetailView();
+    switchLoansSubView('collections', true);
+}
+
+async function loadCollectionsQueue(bucket = 'ALL') {
+    activeCollectionsBucket = bucket;
+    const cardsBox = document.getElementById('collections-queue-cards');
+    if (!cardsBox) return;
+
+    const bucketLabels = {
+        ALL: 'Queue: All Actionable Delinquent & Due Loans',
+        OVERDUE: 'Queue: Active Overdue Loans (Immediate Collection Required)',
+        DUE_TODAY: 'Queue: Installments Maturing Today',
+        DEFAULTED: 'Queue: Defaulted Portfolio (Cartera Vencida / Legal Recovery)'
+    };
+    const lblEl = document.getElementById('cq-active-bucket-label');
+    if (lblEl) lblEl.innerText = bucketLabels[bucket] || bucketLabels.ALL;
+
+    ['ALL', 'OVERDUE', 'DUE_TODAY', 'DEFAULTED'].forEach(k => {
+        const pill = document.getElementById('cq-pill-' + k);
+        if (!pill) return;
+        if (k === bucket) {
+            pill.className = 'px-3.5 py-1.5 rounded-xl font-semibold bg-slate-900 text-white';
+        } else if (k === 'OVERDUE') {
+            pill.className = 'px-3.5 py-1.5 rounded-xl font-semibold bg-red-50 text-red-700 hover:bg-red-100';
+        } else if (k === 'DUE_TODAY') {
+            pill.className = 'px-3.5 py-1.5 rounded-xl font-semibold bg-amber-50 text-amber-800 hover:bg-amber-100';
+        } else if (k === 'DEFAULTED') {
+            pill.className = 'px-3.5 py-1.5 rounded-xl font-semibold bg-rose-50 text-rose-800 hover:bg-rose-100';
+        } else {
+            pill.className = 'px-3.5 py-1.5 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200';
+        }
+    });
+
+    cardsBox.innerHTML = '<p class="col-span-2 py-8 text-center text-xs text-slate-400">Loading collections queue from PostgreSQL...</p>';
+
+    try {
+        const res = await fetch(`/api/collections/queue?bucket=${encodeURIComponent(bucket)}`);
+        if (res.status === 401) {
+            mostrarAuthView();
+            return;
+        }
+        if (!res.ok) throw new Error('Could not load collections queue.');
+        const data = await res.json();
+
+        const counts = data.counts || {};
+        const totals = data.totals || {};
+        document.getElementById('cq-count-overdue').innerText = String(counts.overdue_active || 0);
+        document.getElementById('cq-count-today').innerText = String(counts.due_today_active || 0);
+        document.getElementById('cq-count-defaulted').innerText = String(counts.defaulted || 0);
+        document.getElementById('cq-sum-overdue').innerText = NuraFinancialEngine.formatMXNFromCents(totals.overdue_active_cents || 0);
+        document.getElementById('cq-sum-defaulted').innerText = NuraFinancialEngine.formatMXNFromCents(totals.defaulted_remaining_cents || 0);
+
+        const items = Array.isArray(data.items) ? data.items : [];
+        cardsBox.innerHTML = '';
+
+        if (items.length === 0) {
+            cardsBox.innerHTML = `
+                <div class="col-span-2 fintech-card p-8 bg-white text-center space-y-1.5">
+                    <p class="text-sm font-bold text-slate-900">No delinquent or due loans in this queue</p>
+                    <p class="text-xs text-slate-500">All scheduled installments for this filter are up to date.</p>
+                </div>`;
+            return;
+        }
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'fintech-card p-4 bg-white space-y-3 flex flex-col justify-between border-l-4 ' +
+                (item.status === 'DEFAULTED' ? 'border-l-rose-700' : (item.overdue_amount_cents > 0 ? 'border-l-red-600' : 'border-l-amber-500'));
+
+            const dpdBadge = item.days_past_due > 0
+                ? `<span class="text-[10px] font-extrabold font-mono px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200">${item.days_past_due}d DPD (${item.overdue_installments_count} inst.)</span>`
+                : `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">Due Today</span>`;
+
+            const lastNoteHtml = item.last_collection_note
+                ? `<div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-[11px] text-slate-600">
+                       <p class="font-bold text-slate-800 text-[10px] uppercase">Last Interaction (${escapeHtml(item.last_collection_outcome || 'NOTE')})</p>
+                       <p class="truncate mt-0.5">${escapeHtml(item.last_collection_note)}</p>
+                   </div>`
+                : `<p class="text-[11px] text-slate-400 italic">No collection calls logged yet.</p>`;
+
+            card.innerHTML = `
+                <div class="space-y-2.5">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="font-mono font-extrabold text-blue-700 text-xs">${escapeHtml(item.loan_number)}</span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${getLoanStatusBadgeStyle(item.status)}">${escapeHtml(item.status)}</span>
+                                ${dpdBadge}
+                            </div>
+                            <h4 class="text-sm font-extrabold text-slate-900 mt-1">${escapeHtml(item.customer_name)}</h4>
+                            <p class="text-xs text-slate-500 font-medium">${escapeHtml(item.customer_number)} &bull; 📞 ${escapeHtml(item.customer_phone || 'N/A')}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-bold text-red-600 uppercase">Current Payable</p>
+                            <p class="text-sm font-extrabold font-mono text-red-600">${NuraFinancialEngine.formatMXNFromCents(item.current_payable_amount_cents)}</p>
+                            <p class="text-[10px] text-slate-500 font-mono">Rem. Total: ${NuraFinancialEngine.formatMXNFromCents(item.remaining_contract_total_cents)}</p>
+                        </div>
+                    </div>
+                    ${lastNoteHtml}
+                </div>
+                <div class="grid grid-cols-3 gap-2 pt-2.5 border-t border-slate-100 text-xs">
+                    <button type="button" class="btn-cq-log py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold transition">📞 Log Call</button>
+                    <button type="button" class="btn-cq-pay py-2 px-3 rounded-xl ${item.status === 'ACTIVE' ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}" ${item.status !== 'ACTIVE' ? 'disabled' : ''}>💳 Payment</button>
+                    <button type="button" class="btn-cq-open py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition">Inspect →</button>
+                </div>
+            `;
+
+            card.querySelector('.btn-cq-log').onclick = async () => {
+                await openLoanDetailFull(item.id);
+                openLoanCollectionModal();
+            };
+            const payBtn = card.querySelector('.btn-cq-pay');
+            if (item.status === 'ACTIVE') {
+                payBtn.onclick = async () => {
+                    await openLoanDetailFull(item.id);
+                    openLoanPaymentModal();
+                };
+            }
+            card.querySelector('.btn-cq-open').onclick = () => openLoanDetailFull(item.id);
+
+            cardsBox.appendChild(card);
+        });
+    } catch (err) {
+        cardsBox.innerHTML = `<p class="col-span-2 py-6 text-center text-xs text-red-600">${escapeHtml(err.message)}</p>`;
+    }
+}
+
+function openLoanCollectionModal() {
+    if (!currentSelectedLoan) return;
+    const l = currentSelectedLoan;
+    document.getElementById('loan-collection-error')?.classList.add('hidden');
+    document.getElementById('loan-collection-form')?.reset();
+
+    document.getElementById('lcol-loan-header').innerText = `${l.loan_number} • ${l.product_name || 'Loan'}`;
+    document.getElementById('lcol-customer-header').innerText = `${l.customer_name || 'Customer #' + l.customer_id} • Phone: ${l.customer_phone || 'N/A'}`;
+    document.getElementById('lcol-payable').innerText = NuraFinancialEngine.formatMXNFromCents(l.current_payable_amount_cents || 0);
+
+    document.getElementById('loan-collection-modal')?.classList.remove('hidden');
+}
+
+function closeLoanCollectionModal() {
+    document.getElementById('loan-collection-modal')?.classList.add('hidden');
+}
+
+async function handleLoanCollectionSubmit(e) {
+    e.preventDefault();
+    if (!currentSelectedLoan) return;
+    const errBox = document.getElementById('loan-collection-error');
+    const submitBtn = document.getElementById('lcol-submit-btn');
+    errBox?.classList.add('hidden');
+    submitBtn.disabled = true;
+
+    const promisedRaw = parseFloat(document.getElementById('lcol-promised').value || '0');
+    const payload = {
+        interaction_type: document.getElementById('lcol-type').value,
+        outcome: document.getElementById('lcol-outcome').value,
+        promised_amount_pesos: (Number.isFinite(promisedRaw) && promisedRaw > 0) ? promisedRaw : null,
+        next_follow_up_at: document.getElementById('lcol-followup').value || null,
+        notes: document.getElementById('lcol-notes').value.trim()
+    };
+
+    try {
+        const res = await fetch(`/api/loans/${currentSelectedLoan.id}/collections-log`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCookie('csrf_token')
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Could not record collection log.');
+
+        closeLoanCollectionModal();
+        const succBox = document.getElementById('loan-detail-success');
+        const succText = document.getElementById('loan-detail-success-text');
+        if (succBox && succText) {
+            succText.innerText = `Collection log recorded in customer dossier (${data.interaction_type} • ${data.outcome}).`;
+            succBox.classList.remove('hidden');
+        }
+    } catch (err) {
+        if (errBox) {
+            errBox.innerText = err.message;
+            errBox.classList.remove('hidden');
+        }
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+function openLoanDefaultModal() {
+    if (!currentSelectedLoan) return;
+    const l = currentSelectedLoan;
+    document.getElementById('loan-default-error')?.classList.add('hidden');
+    document.getElementById('loan-default-form')?.reset();
+
+    document.getElementById('ldef-loan-header').innerText = `${l.loan_number} (${l.product_name || 'Loan'})`;
+    document.getElementById('ldef-customer-label').innerText = l.customer_name || `Customer #${l.customer_id}`;
+    document.getElementById('ldef-principal').innerText = NuraFinancialEngine.formatMXNFromCents(l.unpaid_principal_cents || 0);
+    document.getElementById('ldef-rem-total').innerText = NuraFinancialEngine.formatMXNFromCents(l.remaining_contract_total_cents || 0);
+    document.getElementById('ldef-overdue').innerText = NuraFinancialEngine.formatMXNFromCents(l.overdue_amount_cents || 0);
+    document.getElementById('ldef-dpd').innerText = `${l.days_past_due || 0} days`;
+
+    document.getElementById('loan-default-modal')?.classList.remove('hidden');
+}
+
+function closeLoanDefaultModal() {
+    document.getElementById('loan-default-modal')?.classList.add('hidden');
+}
+
+async function handleLoanDefaultSubmit(e) {
+    e.preventDefault();
+    if (!currentSelectedLoan) return;
+    const errBox = document.getElementById('loan-default-error');
+    const submitBtn = document.getElementById('ldef-submit-btn');
+    errBox?.classList.add('hidden');
+    submitBtn.disabled = true;
+
+    const payload = {
+        confirm_default: document.getElementById('ldef-confirm-check').checked,
+        default_reason: document.getElementById('ldef-reason').value.trim()
+    };
+
+    try {
+        const res = await fetch(`/api/loans/${currentSelectedLoan.id}/default`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCookie('csrf_token')
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Could not transition loan to DEFAULTED.');
+
+        closeLoanDefaultModal();
+        await Promise.all([
+            openLoanDetailFull(currentSelectedLoan.id),
+            loadLoans(currentLoansPage || 1),
+            loadDashboardSummary()
+        ]);
+
+        const succBox = document.getElementById('loan-detail-success');
+        const succText = document.getElementById('loan-detail-success-text');
+        if (succBox && succText) {
+            succText.innerText = `Loan ${data.loan_number} has been transitioned to DEFAULTED and logged in the audit trail.`;
+            succBox.classList.remove('hidden');
+        }
+    } catch (err) {
+        if (errBox) {
+            errBox.innerText = err.message;
+            errBox.classList.remove('hidden');
+        }
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+if (typeof updateLoanLifecycleActionsUI === 'function') {
+    const _origUpdateLifecycleUI = updateLoanLifecycleActionsUI;
+    window.updateLoanLifecycleActionsUI = function(loanData) {
+        _origUpdateLifecycleUI(loanData);
+        const colBtn = document.getElementById('ld-btn-collection');
+        const defBtn = document.getElementById('ld-btn-default');
+        const actionsWrap = document.getElementById('ld-lifecycle-actions');
+        const role = currentUser?.role || '';
+
+        const canLogCollection = (
+            loanData &&
+            ['ACTIVE', 'DEFAULTED'].includes(loanData.status) &&
+            ['OWNER_ADMIN', 'CREDIT_ADVISOR', 'OPERATIONS_OFFICER'].includes(role)
+        );
+        const canMarkDefault = (
+            loanData &&
+            loanData.status === 'ACTIVE' &&
+            Number(loanData.remaining_contract_total_cents) > 0 &&
+            ['OWNER_ADMIN', 'CREDIT_ADVISOR'].includes(role)
+        );
+
+        if (colBtn) colBtn.classList.toggle('hidden', !canLogCollection);
+        if (defBtn) defBtn.classList.toggle('hidden', !canMarkDefault);
+        if ((canLogCollection || canMarkDefault) && actionsWrap) {
+            actionsWrap.classList.remove('hidden');
+        }
     };
 }
     </script>
