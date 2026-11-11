@@ -621,7 +621,7 @@ def _enforce_payment_reversal_only_update(mapper, connection, target):
     ):
         raise ValueError("Payment reversal requires reversed_by_user_id, reversed_at, and a valid reversal_reason.")
 
-# --- AUTHORITATIVE FINANCIAL ENGINE (FLAT_ORIGINAL_PRINCIPAL) ---
+# --- AUTHORITATIVE FINANCIAL ENGINE (FLAT & DECLINING BALANCE) ---
 class LoanFinancialEngine:
     @staticmethod
     def add_days_iso(iso_date_str: str, days_to_add: int) -> str:
@@ -635,51 +635,112 @@ class LoanFinancialEngine:
         monthly_rate_percent: float,
         assumed_interest_months: int,
         term_weeks: int,
-        first_payment_date_iso: str
+        first_payment_date_iso: str,
+        interest_calculation_method: str = "FLAT_ORIGINAL_PRINCIPAL"
     ) -> dict:
+        import math
         principal_cents = max(0, int(round(Decimal(str(principal_pesos)) * Decimal("100"))))
         rate_bps = max(0, int(round(Decimal(str(monthly_rate_percent)) * Decimal("100"))))
         months_count = max(1, int(assumed_interest_months))
         installments_count = max(1, int(term_weeks))
+        method = (interest_calculation_method or "FLAT_ORIGINAL_PRINCIPAL").strip().upper()
 
-        monthly_interest_cents = int(((Decimal(principal_cents) * Decimal(rate_bps)) / Decimal("10000")).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-        total_interest_cents = monthly_interest_cents * months_count
-        total_repayment_cents = principal_cents + total_interest_cents
-
-        regular_principal_cents = principal_cents // installments_count
-        regular_interest_cents = total_interest_cents // installments_count
+        monthly_interest_cents = int(
+            ((Decimal(principal_cents) * Decimal(rate_bps)) / Decimal("10000")).quantize(
+                Decimal("1"), rounding=ROUND_HALF_UP
+            )
+        )
 
         schedule = []
         remaining_principal_cents = principal_cents
         accumulated_principal_cents = 0
         accumulated_interest_cents = 0
 
-        for i in range(1, installments_count + 1):
-            is_final = (i == installments_count)
-            due_date_str = LoanFinancialEngine.add_days_iso(first_payment_date_iso, (i - 1) * 7)
-            due_date_obj = date.fromisoformat(due_date_str)
-            beginning_principal_cents = remaining_principal_cents
+        if method == "DECLINING_BALANCE":
+            if rate_bps == 0:
+                weekly_rate = 0.0
+                regular_payment_cents = principal_cents // installments_count
+            else:
+                weekly_rate = (rate_bps * 12.0) / (10000.0 * 52.0)
+                factor = (1.0 + weekly_rate) ** installments_count
+                raw_pmt = principal_cents * (weekly_rate * factor) / (factor - 1.0)
+                regular_payment_cents = int(math.floor(raw_pmt + 0.5))
 
-            principal_component_cents = (principal_cents - accumulated_principal_cents) if is_final else regular_principal_cents
-            interest_component_cents = (total_interest_cents - accumulated_interest_cents) if is_final else regular_interest_cents
-            scheduled_payment_cents = principal_component_cents + interest_component_cents
-            ending_principal_cents = beginning_principal_cents - principal_component_cents
+            for i in range(1, installments_count + 1):
+                is_final = (i == installments_count)
+                due_date_str = LoanFinancialEngine.add_days_iso(first_payment_date_iso, (i - 1) * 7)
+                due_date_obj = date.fromisoformat(due_date_str)
+                beginning_principal_cents = remaining_principal_cents
 
-            accumulated_principal_cents += principal_component_cents
-            accumulated_interest_cents += interest_component_cents
-            remaining_principal_cents = ending_principal_cents
+                interest_component_cents = (
+                    int(math.floor(beginning_principal_cents * weekly_rate + 0.5))
+                    if rate_bps > 0 else 0
+                )
+                if is_final:
+                    principal_component_cents = remaining_principal_cents
+                else:
+                    principal_component_cents = max(
+                        0,
+                        min(remaining_principal_cents, regular_payment_cents - interest_component_cents)
+                    )
 
-            schedule.append({
-                "installment_number": i,
-                "due_date": due_date_obj,
-                "beginning_principal_cents": beginning_principal_cents,
-                "principal_due_cents": principal_component_cents,
-                "interest_due_cents": interest_component_cents,
-                "scheduled_payment_cents": scheduled_payment_cents,
-                "ending_principal_cents": ending_principal_cents
-            })
+                scheduled_payment_cents = principal_component_cents + interest_component_cents
+                ending_principal_cents = beginning_principal_cents - principal_component_cents
+
+                accumulated_principal_cents += principal_component_cents
+                accumulated_interest_cents += interest_component_cents
+                remaining_principal_cents = ending_principal_cents
+
+                schedule.append({
+                    "installment_number": i,
+                    "due_date": due_date_obj,
+                    "beginning_principal_cents": beginning_principal_cents,
+                    "principal_due_cents": principal_component_cents,
+                    "interest_due_cents": interest_component_cents,
+                    "scheduled_payment_cents": scheduled_payment_cents,
+                    "ending_principal_cents": ending_principal_cents
+                })
+
+            total_interest_cents = accumulated_interest_cents
+            total_repayment_cents = principal_cents + total_interest_cents
+            monthly_interest_cents = int(math.floor((total_interest_cents / months_count) + 0.5))
+        else:
+            total_interest_cents = monthly_interest_cents * months_count
+            total_repayment_cents = principal_cents + total_interest_cents
+            regular_principal_cents = principal_cents // installments_count
+            regular_interest_cents = total_interest_cents // installments_count
+
+            for i in range(1, installments_count + 1):
+                is_final = (i == installments_count)
+                due_date_str = LoanFinancialEngine.add_days_iso(first_payment_date_iso, (i - 1) * 7)
+                due_date_obj = date.fromisoformat(due_date_str)
+                beginning_principal_cents = remaining_principal_cents
+
+                principal_component_cents = (
+                    (principal_cents - accumulated_principal_cents) if is_final else regular_principal_cents
+                )
+                interest_component_cents = (
+                    (total_interest_cents - accumulated_interest_cents) if is_final else regular_interest_cents
+                )
+                scheduled_payment_cents = principal_component_cents + interest_component_cents
+                ending_principal_cents = beginning_principal_cents - principal_component_cents
+
+                accumulated_principal_cents += principal_component_cents
+                accumulated_interest_cents += interest_component_cents
+                remaining_principal_cents = ending_principal_cents
+
+                schedule.append({
+                    "installment_number": i,
+                    "due_date": due_date_obj,
+                    "beginning_principal_cents": beginning_principal_cents,
+                    "principal_due_cents": principal_component_cents,
+                    "interest_due_cents": interest_component_cents,
+                    "scheduled_payment_cents": scheduled_payment_cents,
+                    "ending_principal_cents": ending_principal_cents
+                })
 
         return {
+            "interest_calculation_method": method,
             "principal_cents": principal_cents,
             "monthly_rate_percent": float(monthly_rate_percent),
             "monthly_interest_rate_bps": rate_bps,
@@ -746,6 +807,27 @@ def verify_database_schema_compatibility(db_engine):
             _AUTH_SECURITY_SCHEMA_READY = True
 
             if db_engine.dialect.name == "postgresql":
+                conn.execute(text("""
+                    DO $$
+                    DECLARE
+                        r RECORD;
+                    BEGIN
+                        FOR r IN
+                            SELECT conname, pg_get_constraintdef(oid) AS def
+                            FROM pg_constraint
+                            WHERE conrelid = 'loans'::regclass AND contype = 'c'
+                        LOOP
+                            IF r.def ILIKE '%FLAT_ORIGINAL_PRINCIPAL%'
+                               OR r.def ILIKE '%ORIGINAL_PRINCIPAL%'
+                               OR r.def ILIKE '%FLOOR_REGULAR_EXACT_FINAL%'
+                               OR r.def ILIKE '%monthly_interest_amount_cents%'
+                               OR r.def ILIKE '%regular_installment_cents%'
+                            THEN
+                                EXECUTE format('ALTER TABLE loans DROP CONSTRAINT IF EXISTS %I', r.conname);
+                            END IF;
+                        END LOOP;
+                    END $$;
+                """))
                 conn.execute(text("""
                     CREATE OR REPLACE FUNCTION assert_loan_ledger_integrity(p_loan_id INTEGER)
                     RETURNS VOID LANGUAGE plpgsql AS $fn$
@@ -1594,6 +1676,7 @@ class LoanCreateRequest(BaseModel):
     start_date: str  # YYYY-MM-DD
     first_payment_date: str  # YYYY-MM-DD
     notes: Optional[str] = Field(default=None, max_length=1000)
+    interest_calculation_method: str = Field(default="FLAT_ORIGINAL_PRINCIPAL")
 
 
 class LoanApproveRequest(BaseModel):
@@ -4275,19 +4358,30 @@ def create_loan(
     if first_pay_dt < start_dt:
         raise HTTPException(status_code=422, detail="First payment date cannot be earlier than start date.")
 
+    calc_method = (payload.interest_calculation_method or "FLAT_ORIGINAL_PRINCIPAL").strip().upper()
+    if calc_method not in ("FLAT_ORIGINAL_PRINCIPAL", "DECLINING_BALANCE"):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid interest_calculation_method. Allowed: FLAT_ORIGINAL_PRINCIPAL, DECLINING_BALANCE."
+        )
+    interest_basis_val = "DECLINING_PRINCIPAL" if calc_method == "DECLINING_BALANCE" else "ORIGINAL_PRINCIPAL"
+    rounding_policy_val = "FRENCH_LEVEL_EXACT_FINAL" if calc_method == "DECLINING_BALANCE" else "FLOOR_REGULAR_EXACT_FINAL"
+
     # Calculate deterministic schedule on server
     calc = LoanFinancialEngine.calculate_flat_schedule(
         principal_pesos=principal_cents / 100.0,
         monthly_rate_percent=payload.monthly_interest_rate_percent,
         assumed_interest_months=payload.assumed_interest_months,
         term_weeks=payload.term_installments_count,
-        first_payment_date_iso=payload.first_payment_date
+        first_payment_date_iso=payload.first_payment_date,
+        interest_calculation_method=calc_method
     )
 
     canonical_payload = {
         "customer_id": payload.customer_id,
         "source_lead_id": payload.source_lead_id,
         "product_name": payload.product_name,
+        "interest_calculation_method": calc_method,
         "principal_cents": calc["principal_cents"],
         "monthly_interest_rate_bps": calc["monthly_interest_rate_bps"],
         "assumed_interest_months": calc["months_count"],
@@ -4324,14 +4418,14 @@ def create_loan(
         loan_number = generate_next_loan_number(db)
 
         contract_rules = {
-            "engine_version": "1.0.0",
-            "interest_calculation_method": "FLAT_ORIGINAL_PRINCIPAL",
-            "interest_basis": "ORIGINAL_PRINCIPAL",
+            "engine_version": "1.1.0",
+            "interest_calculation_method": calc_method,
+            "interest_basis": interest_basis_val,
             "interest_accrual_convention": "ON_INSTALLMENT_DUE_DATE",
             "assumed_interest_months": calc["months_count"],
             "term_installments_count": calc["installments_count"],
             "payment_frequency": "WEEKLY",
-            "rounding_policy": "FLOOR_REGULAR_EXACT_FINAL",
+            "rounding_policy": rounding_policy_val,
             "partial_period_prorating_rule": "NOT_DEFINED_EXPLICIT_MONTHS_USED",
             "early_payoff_rebate_rule": "NOT_DEFINED_PENDING_POLICY",
             "late_fee_moratory_rule": "NOT_DEFINED_PENDING_POLICY"
@@ -4345,17 +4439,17 @@ def create_loan(
             source_lead_id=payload.source_lead_id,
             status="DRAFT",
             product_name=payload.product_name,
-            product_version="v1.0",
+            product_version="v1.1",
             currency="MXN",
             principal_cents=calc["principal_cents"],
             monthly_interest_rate_bps=calc["monthly_interest_rate_bps"],
-            interest_calculation_method="FLAT_ORIGINAL_PRINCIPAL",
-            interest_basis="ORIGINAL_PRINCIPAL",
+            interest_calculation_method=calc_method,
+            interest_basis=interest_basis_val,
             interest_accrual_convention="ON_INSTALLMENT_DUE_DATE",
             assumed_interest_months=calc["months_count"],
             payment_frequency="WEEKLY",
             term_installments_count=calc["installments_count"],
-            rounding_policy="FLOOR_REGULAR_EXACT_FINAL",
+            rounding_policy=rounding_policy_val,
             contract_rules_json=json.dumps(contract_rules),
             monthly_interest_amount_cents=calc["monthly_interest_amount_cents"],
             total_interest_cents=calc["total_interest_cents"],
