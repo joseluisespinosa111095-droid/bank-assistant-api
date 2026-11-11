@@ -4709,7 +4709,614 @@
                 return `${match[1]}-${match[2]}-${match[3]}`;
             },
 
-            applyStaticTranslations() {
+            staticPlaceholdersEs: {
+                "Search by Lead Number (LD-00001), Name, Phone, or Email...": "Buscar por Número de Prospecto (LD-00001), Nombre, Teléfono o Correo...",
+                "Search by Customer Number (CUST-00001), Full Name, or Phone...": "Buscar por Número de Cliente (CUST-00001), Nombre Completo o Teléfono...",
+                "Write interaction summary, call notes, or agreement details...": "Escribe el resumen de la interacción, notas de llamada o detalles del acuerdo...",
+                "Search by Loan Number (LN-00001) or Product...": "Buscar por Número de Préstamo (LN-00001) o Producto...",
+                "Message Nura...": "Escribe un mensaje a Nura...",
+                "Full name or legal entity": "Nombre completo o razón social",
+                "Authorized representative": "Representante legal autorizado",
+                "Commercial name": "Nombre comercial",
+                "10-digit phone (e.g., 55 1234 5678)": "Teléfono a 10 dígitos (ej. 55 1234 5678)",
+                "prospect@email.com": "prospecto@correo.com",
+                "Optional RFC": "RFC opcional",
+                "Context, credit need, or referral details...": "Contexto, necesidad de crédito o detalles del referido...",
+                "Search active borrower by CUST-XXXXX, Full Legal Name, Phone, or RFC...": "Buscar acreditado activo por CUST-XXXXX, Nombre Legal, Teléfono o RFC...",
+                "Credit purpose, collateral notes, or special underwriting remarks...": "Destino del crédito, notas de garantía u observaciones de suscripción...",
+                "e.g., Rate too high, Declined underwriting, Unreachable": "ej. Tasa alta, Rechazado en análisis, No localizable",
+                "Optional reason or context for stage change...": "Motivo o contexto opcional del cambio de etapa...",
+                "Record what was discussed with the prospect...": "Registra lo conversado con el prospecto...",
+                "Required for Business customers": "Obligatorio para clientes de Persona Moral",
+                "Optional address": "Domicilio opcional",
+                "Optional conversion note": "Nota opcional de conversión",
+                "Full legal name or Razón Social": "Nombre legal completo o Razón Social",
+                "Commercial brand name": "Nombre comercial de la marca",
+                "Optional secondary phone": "Teléfono secundario opcional",
+                "customer@email.com": "cliente@correo.com",
+                "Employed, Business Owner, etc.": "Empleado, Dueño de Negocio, etc.",
+                "Company or business name": "Nombre de la empresa o negocio",
+                "Role or industry sector": "Puesto o giro industrial",
+                "Street, number, neighborhood, city, state, ZIP": "Calle, número, colonia, ciudad, estado, C.P.",
+                "Workplace or branch address": "Domicilio del lugar de trabajo o sucursal",
+                "Record credit committee observations, income verification, or approval conditions...": "Registra observaciones del comité de crédito, verificación de ingresos o condiciones...",
+                "e.g., SPEI-20261103-994812 or Receipt #0042 (min. 3 chars)": "ej. SPEI-20261103-994812 o Recibo #0042 (mín. 3 caracteres)",
+                "Originating bank account, beneficiary CLABE last digits, or delivery observations...": "Cuenta bancaria de origen, últimos dígitos de CLABE u observaciones de entrega...",
+                "State the reason for cancelling this loan (min. 3 characters, e.g., Borrower withdrew request, Failed KYC verification, Terms renegotiated)...": "Indica el motivo de cancelación del préstamo (mín. 3 caracteres, ej. Solicitud retirada, KYC rechazado, Términos renegociados)...",
+                "e.g., SPEI-20261107-00192 or Receipt #104": "ej. SPEI-20261107-00192 o Recibo #104",
+                "Optional payment observations...": "Observaciones opcionales del pago...",
+                "State the reason for reversing this payment (min. 3 characters, e.g., Returned check, Duplicate entry, Incorrect amount)...": "Indica el motivo para revertir este pago (mín. 3 caracteres, ej. Cheque devuelto, Captura duplicada, Monto incorrecto)...",
+                "e.g., Unreachable after 90 days past due, borrower refusal to pay, legal recovery initiated...": "ej. Ilocalizable tras 90 días de mora, negativa de pago, recuperación legal iniciada...",
+                "Record agreement terms, borrower justification, promise date or reminder note...": "Registra términos del convenio, justificación del acreditado, fecha promesa o nota...",
+                "Enter bootstrap secret": "Ingresa la clave secreta de activación",
+                "Full Name": "Nombre Completo",
+                "Email Address": "Correo Electrónico",
+                "Password (min. 8 characters)": "Contraseña (mín. 8 caracteres)"
+            },
+
+            staticTitlesEs: {
+                "Secure Session": "Sesión Segura",
+                "Print Official Receipt": "Imprimir Recibo Oficial"
+            },
+
+            staticEnToEs: {
+                // --- Print Header & Shell Navigation ---
+                "Institutional Credit Document": "Documento Institucional de Crédito",
+                "Printed:": "Impreso:",
+                "Credit Operations": "Operaciones de Crédito",
+                "Core CRM Modules": "Módulos Principales CRM",
+                "1. Dashboard": "1. Panel Principal",
+                "2. Leads & Pipeline": "2. Prospectos y Pipeline",
+                "3. Customers": "3. Clientes",
+                "4. Loans": "4. Préstamos",
+                "5. Loan Simulator": "5. Simulador de Crédito",
+                "6. Profile & Team": "6. Perfil y Equipo",
+                "AI Advisory Copilot": "Copiloto Consultivo IA",
+                "NURA Assistant": "Asistente NURA",
+                "Nura Assistant": "Asistente Nura",
+                "Sign Out": "Cerrar Sesión",
+                "Exit": "Salir",
+                "+ New Lead": "+ Nuevo Prospecto",
+                "+ New Customer": "+ Nuevo Cliente",
+                "Loan Simulator": "Simulador de Crédito",
+                "Ask Nura": "Preguntar a Nura",
+                "Dashboard": "Panel Principal",
+                "Leads": "Prospectos",
+                "Customers": "Clientes",
+                "Loans": "Préstamos",
+                "Simulator": "Simulador",
+                "Profile": "Perfil",
+
+                // --- Module 1: Dashboard ---
+                "Executive Credit Dashboard": "Panel Ejecutivo de Crédito",
+                "Real-time portfolio accounting indicators, collections tracking, and origination pipeline": "Indicadores contables de cartera en tiempo real, seguimiento de cobranza y embudo de originación",
+                "Hide Figures": "Ocultar Montos",
+                "Show Figures": "Mostrar Montos",
+                "Open Loan Simulator": "Abrir Simulador de Crédito",
+                "A. Active Loan Portfolio": "A. Cartera Activa de Préstamos",
+                "Unpaid principal balance on active, unliquidated loans (0 loans).": "Saldo de capital insoluto en préstamos activos sin liquidar.",
+                "Filter Active Loans →": "Filtrar Préstamos Activos →",
+                "B. Due Today": "B. Vence Hoy",
+                "Scheduled installments maturing today (": "Cuotas programadas que vencen hoy (",
+                "due).": "por vencer).",
+                "View Current Schedule →": "Ver Calendario al Corriente →",
+                "C. Overdue Payments": "C. Pagos Vencidos (Mora)",
+                "past-due installments across": "cuotas vencidas en",
+                "loans.": "préstamos.",
+                "Open Collections Queue →": "Abrir Cola de Cobranza →",
+                "D. Total Outstanding": "D. Saldo Total por Recuperar",
+                "Principal pending recovery (Total due:": "Capital pendiente de cobro (Total exigible:",
+                "Inspect All Loans →": "Inspeccionar Todos los Préstamos →",
+                "E. Collected This Week": "E. Cobrado Esta Semana",
+                "Payments Mon–Sun (": "Pagos Lun–Dom (",
+                "receipts posted).": "recibos aplicados).",
+                "View Payment Ledger →": "Ver Libro de Pagos →",
+                "Portfolio Distribution by Loan Status": "Distribución de Cartera por Estatus",
+                "Derived strictly from schedule dates and confirmed payments": "Derivado estrictamente de fechas de calendario y pagos confirmados",
+                "Active": "Activos",
+                "Unliquidated": "Sin liquidar",
+                "Current": "Al Corriente",
+                "0 overdue": "0 en mora",
+                "Overdue": "En Mora",
+                "≥ 1 past-due": "≥ 1 vencida",
+                "Paid Off": "Liquidados",
+                "Settled": "Pagados",
+                "Defaulted": "Castigados",
+                "Customers & Origination Funnel": "Embudo de Clientes y Originación",
+                "Live PostgreSQL Customers & Leads connected": "Clientes y Prospectos conectados en vivo con PostgreSQL",
+                "Open Pipeline →": "Abrir Pipeline →",
+                "Directory →": "Directorio →",
+                "Open Leads": "Prospectos Abiertos",
+                "Pipeline →": "Pipeline →",
+                "Calls Today": "Llamadas Hoy",
+                "Call List →": "Cola de Llamadas →",
+
+                // --- Module 2: Leads & Pipeline ---
+                "Leads & Commercial Pipeline": "Prospectos y Pipeline Comercial",
+                "Live PostgreSQL": "PostgreSQL en Vivo",
+                "Prospect qualification, stage transitions, daily Call List queue, and atomic conversion to Customer": "Calificación de prospectos, transiciones de etapa, cola diaria de llamadas y conversión atómica a Cliente",
+                "Pipeline Stages": "Etapas del Pipeline",
+                "Call List & Follow-ups": "Cola de Llamadas y Seguimiento",
+                "Refresh": "Actualizar",
+                "Stage: All Pipeline Stages": "Etapa: Todas las Etapas del Pipeline",
+                "Product: All Credit Products": "Producto: Todos los Productos de Crédito",
+                "Personal Loan": "Préstamo Personal",
+                "Business Loan": "Préstamo Empresarial",
+                "Lead Number": "No. Prospecto",
+                "Prospect / Entity": "Prospecto / Entidad",
+                "Phone & Source": "Teléfono y Origen",
+                "Product Interest": "Producto de Interés",
+                "Requested Amount": "Monto Solicitado",
+                "Pipeline Stage": "Etapa del Pipeline",
+                "Next Follow-up / Outcome": "Próximo Seguimiento / Resultado",
+                "Actions": "Acciones",
+                "Loading leads from PostgreSQL...": "Cargando prospectos desde PostgreSQL...",
+                "Previous": "Anterior",
+                "Next": "Siguiente",
+                "Overdue Calls": "Llamadas Vencidas",
+                "Scheduled prior to today": "Programadas antes de hoy",
+                "Today's Calls & New": "Llamadas de Hoy y Nuevos",
+                "Due today or awaiting 1st contact": "Vencen hoy o esperan 1er contacto",
+                "Upcoming (Next 7d)": "Próximas (Siguientes 7d)",
+                "Scheduled future callbacks": "Seguimientos futuros programados",
+                "Today's Queue": "Cola de Hoy",
+                "Upcoming": "Próximas",
+                "Queue: Today's Calls & New Leads": "Cola: Llamadas de Hoy y Prospectos Nuevos",
+                "← Back to Leads & Pipeline": "← Volver a Prospectos y Pipeline",
+                "📞 Log Call / Note": "📞 Registrar Llamada / Nota",
+                "Change Stage": "Cambiar Etapa",
+                "Edit Lead": "Editar Prospecto",
+                "Convert to Customer →": "Convertir a Cliente →",
+                "✓ Prospect Converted to Customer": "✓ Prospecto Convertido a Cliente",
+                "All historical calls and notes are linked to the customer record.": "Todo el historial de llamadas y notas está vinculado al expediente del cliente.",
+                "Open Customer Profile →": "Abrir Perfil del Cliente →",
+                "Prospect Qualification Details": "Detalles de Calificación del Prospecto",
+                "Entity Type": "Tipo de Persona",
+                "Primary Phone": "Teléfono Principal",
+                "Email Address": "Correo Electrónico",
+                "Lead Source": "Origen del Prospecto",
+                "Next Scheduled Call": "Próxima Llamada Programada",
+                "Summary / Qualification Notes": "Notas de Resumen / Calificación",
+                "Stage Transition History": "Historial de Cambios de Etapa",
+                "Call Logs & Interactions History": "Historial de Llamadas e Interacciones",
+                "Automatically preserved and linked when converted to Customer": "Se conserva y vincula automáticamente al convertirse en Cliente",
+                "+ Add Entry": "+ Agregar Registro",
+
+                // --- Module 3: Customers ---
+                "Customers Directory": "Directorio de Clientes",
+                "Registered borrowers (Individuals & Businesses) with unique": "Acreditados registrados (Personas Físicas y Morales) con identificadores únicos",
+                "identifiers": "asignados",
+                "Status: All Customers": "Estatus: Todos los Clientes",
+                "Active Borrower": "Acreditado Activo",
+                "Pending KYC Verification": "Verificación KYC Pendiente",
+                "Inactive": "Inactivo",
+                "Sort: Newest Registered": "Ordenar: Más Recientes",
+                "Sort: Full Name (A–Z)": "Ordenar: Nombre Completo (A–Z)",
+                "Sort: Customer Number": "Ordenar: Número de Cliente",
+                "Customer Number": "No. Cliente",
+                "Full Name / Legal Entity": "Nombre Completo / Razón Social",
+                "Current Outstanding Balance": "Saldo Insoluto Actual",
+                "Active Loans": "Préstamos Activos",
+                "Customer Status": "Estatus del Cliente",
+                "Last Payment Date": "Fecha Último Pago",
+                "Loading customers from PostgreSQL...": "Cargando clientes desde PostgreSQL...",
+                "← Back to Customers Directory": "← Volver al Directorio de Clientes",
+                "Balance:": "Saldo:",
+                "Edit Customer Information": "Editar Información del Cliente",
+                "A. Personal Information": "A. Información Personal",
+                "B. Credit Summary": "B. Resumen Crediticio",
+                "D. Interactions & Notes": "D. Interacciones y Notas",
+                "E. Documents (KYC)": "E. Documentos (KYC)",
+                "Registered Borrower Information": "Información Registrada del Acreditado",
+                "Live PostgreSQL record": "Registro en vivo en PostgreSQL",
+                "Customer Number (Immutable)": "Número de Cliente (Inmutable)",
+                "Full Legal Name / Razón Social": "Nombre Legal Completo / Razón Social",
+                "Date of Birth / Incorporation": "Fecha de Nacimiento / Constitución",
+                "Primary Phone Number": "Teléfono Principal",
+                "Additional Phone Number": "Teléfono Adicional",
+                "Full Residential / Fiscal Address": "Domicilio Residencial / Fiscal Completo",
+                "Employment / Activity Status": "Estatus Laboral / Actividad",
+                "Employer or Business Name": "Nombre del Empleador o Negocio",
+                "Occupation / Industry": "Ocupación / Giro",
+                "Employment / Business Address": "Domicilio Laboral / Comercial",
+                "Customer Since & Tax ID (RFC)": "Cliente Desde y RFC",
+                "Corporate / Business Borrower Details (Persona Moral)": "Datos de Acreditado Corporativo (Persona Moral)",
+                "Trade Name (Nombre Comercial)": "Nombre Comercial",
+                "Authorized Legal Representative": "Representante Legal Autorizado",
+                "Corporate Tax ID (RFC)": "RFC Corporativo",
+                "Aggregated Customer Credit Summary": "Resumen Crediticio Acumulado del Cliente",
+                "Real-time aggregation across all active loans for this borrower in PostgreSQL": "Agregación en tiempo real de todos los préstamos activos de este acreditado en PostgreSQL",
+                "Current Outstanding Principal": "Capital Insoluto Actual",
+                "Unpaid principal across active loans": "Capital pendiente en préstamos activos",
+                "Total Contractual Amount Due": "Monto Total Contractual por Pagar",
+                "Principal + remaining contractual interest": "Capital + interés contractual restante",
+                "Overdue Amount": "Monto en Mora",
+                "Past-due installments pending collection": "Cuotas vencidas pendientes de cobro",
+                "Active / Total Loans": "Préstamos Activos / Totales",
+                "Next Installment Due": "Próximo Vencimiento",
+                "None scheduled": "Sin programar",
+                "Remaining Installments": "Cuotas Restantes",
+                "Last Payment Recorded": "Último Pago Registrado",
+                "Associated Customer Loans": "Préstamos Asociados al Cliente",
+                "All loan records linked to this borrower in PostgreSQL": "Todos los contratos de préstamo vinculados a este acreditado en PostgreSQL",
+                "Simulate Offer": "Simular Oferta",
+                "+ Originate Loan": "+ Originar Préstamo",
+                "Loan Number": "No. Préstamo",
+                "Product": "Producto",
+                "Status": "Estatus",
+                "Original Principal": "Capital Original",
+                "Unpaid Principal": "Capital Insoluto",
+                "Rem. Interest": "Interés Rest.",
+                "Rem. Contract Total": "Total Contrato Rest.",
+                "Current Payable": "Exigible Hoy",
+                "Maturity Date": "Fecha Vencimiento",
+                "No loans associated with this customer yet.": "Aún no hay préstamos asociados a este cliente.",
+                "Chronological Interactions & Notes": "Historial Cronológico de Interacciones y Notas",
+                "Includes direct customer interactions and inherited pre-conversion lead call history": "Incluye interacciones directas con el cliente e historial heredado de prospecto",
+                "Live Persistence": "Persistencia en Vivo",
+                "Interaction Type": "Tipo de Interacción",
+                "NOTE (Internal / File Note)": "NOTA (Nota Interna de Expediente)",
+                "CALL (Phone Call)": "LLAMADA (Llamada Telefónica)",
+                "Visibility": "Visibilidad",
+                "INTERNAL (Team Only)": "INTERNA (Solo Equipo)",
+                "CUSTOMER_FACING": "VISIBLE AL CLIENTE",
+                "Call Outcome (Optional)": "Resultado de Llamada (Opcional)",
+                "— None / General Note —": "— Ninguno / Nota General —",
+                "Save Interaction to PostgreSQL": "Guardar Interacción en PostgreSQL",
+                "Customer Document Dossier (KYC & Contracts)": "Expediente Documental del Cliente (KYC y Contratos)",
+                "Secure PostgreSQL BYTEA Storage • Encrypted at rest": "Almacenamiento Seguro BYTEA en PostgreSQL • Encriptado en reposo",
+                "Document Type *": "Tipo de Documento *",
+                "INE / Official ID": "INE / Identificación Oficial",
+                "Proof of Address": "Comprobante de Domicilio",
+                "Bank Statement": "Estado de Cuenta Bancario",
+                "Signed Contract": "Contrato Firmado",
+                "Other Document": "Otro Documento",
+                "File (PDF, JPG, PNG - Max 10MB) *": "Archivo (PDF, JPG, PNG - Máx 10MB) *",
+                "Upload to DB": "Subir a BD",
+                "Type": "Tipo",
+                "Filename": "Archivo",
+                "Size & Hash": "Tamaño y Hash",
+                "Uploaded By": "Subido Por",
+
+                // --- Module 4: Loans & Servicing ---
+                "Loans & Portfolio Servicing": "Préstamos y Administración de Cartera",
+                "Authoritative loan accounting, waterfall collections queue, and delinquency management": "Contabilidad autoritativa de préstamos, cola de cobranza en cascada y gestión de mora",
+                "Book of Business": "Cartera de Créditos",
+                "Collections Queue 📞": "Cola de Cobranza 📞",
+                "+ New Loan": "+ Nuevo Préstamo",
+                "Partial Sample: Matching Active Portfolio Exceeds 100 Loans": "Muestra Parcial: La Cartera Activa Supera los 100 Préstamos",
+                "Dismiss": "Descartar",
+                "Status: All Loans": "Estatus: Todos los Préstamos",
+                "ACTIVE (All Active)": "ACTIVO (Todos los Activos)",
+                "CURRENT (0 Overdue Installments)": "AL CORRIENTE (0 Cuotas Vencidas)",
+                "OVERDUE (≥ 1 Overdue Installment)": "EN MORA (≥ 1 Cuota Vencida)",
+                "PAID_OFF (Closed)": "LIQUIDADO (Cerrado)",
+                "DEFAULTED (Cartera Vencida)": "CARTERA VENCIDA (Defaulted)",
+                "All Loans": "Todos",
+                "Current / On-Time": "Al Corriente",
+                "Customer": "Cliente",
+                "Product & Rate": "Producto y Tasa",
+                "Status & DPD": "Estatus y Mora",
+                "Loading loans from PostgreSQL...": "Cargando préstamos desde PostgreSQL...",
+                "Active Overdue Loans": "Préstamos Activos en Mora",
+                "Filter Overdue →": "Filtrar en Mora →",
+                "Maturing Today (Due)": "Vencen Hoy (Exigibles)",
+                "Filter Due Today →": "Filtrar Vencen Hoy →",
+                "Defaulted (Cartera Vencida)": "Cartera Vencida (Defaulted)",
+                "Filter Defaulted →": "Filtrar Cartera Vencida →",
+                "All Actionable": "Todos Exigibles",
+                "Due Today": "Vencen Hoy",
+                "Queue: All Actionable Delinquent & Due Loans": "Cola: Todos los Préstamos en Mora y que Vencen Hoy",
+                "← Back to Loans Table": "← Volver a la Tabla de Préstamos",
+                "✓ Approve Loan": "✓ Aprobar Préstamo",
+                "🏦 Record Disbursement & Activate": "🏦 Registrar Desembolso y Activar",
+                "✕ Cancel Loan": "✕ Cancelar Préstamo",
+                "📞 Log Collection": "📞 Registrar Cobranza",
+                "💳 Record Payment": "💳 Registrar Pago",
+                "⚠️ Mark Defaulted": "⚠️ Marcar Cartera Vencida",
+                "Loan Financial Position & Accounting Summary": "Posición Financiera y Resumen Contable del Préstamo",
+                "Live PostgreSQL balance derivation • Exact MXN cents without frontend recalculation": "Derivación de saldos en vivo desde PostgreSQL • Centavos exactos en MXN sin recálculo en frontend",
+                "Live Accounting Ledger": "Libro Contable en Vivo",
+                "1. Global Contractual Position (Lifecycle Obligations)": "1. Posición Contractual Global (Obligaciones del Contrato)",
+                "Contract-wide Balances": "Saldos Globales del Contrato",
+                "1. Original Principal": "1. Capital Original",
+                "Approved contract baseline.": "Base contractual aprobada.",
+                "2. Unpaid Principal": "2. Capital Insoluto",
+                "Principal pending repayment.": "Capital pendiente de pago.",
+                "3. Rem. Contract Interest": "3. Interés Contractual Rest.",
+                "Unpaid contractual interest.": "Interés contractual no pagado.",
+                "4. Remaining Total": "4. Total Restante",
+                "Full Payoff": "Liquidación Total",
+                "Total obligation to settle loan.": "Obligación total para liquidar.",
+                "2. Immediate Enforceability (Exigibilidad al Día de Hoy)": "2. Exigibilidad Inmediata (Al Día de Hoy)",
+                "As of Current Date": "A la Fecha Actual",
+                "5. Accrued Interest": "5. Interés Devengado",
+                "Earned on matured installments.": "Generado en cuotas vencidas.",
+                "6. Due Today": "6. Vence Hoy",
+                "Maturing today (due == today).": "Cuota que vence hoy (due == hoy).",
+                "7. Overdue Amount": "7. Monto en Mora",
+                "Past-due (due_date < today).": "Vencido no pagado (due_date < hoy).",
+                "8. Current Payable": "8. Exigible Hoy",
+                "Collectible": "Cobrable Hoy",
+                "Strictly payable today (6 + 7).": "Estrictamente exigible hoy (6 + 7).",
+                "Accounting Accrual Convention:": "Convención Contable de Devengo:",
+                "Approved Contractual Terms (Immutable Specifications)": "Términos Contractuales Aprobados (Especificaciones Inmutables)",
+                "Fixed at origination • Parameter baseline for amortization schedule": "Fijados en la originación • Línea base para la tabla de amortización",
+                "Contract Snapshot": "Snapshot Contractual",
+                "Product & Version": "Producto y Versión",
+                "Monthly Flat Rate": "Tasa Mensual",
+                "Contractual Term": "Plazo Contractual",
+                "Interest Periods": "Periodos de Interés",
+                "First Payment Due": "Primer Pago",
+                "View Engine Specifications, Start Date & Origination Notes": "Ver Especificaciones del Motor, Fecha de Inicio y Notas de Originación",
+                "Inspect Specs ↓": "Ver Especificaciones ↓",
+                "Contract Start Date": "Fecha de Inicio del Contrato",
+                "Interest Method": "Método de Interés",
+                "Interest Basis": "Base de Interés",
+                "Accrual Convention": "Convención de Devengo",
+                "Rounding Policy": "Política de Redondeo",
+                "Currency Standard": "Estándar de Moneda",
+                "MXN (Exact Cents)": "MXN (Centavos Exactos)",
+                "Origination File Notes": "Notas del Expediente de Originación",
+                "Contractual Amortization Schedule & Payment Ledger": "Tabla de Amortización Contractual y Libro de Pagos",
+                "Authoritative installment breakdown • Exact MXN cents • Direct contractual dates without timezone shift": "Desglose autoritativo por cuota • Centavos exactos en MXN • Fechas contractuales sin desfase horario",
+                "Due Date": "Fecha Vencimiento",
+                "Principal Due": "Capital Exigible",
+                "Interest Due": "Interés Exigible",
+                "Total Due": "Total Cuota",
+                "Amount Paid": "Monto Pagado",
+                "Remaining Balance": "Saldo Pendiente",
+                "Select a loan record to inspect its amortization schedule.": "Selecciona un préstamo para inspeccionar su tabla de amortización.",
+                "Schedule Audit Record:": "Registro de Auditoría del Calendario:",
+                "No installments loaded": "Sin cuotas cargadas",
+                "Payment History & Allocation Ledger": "Historial de Pagos y Libro de Asignación",
+                "Immutable record of posted receipts, per-installment waterfall allocations, and controlled LIFO reversals": "Registro inmutable de recibos aplicados, prelación en cascada por cuota y reversiones LIFO controladas",
+                "Receipt / Allocations": "Recibo / Asignación",
+                "Effective Date & Method": "Fecha Efectiva y Método",
+                "Interest Applied": "Interés Aplicado",
+                "Principal Applied": "Capital Aplicado",
+                "Total Received": "Total Recibido",
+                "No payments recorded for this loan yet.": "Aún no hay pagos registrados para este préstamo.",
+                "Operational Lifecycle & Servicing Audit": "Auditoría Operativa del Ciclo de Vida y Cobranza",
+                "Immutable audit timestamps and actor traceability recorded in PostgreSQL": "Marcas de tiempo inmutables y trazabilidad de operadores registradas en PostgreSQL",
+                "1. Credit Underwriting Approval": "1. Aprobación de Suscripción de Crédito",
+                "Approval Date:": "Fecha de Aprobación:",
+                "Approving User:": "Usuario Aprobador:",
+                "Underwriter Notes": "Notas de Suscripción",
+                "2. Activation & Bank Disbursement": "2. Activación y Desembolso Bancario",
+                "Disbursement Date:": "Fecha de Desembolso:",
+                "Method:": "Método:",
+                "Bank Reference:": "Referencia Bancaria:",
+                "Disbursement Notes": "Notas de Desembolso",
+                "3. Cancellation Audit Record": "3. Registro de Auditoría de Cancelación",
+                "Cancelled Date:": "Fecha de Cancelación:",
+                "Cancellation Reason:": "Motivo de Cancelación:",
+                "4. Delinquency Audit: Defaulted / Cartera Vencida": "4. Auditoría de Mora: Cartera Vencida (Defaulted)",
+                "Default Reason:": "Motivo de Cartera Vencida:",
+
+                // --- Module 5: Loan Simulator ---
+                "NURA CRM — Loan Amortization Schedule": "NURA CRM — Tabla de Amortización de Préstamo",
+                "Non-Binding Credit Simulation & Repayment Projection (Currency: MXN)": "Simulación de Crédito No Vinculante y Proyección de Pagos (Moneda: MXN)",
+                "Simulation ID:": "ID de Simulación:",
+                "Generated:": "Generado:",
+                "Deterministic flat-interest engine on original principal • Simulating does not create or approve a loan": "Motor determinista de cálculo de intereses • Simular no crea ni aprueba un préstamo",
+                "Start New Simulation": "Nueva Simulación",
+                "+ Compare Scenario": "+ Comparar Escenario",
+                "Print / Save PDF": "Imprimir / Guardar PDF",
+                "Editable Simulation Parameters": "Parámetros Editables de Simulación",
+                "MXN Exact Cents": "MXN Centavos Exactos",
+                "Credit Product": "Producto de Crédito",
+                "Interest Calculation Method": "Método de Cálculo de Interés",
+                "Loan Amount (MXN)": "Monto del Préstamo (MXN)",
+                "Monthly Rate (%)": "Tasa Mensual (%)",
+                "Loan Term (Months)": "Plazo del Préstamo (Meses)",
+                "Weekly Payments (Auto Calendar)": "Pagos Semanales (Calendario Auto)",
+                "Start Date": "Fecha de Inicio",
+                "First Payment Date": "Fecha Primer Pago",
+                "Simulation Financial Summary": "Resumen Financiero de la Simulación",
+                "Total Interest (": "Interés Total (",
+                "Periods)": "Periodos)",
+                "Total Repayment": "Pago Total Acumulado",
+                "Regular Weekly Payment": "Pago Semanal Regular",
+                "Final Installment (#": "Cuota Final (#",
+                "Installments": "Número de Pagos",
+                "Estimated Payoff Date": "Fecha Estimada de Liquidación",
+                "Calculation Method & Calendar Assumption Disclosure:": "Nota sobre Método de Cálculo y Calendario:",
+                "Saved Scenario Comparison": "Comparativa de Escenarios Guardados",
+                "Clear List": "Limpiar Lista",
+                "Scenario ID": "ID Escenario",
+                "Principal": "Capital",
+                "Monthly Rate": "Tasa Mensual",
+                "Term / Periods": "Plazo / Periodos",
+                "Weekly Payment": "Pago Semanal",
+                "Total Interest": "Interés Total",
+                "Amortization Schedule Table": "Tabla de Amortización",
+                "✓ Cent-Exact Invariant Verified": "✓ Invariante Exacta en Centavos Verificada",
+                "Installment #": "Cuota #",
+                "Beginning Principal Balance": "Saldo Inicial de Capital",
+                "Principal Component": "Abono a Capital",
+                "Interest Component": "Componente de Interés",
+                "Scheduled Payment": "Pago Programado",
+                "Ending Principal Balance": "Saldo Final de Capital",
+                "NURA CRM • Non-Binding Financial Simulation Document • All figures in MXN": "NURA CRM • Documento de Simulación Financiera No Vinculante • Cifras en MXN",
+                "Multi-page headers enabled": "Encabezados multipágina habilitados",
+
+                // --- Module 6: Profile & Team & Module 7: NURA Assistant ---
+                "Profile, Team & Security Audit": "Perfil, Equipo y Auditoría de Seguridad",
+                "Manage your personal details, team member accounts, RBAC roles, and system audit logs": "Administra tus datos personales, cuentas del equipo, roles RBAC y bitácoras de auditoría",
+                "Owner Admin Activation": "Activación de Socio Administrador",
+                "Activate Owner Admin": "Activar Socio Administrador",
+                "Secure Sign Out": "Cerrar Sesión de Forma Segura",
+                "Account, Team & Security Administration": "Administración de Cuenta, Equipo y Seguridad",
+                "Team & Access Management": "Gestión de Equipo y Accesos",
+                "Add Owners, Sales Agents, and manage team member roles": "Agregar Socios, Asesores Comerciales y administrar roles del equipo",
+                "Security Audit Trail (Append-Only)": "Bitácora de Auditoría de Seguridad (Inmutable)",
+                "Inspect real-time authentication, lead, customer, and administrative events": "Inspeccionar eventos en tiempo real de autenticación, prospectos, clientes y administración",
+                "Personal Information": "Información Personal",
+                "Name, email address, and assigned CRM role": "Nombre, correo electrónico, rol asignado y preferencia de idioma",
+                "Security & Privacy": "Seguridad y Privacidad",
+                "Portfolio figure visibility and access controls": "Visibilidad de montos financieros del portafolio y controles de acceso",
+                "Conversations": "Conversaciones",
+                "Saved advisory sessions": "Sesiones consultivas guardadas",
+                "Delete": "Eliminar",
+                "+ New": "+ Nueva",
+                "Nura CRM Assistant": "Asistente Nura CRM",
+                "Advisory Mode • Read-Only Safety": "Modo Consultivo • Seguridad de Solo Lectura",
+                "Send": "Enviar",
+
+                // --- All 18 Modals ---
+                "Register New Lead": "Registrar Nuevo Prospecto",
+                "Entity Type *": "Tipo de Persona *",
+                "Individual (Persona Física)": "Persona Física (Individual)",
+                "Business (Persona Moral)": "Persona Moral (Empresa)",
+                "Lead Source *": "Origen del Prospecto *",
+                "Priority *": "Prioridad *",
+                "Prospect Full Name / Razón Social *": "Nombre Completo del Prospecto / Razón Social *",
+                "Legal Representative": "Representante Legal",
+                "Primary Phone Number *": "Teléfono Principal *",
+                "Product Interest *": "Producto de Interés *",
+                "Requested Amount (MXN Pesos)": "Monto Solicitado (Pesos MXN)",
+                "Next Follow-up Call Date/Time": "Fecha/Hora de Próxima Llamada",
+                "Tax ID (RFC)": "RFC",
+                "Initial Qualification Notes": "Notas Iniciales de Calificación",
+                "Cancel": "Cancelar",
+                "Save Customer": "Guardar Cliente",
+                "Originate New Loan Contract": "Originar Nuevo Contrato de Préstamo",
+                "Initial Status: DRAFT": "Estatus Inicial: BORRADOR",
+                "Complete borrower selection, contractual parameters, and schedule review before creating the PostgreSQL record": "Completa la selección del acreditado, parámetros contractuales y revisión del calendario antes de crear el registro en PostgreSQL",
+                "1. Borrower & Terms": "1. Acreditado y Términos",
+                "2. Financial Review": "2. Revisión Financiera",
+                "3. Confirm": "3. Confirmar",
+                "Stage 1 — Borrower & Contractual Loan Terms": "Etapa 1 — Acreditado y Términos Contractuales del Préstamo",
+                "Requires ACTIVE customer status": "Requiere cliente con estatus ACTIVO",
+                "Search": "Buscar",
+                "Loading active customers...": "Cargando clientes activos...",
+                "Change Borrower": "Cambiar Acreditado",
+                "1. Credit Product *": "1. Producto de Crédito *",
+                "Authorized product line": "Línea de producto autorizada",
+                "Interest Method *": "Método de Interés *",
+                "2. Principal Amount (MXN) *": "2. Monto de Capital (MXN) *",
+                "3. Monthly Rate (%) *": "3. Tasa Mensual (%) *",
+                "Quick Duration Presets (1–4m Commercial / 6–12m 52-Week Calendar)": "Plazos Rápidos (1–4m Comercial / 6–12m Calendario 52 Semanas)",
+                "4 Months (16 Weeks) Standard": "Estándar 4 Meses (16 Semanas)",
+                "4. Loan Term (Months) *": "4. Plazo del Préstamo (Meses) *",
+                "1 to 24 months (max 104 wks)": "1 a 24 meses (máx. 104 sem)",
+                "Weekly Installments (Auto)": "Cuotas Semanales (Auto)",
+                "5. Payment Frequency": "5. Frecuencia de Pago",
+                "WEEKLY (Every 7 Days)": "SEMANAL (Cada 7 Días)",
+                "Fixed": "Fijo",
+                "Authoritative weekly schedule": "Calendario semanal autoritativo",
+                "6. Contract Start Date *": "6. Fecha de Inicio *",
+                "7. First Payment Due *": "7. Fecha Primer Pago *",
+                "8. Origination File Notes (Optional)": "8. Notas de Originación (Opcional)",
+                "Stage 2 — Financial Summary & Amortization Schedule": "Etapa 2 — Resumen Financiero y Tabla de Amortización",
+                "Exact MXN Cents": "Centavos Exactos MXN",
+                "Total Contract Repayment": "Total Contractual a Pagar",
+                "Principal + Interest": "Capital + Interés",
+                "Total contractual obligation across all installments": "Obligación contractual total en todas las cuotas",
+                "Weekly Installment Amount": "Monto de Cuota Semanal",
+                "Final installment:": "Cuota final:",
+                "Monthly Interest": "Interés Mensual",
+                "Scheduled Total Due": "Total Cuota Programada",
+                "Stage 3 — Confirm Loan Origination:": "Etapa 3 — Confirmar Originación del Préstamo:",
+                "Create Draft Loan →": "Crear Préstamo en Borrador →",
+                "Update Pipeline Stage": "Actualizar Etapa del Pipeline",
+                "New Stage *": "Nueva Etapa *",
+                "Lost Reason *": "Motivo de Descarte *",
+                "Next Follow-up Date/Time *": "Fecha/Hora de Próximo Seguimiento *",
+                "Transition Note": "Nota de Transición",
+                "Confirm Stage": "Confirmar Etapa",
+                "Log Call Outcome or Interaction": "Registrar Resultado de Llamada o Interacción",
+                "Channel *": "Canal *",
+                "Call Outcome": "Resultado de Llamada",
+                "Schedule Next Follow-up Call": "Programar Próxima Llamada de Seguimiento",
+                "Call / Interaction Notes *": "Notas de Llamada / Interacción *",
+                "Save Call Log": "Guardar Registro",
+                "Convert Lead to Customer": "Convertir Prospecto a Cliente",
+                "Deduplicates against existing customers and transfers all call history": "Verifica duplicados contra clientes existentes y transfiere todo el historial de llamadas",
+                "Customer Entity Type *": "Tipo de Persona del Cliente *",
+                "Authorized Legal Representative *": "Representante Legal Autorizado *",
+                "Conversion Note": "Nota de Conversión",
+                "Confirm Conversion": "Confirmar Conversión",
+                "Register New Customer": "Registrar Nuevo Cliente",
+                "Phone, Email, and RFC are automatically checked to prevent duplicates": "Teléfono, Correo y RFC se verifican automáticamente para evitar duplicados",
+                "Customer Status *": "Estatus del Cliente *",
+                "KYC Verification *": "Verificación KYC *",
+                "Full Legal Name *": "Nombre Legal Completo *",
+                "Legal Representative Name *": "Nombre del Representante Legal *",
+                "Approve Credit Underwriting": "Aprobar Suscripción de Crédito",
+                "Authorize contractual terms before bank disbursement and schedule activation": "Autoriza los términos contractuales antes del desembolso bancario y la activación del calendario",
+                "Loan & Borrower Identification": "Identificación del Préstamo y Acreditado",
+                "Term & Periods": "Plazo y Periodos",
+                "Weekly Installment": "Cuota Semanal",
+                "Underwriting Approval Notes (Optional)": "Notas de Aprobación de Suscripción (Opcional)",
+                "Confirm Credit Approval:": "Confirmar Aprobación de Crédito:",
+                "Confirm Approval →": "Confirmar Aprobación →",
+                "Record Disbursement & Activate Loan": "Registrar Desembolso y Activar Préstamo",
+                "Register verified payout details to activate accounting balances and installment collection": "Registra los datos verificados de entrega de fondos para activar saldos contables y cobranza",
+                "Approved Loan Contract": "Contrato de Préstamo Aprobado",
+                "Amount to Disburse": "Monto a Desembolsar",
+                "Term": "Plazo",
+                "Total Contract Due": "Total del Contrato",
+                "Disbursement Method *": "Método de Desembolso *",
+                "Disbursement Date & Time (Optional)": "Fecha y Hora de Desembolso (Opcional)",
+                "Defaults to current server time if blank": "Usa la hora actual del servidor si se deja en blanco",
+                "Bank Reference / Tracking Key (Clave de Rastreo / Folio) *": "Referencia Bancaria / Clave de Rastreo / Folio *",
+                "Disbursement Operational Notes (Optional)": "Notas Operativas de Desembolso (Opcional)",
+                "Operational Notice:": "Aviso Operativo:",
+                "Confirm External Disbursement:": "Confirmar Desembolso Externo:",
+                "Activate & Record Disbursement →": "Activar y Registrar Desembolso →",
+                "Cancel Pre-Disbursement Loan": "Cancelar Préstamo Pre-Desembolso",
+                "Permanently void a DRAFT or APPROVED loan prior to disbursement": "Anula permanentemente un préstamo en BORRADOR o APROBADO antes de su desembolso",
+                "Mandatory Cancellation Reason *": "Motivo Obligatorio de Cancelación *",
+                "Confirm Irreversible Cancellation:": "Confirmar Cancelación Irreversible:",
+                "Back": "Volver",
+                "Confirm Cancellation": "Confirmar Cancelación",
+                "Record Loan Payment Receipt": "Registrar Recibo de Pago de Préstamo",
+                "Allocates chronologically to oldest unpaid installments (Interest first, then Principal)": "Asigna cronológicamente a las cuotas insolutas más antiguas (Interés primero, después Capital)",
+                "Use Payable": "Usar Exigible",
+                "Next Installment": "Siguiente Cuota",
+                "Use Installment": "Usar Cuota",
+                "Pay in Full": "Liquidar Total",
+                "Payment Amount Received (MXN) *": "Monto de Pago Recibido (MXN) *",
+                "Payment Method *": "Método de Pago *",
+                "Effective Date & Time (Optional)": "Fecha y Hora Efectiva (Opcional)",
+                "Bank Reference / Tracking Key (Clave de Rastreo / Folio)": "Referencia Bancaria / Clave de Rastreo / Folio",
+                "Collection Notes (Optional)": "Notas de Cobranza (Opcional)",
+                "Confirm Verified Payment:": "Confirmar Pago Verificado:",
+                "Post Payment →": "Aplicar Pago →",
+                "Reverse Posted Payment": "Revertir Pago Aplicado",
+                "Controlled LIFO reversal • Restores exact prior loan and installment balances": "Reversión LIFO controlada • Restaura exactamente los saldos previos del préstamo y sus cuotas",
+                "Mandatory Reversal Reason *": "Motivo Obligatorio de Reversión *",
+                "Confirm LIFO Payment Reversal:": "Confirmar Reversión LIFO de Pago:",
+                "Confirm Reversal": "Confirmar Reversión",
+                "Transition to DEFAULTED": "Transicionar a CARTERA VENCIDA",
+                "Declare severely delinquent loan as defaulted cartera vencida": "Declarar préstamo con mora severa en estatus de cartera vencida",
+                "Mandatory Default / Castigo Reason (min. 5 chars) *": "Motivo Obligatorio de Cartera Vencida / Castigo (mín. 5 caracteres) *",
+                "Confirm Irreversible Default Status:": "Confirmar Estatus Irreversible de Cartera Vencida:",
+                "Confirm Defaulted →": "Confirmar Cartera Vencida →",
+                "Log Collection & Promise of Payment": "Registrar Gestión de Cobranza y Promesa de Pago",
+                "Record borrower interaction, payment commitment and callback schedule": "Registra interacción con el acreditado, compromiso de pago y fecha de próximo seguimiento",
+                "Contact Channel *": "Canal de Contacto *",
+                "Call / Collection Outcome *": "Resultado de Cobranza *",
+                "PROMISE OF PAYMENT (Compromiso)": "PROMESA DE PAGO (Compromiso)",
+                "ANSWERED (Negotiation Pending)": "CONTESTÓ (Negociación Pendiente)",
+                "REFUSED TO PAY (Negativa de pago)": "NEGATIVA DE PAGO (Refused to Pay)",
+                "Promised Payment Amount (MXN)": "Monto Prometido de Pago (MXN)",
+                "Next Follow-up Call / Date": "Fecha/Hora de Próximo Seguimiento",
+                "Collection Observations & Agreements *": "Observaciones y Acuerdos de Cobranza *",
+                "Save Collection Log": "Guardar Gestión de Cobranza",
+                "Details": "Detalles",
+                "Close": "Cerrar",
+                "Activate": "Activar",
+                "Add Team Member": "Agregar Integrante del Equipo",
+                "Create Account": "Crear Cuenta",
+                "Current Team Members": "Integrantes Actuales del Equipo",
+                "Scheduled for Next Stage": "Programado para la Siguiente Etapa",
+                "Understood": "Entendido"
+            },
+
+            applyStaticTranslations(rootNode = null) {
                 document.querySelectorAll('[data-i18n]').forEach(el => {
                     const key = el.getAttribute('data-i18n');
                     if (key) el.textContent = this.t(key);
@@ -4725,6 +5332,85 @@
                 document.querySelectorAll('[data-i18n-title]').forEach(el => {
                     const key = el.getAttribute('data-i18n-title');
                     if (key) el.setAttribute('title', this.t(key));
+                });
+
+                // Translate static DOM inside #app-view and #print-view-container (never #auth-view)
+                const containers = rootNode
+                    ? [rootNode]
+                    : [document.getElementById('app-view'), document.getElementById('print-view-container')].filter(Boolean);
+
+                const isEs = (this.currentLang === 'es');
+
+                containers.forEach(container => {
+                    // 1. Placeholders
+                    container.querySelectorAll('[placeholder]').forEach(el => {
+                        if (!el.hasAttribute('data-nura-orig-placeholder')) {
+                            el.setAttribute('data-nura-orig-placeholder', el.getAttribute('placeholder') || '');
+                        }
+                        const orig = el.getAttribute('data-nura-orig-placeholder') || '';
+                        if (isEs && this.staticPlaceholdersEs[orig]) {
+                            el.setAttribute('placeholder', this.staticPlaceholdersEs[orig]);
+                        } else if (!isEs) {
+                            el.setAttribute('placeholder', orig);
+                        }
+                    });
+
+                    // 2. Titles (Tooltips)
+                    container.querySelectorAll('[title]').forEach(el => {
+                        if (!el.hasAttribute('data-nura-orig-title')) {
+                            el.setAttribute('data-nura-orig-title', el.getAttribute('title') || '');
+                        }
+                        const orig = el.getAttribute('data-nura-orig-title') || '';
+                        if (isEs && this.staticTitlesEs[orig]) {
+                            el.setAttribute('title', this.staticTitlesEs[orig]);
+                        } else if (!isEs) {
+                            el.setAttribute('title', orig);
+                        }
+                    });
+
+                    // 3. Text Nodes (Preserving all child elements, IDs, and input values)
+                    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+                        acceptNode(node) {
+                            const parent = node.parentElement;
+                            if (!parent) return NodeFilter.FILTER_REJECT;
+                            const tag = parent.tagName;
+                            if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'TEXTAREA') {
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    });
+
+                    let textNode;
+                    while ((textNode = walker.nextNode())) {
+                        if (textNode.__nuraOrigEn === undefined) {
+                            const currentVal = textNode.nodeValue || '';
+                            const normalized = currentVal.replace(/\s+/g, ' ').trim();
+                            if (normalized && (this.staticEnToEs[normalized] || (`enum.${normalized}` in this.dictionaries.es))) {
+                                textNode.__nuraOrigEn = currentVal;
+                                textNode.__nuraNormKey = normalized;
+                            } else {
+                                textNode.__nuraOrigEn = null;
+                            }
+                        }
+
+                        if (textNode.__nuraOrigEn) {
+                            if (!isEs) {
+                                textNode.nodeValue = textNode.__nuraOrigEn;
+                            } else {
+                                const key = textNode.__nuraNormKey;
+                                const translated = this.staticEnToEs[key] || this.tEnum(key);
+                                if (translated && translated !== key) {
+                                    const orig = textNode.__nuraOrigEn;
+                                    const leadMatch = orig.match(/^\s*/);
+                                    const trailMatch = orig.match(/\s*$/);
+                                    const leading = leadMatch ? leadMatch[0] : '';
+                                    const trailing = trailMatch ? trailMatch[0] : '';
+                                    textNode.nodeValue = `${leading}${translated}${trailing}`;
+                                }
+                            }
+                        }
+                    }
                 });
 
                 // Sync active section header title
@@ -5005,6 +5691,9 @@
                 if (res.ok) {
                     const data = await res.json();
                     currentUser = data;
+                    const accountLang = (data.preferred_language === 'es') ? 'es' : 'en';
+                    await NuraI18n.setLanguage(accountLang, { persist: false });
+
                     const initials = data.email.substring(0, 2).toUpperCase();
                     const displayName = data.full_name || data.email.split('@')[0].toUpperCase();
 
@@ -5059,6 +5748,9 @@
         }
 
         function mostrarAuthView() {
+            if (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang !== 'en') {
+                NuraI18n.setLanguage('en', { persist: false });
+            }
             document.getElementById('app-view').classList.add('hidden');
             document.getElementById('auth-view').classList.remove('hidden');
             currentConversationId = null;
@@ -8916,38 +9608,79 @@ async function loadDashboardSummary() {
             }
         }
 
+        window.currentOpenProfileSection = null;
+
         function openProfileSection(section) {
+            window.currentOpenProfileSection = section;
             const modal = document.getElementById('profile-detail-modal');
             const card = document.getElementById('profile-detail-card');
             const titleEl = document.getElementById('profile-modal-title');
             const bodyEl = document.getElementById('profile-modal-body');
+            const closeBtn = document.querySelector('#profile-modal-footer button');
 
-            const email = currentUser?.email || 'Not available';
+            const email = currentUser?.email || t('common.not_available');
             const displayName = currentUser?.full_name || email.split('@')[0].toUpperCase();
             const roleName = currentUser?.role || 'Standard';
+            const activeLang = NuraI18n.currentLang;
+
+            if (closeBtn) {
+                closeBtn.innerText = t('common.close');
+            }
 
             if (section === 'personal') {
-                titleEl.innerText = 'Personal Information';
+                titleEl.innerText = t('profile.personal.title');
                 bodyEl.innerHTML = `
                     <div class="space-y-2.5">
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Email</p><p class="text-xs font-bold text-slate-900 mt-0.5">${escapeHtml(email)}</p></div>
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Name</p><p class="text-xs font-bold text-slate-900 mt-0.5">${escapeHtml(displayName)}</p></div>
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100"><p class="text-[10px] font-semibold text-slate-400 uppercase">Role</p><p class="text-xs font-bold text-blue-700 mt-0.5">${escapeHtml(roleName)}</p></div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <p class="text-[10px] font-semibold text-slate-400 uppercase">${escapeHtml(t('profile.personal.email'))}</p>
+                            <p class="text-xs font-bold text-slate-900 mt-0.5">${escapeHtml(email)}</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <p class="text-[10px] font-semibold text-slate-400 uppercase">${escapeHtml(t('profile.personal.name'))}</p>
+                            <p class="text-xs font-bold text-slate-900 mt-0.5">${escapeHtml(displayName)}</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <p class="text-[10px] font-semibold text-slate-400 uppercase">${escapeHtml(t('profile.personal.role'))}</p>
+                            <p class="text-xs font-bold text-blue-700 mt-0.5">${escapeHtml(tEnum(roleName))}</p>
+                        </div>
+
+                        <div class="pt-3 mt-3 border-t border-slate-200/80 space-y-2">
+                            <div>
+                                <p class="text-[10px] font-extrabold text-slate-700 uppercase tracking-wider">${escapeHtml(t('profile.lang.section_title'))}</p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(t('profile.lang.section_subtitle'))}</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 pt-1">
+                                <button type="button" onclick="NuraI18n.setLanguage('en', { persist: true })"
+                                    class="py-2.5 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 ${activeLang === 'en' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'}">
+                                    <span>English</span>
+                                    ${activeLang === 'en' ? '<span class="text-[10px]">✓</span>' : ''}
+                                </button>
+                                <button type="button" onclick="NuraI18n.setLanguage('es', { persist: true })"
+                                    class="py-2.5 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 ${activeLang === 'es' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'}">
+                                    <span>Español</span>
+                                    ${activeLang === 'es' ? '<span class="text-[10px]">✓</span>' : ''}
+                                </button>
+                            </div>
+                            <p id="profile-lang-status" class="hidden text-[11px] font-semibold text-emerald-700 pt-0.5"></p>
+                        </div>
                     </div>
                 `;
             } else {
-                titleEl.innerText = 'Security & Privacy';
-                bodyEl.innerHTML = `<p class="text-xs text-slate-600">Session authenticated with HttpOnly cookies, CSRF token protection, and append-only PostgreSQL audit logs.</p>`;
+                titleEl.innerText = t('profile.security.title');
+                bodyEl.innerHTML = `<p class="text-xs text-slate-600">${escapeHtml(t('profile.security.modal_body'))}</p>`;
             }
 
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                card.classList.remove('scale-95', 'translate-y-4');
-            }, 10);
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    card.classList.remove('scale-95', 'translate-y-4');
+                }, 10);
+            }
         }
 
         function closeProfileSection() {
+            window.currentOpenProfileSection = null;
             const modal = document.getElementById('profile-detail-modal');
             const card = document.getElementById('profile-detail-card');
             modal.classList.add('opacity-0');
