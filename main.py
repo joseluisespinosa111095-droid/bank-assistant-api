@@ -1718,6 +1718,7 @@ class LoanPaymentCreateRequest(BaseModel):
     payment_reference: Optional[str] = Field(default=None, max_length=120)
     paid_at: Optional[str] = None
     notes: Optional[str] = Field(default=None, max_length=1000)
+    apply_early_payoff_rebate: bool = Field(default=False)
 
 class LoanPaymentReverseRequest(BaseModel):
     reversal_reason: str = Field(..., min_length=3, max_length=255)
@@ -4304,8 +4305,63 @@ def serialize_loan_summary(l: LoanModel, today_local: date) -> dict:
     }
 
 
+def compute_early_payoff_breakdown(
+    l: LoanModel,
+    today_local: date,
+    db: Optional[Session] = None,
+    base_summary: Optional[dict] = None
+) -> dict:
+    rem_contract_total = int(
+        (base_summary or {}).get("remaining_contract_total_cents")
+        or getattr(l, "remaining_contract_total_cents", 0)
+        or 0
+    )
+    if l.status != "ACTIVE":
+        return {
+            "unpaid_accrued_interest_cents": 0,
+            "early_payoff_rebate_cents": 0,
+            "early_payoff_amount_cents": rem_contract_total
+        }
+
+    installments = list(getattr(l, "installments", None) or [])
+    if not installments and db is not None:
+        installments = (
+            db.query(LoanInstallmentModel)
+            .filter(LoanInstallmentModel.loan_id == l.id)
+            .order_by(LoanInstallmentModel.installment_number.asc())
+            .all()
+        )
+
+    if not installments:
+        return {
+            "unpaid_accrued_interest_cents": 0,
+            "early_payoff_rebate_cents": 0,
+            "early_payoff_amount_cents": rem_contract_total
+        }
+
+    unpaid_principal = 0
+    unpaid_accrued_interest = 0
+    unearned_future_interest = 0
+
+    for inst in installments:
+        rem_p = max(0, int(inst.principal_due_cents or 0) - int(inst.principal_paid_cents or 0))
+        rem_i = max(0, int(inst.interest_due_cents or 0) - int(inst.interest_paid_cents or 0))
+        unpaid_principal += rem_p
+        if inst.due_date and inst.due_date <= today_local:
+            unpaid_accrued_interest += rem_i
+        else:
+            unearned_future_interest += rem_i
+
+    return {
+        "unpaid_accrued_interest_cents": unpaid_accrued_interest,
+        "early_payoff_rebate_cents": unearned_future_interest,
+        "early_payoff_amount_cents": unpaid_principal + unpaid_accrued_interest
+    }
+
+
 def serialize_loan_detail(l: LoanModel, today_local: date, db: Optional[Session] = None) -> dict:
     base = serialize_loan_summary(l, today_local)
+    base.update(compute_early_payoff_breakdown(l, today_local, db=db, base_summary=base))
 
     defaulted_at_iso = None
     defaulted_by_user_id = None
@@ -5215,29 +5271,96 @@ def create_loan_payment(
             LoanInstallmentModel.loan_id == loan_id, LoanInstallmentModel.remaining_amount_cents > 0
         ).order_by(LoanInstallmentModel.installment_number.asc()).with_for_update().all()
 
+        _, _, _, today_local = get_local_day_bounds_utc()
+        rebated_installments_map = {}
+        total_rebated_interest_cents = 0
+        effective_notes = payload.notes
+
+        if getattr(payload, "apply_early_payoff_rebate", False):
+            if current_user.role not in ("OWNER_ADMIN", "CREDIT_ADVISOR"):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only OWNER_ADMIN or CREDIT_ADVISOR can authorize an early payoff interest rebate."
+                )
+
+            unpaid_principal = 0
+            unpaid_accrued_interest = 0
+            unearned_future_interest = 0
+            for inst in installments:
+                rem_p = max(0, int(inst.principal_due_cents or 0) - int(inst.principal_paid_cents or 0))
+                rem_i = max(0, int(inst.interest_due_cents or 0) - int(inst.interest_paid_cents or 0))
+                unpaid_principal += rem_p
+                if inst.due_date and inst.due_date <= today_local:
+                    unpaid_accrued_interest += rem_i
+                else:
+                    unearned_future_interest += rem_i
+
+            expected_early_cents = unpaid_principal + unpaid_accrued_interest
+            if unearned_future_interest <= 0:
+                raise HTTPException(
+                    status_code=422,
+                    detail="This loan has no unearned future interest eligible for early payoff rebate."
+                )
+            if amount_cents != expected_early_cents:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Early payoff with interest rebate requires exact settlement amount of ${expected_early_cents / 100:,.2f} MXN."
+                )
+
+            for inst in installments:
+                if inst.due_date and inst.due_date > today_local:
+                    rem_i = max(0, int(inst.interest_due_cents or 0) - int(inst.interest_paid_cents or 0))
+                    if rem_i > 0:
+                        rebated_installments_map[str(inst.id)] = rem_i
+                        total_rebated_interest_cents += rem_i
+                        inst.interest_due_cents = int(inst.interest_paid_cents or 0)
+                        inst.scheduled_payment_cents = int(inst.principal_due_cents or 0) + inst.interest_due_cents
+                        if hasattr(inst, "remaining_interest_cents"):
+                            inst.remaining_interest_cents = 0
+                        inst.remaining_amount_cents = max(0, inst.scheduled_payment_cents - int(inst.amount_paid_cents or 0))
+
+            loan.total_interest_cents = max(0, int(loan.total_interest_cents or 0) - total_rebated_interest_cents)
+            loan.total_repayment_cents = int(loan.principal_cents or 0) + loan.total_interest_cents
+            loan.remaining_contractual_interest_cents = max(0, int(loan.remaining_contractual_interest_cents or 0) - total_rebated_interest_cents)
+            loan.remaining_contract_total_cents = int(loan.unpaid_principal_cents or 0) + loan.remaining_contractual_interest_cents
+            loan.early_payoff_rebate_rule = f"UNEARNED_INTEREST_REBATED:{total_rebated_interest_cents}_CENTS"
+
+            rebate_tag = f"[Early Payoff Rebate: -${total_rebated_interest_cents / 100:,.2f} MXN future interest forgiven]"
+            effective_notes = f"{effective_notes} {rebate_tag}".strip() if effective_notes else rebate_tag
+
         result = LoanPaymentEngine.execute_waterfall_allocation(
             db=db, loan=loan, installments=installments, amount_cents=amount_cents,
             payment_method=payload.payment_method, payment_reference=payload.payment_reference,
-            paid_at_dt=paid_at_dt, notes=payload.notes, user_id=current_user.id,
+            paid_at_dt=paid_at_dt, notes=effective_notes, user_id=current_user.id,
             idempotency_key=payload.idempotency_key, payload_hash=payload_hash
         )
 
         record_audit_event(
             db, "LOAN_PAYMENT_RECORDED", "loan", "SUCCESS", actor=current_user,
             resource_id=result["payment"].payment_number, ip_address=ip,
-            details={"loan_number": loan.loan_number, "amount_cents": amount_cents, "method": payload.payment_method}, commit=False
+            details={
+                "loan_number": loan.loan_number,
+                "amount_cents": amount_cents,
+                "method": payload.payment_method,
+                "early_payoff_rebate_cents": total_rebated_interest_cents,
+                "rebated_installments": rebated_installments_map
+            },
+            commit=False
         )
         db.commit()
         db.refresh(result["payment"])
-        _, _, _, today_local = get_local_day_bounds_utc()
-        return {"idempotent_replay": False, "payment": serialize_loan_payment(result["payment"], include_allocations=True, is_top_reversible=True), "loan": serialize_loan_detail(loan, today_local)}
+        return {
+            "idempotent_replay": False,
+            "payment": serialize_loan_payment(result["payment"], include_allocations=True, is_top_reversible=True),
+            "loan": serialize_loan_detail(loan, today_local, db=db)
+        }
     except HTTPException:
         db.rollback()
         raise
     except Exception as e:
-     db.rollback()
-     logger.exception("Failed to record payment")
-     raise HTTPException(status_code=500, detail=f"Payment execution failed: {type(e).__name__} — {str(e)}")
+        db.rollback()
+        logger.exception("Failed to record payment")
+        raise HTTPException(status_code=500, detail=f"Payment execution failed: {type(e).__name__} — {str(e)}")
 
 
 @app.post("/api/loans/{loan_id}/payments/{payment_id}/reverse", dependencies=[Depends(verify_csrf)])
@@ -5275,6 +5398,49 @@ def reverse_loan_payment(
 
         LoanPaymentEngine.execute_reversal_restoration(db, loan, target_payment, payload.reversal_reason.strip(), current_user.id)
 
+        # Restore rebated future interest if this payment was an early payoff settlement
+        recorded_audit = (
+            db.query(AuditLogModel)
+            .filter(
+                AuditLogModel.event_type == "LOAN_PAYMENT_RECORDED",
+                AuditLogModel.resource_id == target_payment.payment_number
+            )
+            .order_by(AuditLogModel.id.desc())
+            .first()
+        )
+        if recorded_audit and recorded_audit.details_json:
+            try:
+                audit_details = json.loads(recorded_audit.details_json)
+                rebated_map = audit_details.get("rebated_installments") or {}
+                if isinstance(rebated_map, dict) and rebated_map:
+                    all_insts = (
+                        db.query(LoanInstallmentModel)
+                        .filter(LoanInstallmentModel.loan_id == loan.id)
+                        .with_for_update()
+                        .all()
+                    )
+                    inst_by_id = {int(i.id): i for i in all_insts}
+                    restored_total_cents = 0
+                    for inst_id_str, rebated_val in rebated_map.items():
+                        inst_obj = inst_by_id.get(int(inst_id_str))
+                        add_cents = int(rebated_val or 0)
+                        if inst_obj and add_cents > 0:
+                            inst_obj.interest_due_cents = int(inst_obj.interest_due_cents or 0) + add_cents
+                            inst_obj.scheduled_payment_cents = int(inst_obj.principal_due_cents or 0) + inst_obj.interest_due_cents
+                            if hasattr(inst_obj, "remaining_interest_cents"):
+                                inst_obj.remaining_interest_cents = max(0, inst_obj.interest_due_cents - int(inst_obj.interest_paid_cents or 0))
+                            inst_obj.remaining_amount_cents = max(0, inst_obj.scheduled_payment_cents - int(inst_obj.amount_paid_cents or 0))
+                            restored_total_cents += add_cents
+
+                    if restored_total_cents > 0:
+                        loan.total_interest_cents = int(loan.total_interest_cents or 0) + restored_total_cents
+                        loan.total_repayment_cents = int(loan.principal_cents or 0) + loan.total_interest_cents
+                        loan.remaining_contractual_interest_cents = max(0, loan.total_interest_cents - int(loan.interest_paid_cents or 0))
+                        loan.remaining_contract_total_cents = int(loan.unpaid_principal_cents or 0) + loan.remaining_contractual_interest_cents
+                        loan.early_payoff_rebate_rule = "NOT_DEFINED_PENDING_POLICY"
+            except Exception:
+                pass
+
         record_audit_event(
             db, "LOAN_PAYMENT_REVERSED", "loan", "SUCCESS", actor=current_user,
             resource_id=target_payment.payment_number, ip_address=ip,
@@ -5283,7 +5449,11 @@ def reverse_loan_payment(
         db.commit()
         db.refresh(target_payment)
         _, _, _, today_local = get_local_day_bounds_utc()
-        return {"message": "Payment reversed successfully", "payment": serialize_loan_payment(target_payment), "loan": serialize_loan_detail(loan, today_local)}
+        return {
+            "message": "Payment reversed successfully",
+            "payment": serialize_loan_payment(target_payment),
+            "loan": serialize_loan_detail(loan, today_local, db=db)
+        }
     except HTTPException:
         db.rollback()
         raise
