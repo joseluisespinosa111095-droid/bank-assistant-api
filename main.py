@@ -1516,28 +1516,6 @@ def record_audit_event(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     verify_database_schema_compatibility(engine)
-    
-    # --- AUTO-INJECT ADMIN (FREE TIER WORKAROUND) ---
-    db = SessionLocal()
-    try:
-        admin_email = "joseluisespinosa111095@gmail.com"
-        if not db.query(UserModel).filter(UserModel.email == admin_email).first():
-            admin = UserModel(
-                email=admin_email,
-                full_name="Jose Luis",
-                password_hash=pwd_context.hash("NuraAdmin2026!"),
-                role="OWNER_ADMIN",
-                is_active=True
-            )
-            db.add(admin)
-            db.commit()
-            logger.info("✅ Admin user auto-injected successfully.")
-    except Exception as e:
-        db.rollback()
-    finally:
-        db.close()
-    # ------------------------------------------------
-    
     yield
 
 app = FastAPI(title="NURA CRM | Credit & Pipeline System", version="7.4.0", lifespan=lifespan)
