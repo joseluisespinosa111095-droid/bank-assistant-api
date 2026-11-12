@@ -1586,6 +1586,11 @@ class UserLanguageUpdateRequest(BaseModel):
     preferred_language: str = Field(..., min_length=2, max_length=10)
 
 
+class UserChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
 class BootstrapAdminRequest(BaseModel):
     secret: str = Field(..., min_length=12)
 
@@ -2473,6 +2478,90 @@ def update_my_language(
         db.rollback()
         logger.error(f"Language preference update failed: {type(e).__name__}")
         raise HTTPException(status_code=500, detail="Could not update language preference.")
+
+
+@app.post("/api/auth/me/password", dependencies=[Depends(verify_csrf)])
+def change_my_password(
+    payload: UserChangePasswordRequest,
+    request: Request,
+    session_token: Optional[str] = Cookie(None, alias="session_token"),
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    now_utc = datetime.now(timezone.utc)
+
+    allowed, retry_after = consume_rate_limit_atomic(
+        db,
+        bucket_key=f"CHANGE_PW_USER:{current_user.id}",
+        max_attempts=5,
+        window_seconds=300,
+        now_utc=now_utc
+    )
+    if not allowed:
+        record_audit_event(
+            db, "PASSWORD_CHANGE_RATE_LIMITED", "auth", "DENIED",
+            actor=current_user, resource_id=str(current_user.id), ip_address=ip,
+            details={"retry_after_sec": retry_after}, commit=True
+        )
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many password change attempts. Please wait {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)}
+        )
+
+    new_pw = payload.new_password.strip()
+    if len(new_pw) < 8:
+        raise HTTPException(status_code=422, detail="Password must be at least 8 characters long.")
+
+    try:
+        target_user = (
+            db.query(UserModel)
+            .filter(UserModel.id == current_user.id)
+            .with_for_update()
+            .first()
+        )
+        if not target_user or not target_user.is_active:
+            raise HTTPException(status_code=403, detail="Account has been deactivated.")
+
+        if not pwd_context.verify(payload.current_password, target_user.password_hash):
+            record_audit_event(
+                db, "PASSWORD_CHANGE_FAILED_CURRENT_MISMATCH", "auth", "DENIED",
+                actor=target_user, resource_id=str(target_user.id), ip_address=ip, commit=True
+            )
+            raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+        if pwd_context.verify(new_pw, target_user.password_hash):
+            raise HTTPException(
+                status_code=422,
+                detail="New password must be different from your current password."
+            )
+
+        target_user.password_hash = pwd_context.hash(new_pw)
+
+        # Keep current session active while revoking sessions on other devices
+        current_token_hash = hash_token(session_token) if session_token else None
+        other_sessions_query = db.query(SessionModel).filter(SessionModel.user_id == target_user.id)
+        if current_token_hash:
+            other_sessions_query = other_sessions_query.filter(SessionModel.token != current_token_hash)
+        revoked_other_sessions = other_sessions_query.delete(synchronize_session=False)
+
+        record_audit_event(
+            db, "PASSWORD_CHANGED_SELF", "auth", "SUCCESS",
+            actor=target_user, resource_id=str(target_user.id), ip_address=ip,
+            details={"other_sessions_revoked": revoked_other_sessions}, commit=False
+        )
+        db.commit()
+        reset_rate_limit_bucket(db, f"CHANGE_PW_USER:{target_user.id}")
+
+        return {"message": "Password updated successfully."}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Self password change failed: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Could not update password.")
 
 
 # --- TEAM MANAGEMENT ENDPOINTS ---
