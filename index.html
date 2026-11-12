@@ -9691,8 +9691,51 @@ async function loadDashboardSummary() {
                     </div>
                 `;
             } else {
+                const isEs = (NuraI18n.currentLang === 'es');
                 titleEl.innerText = t('profile.security.title');
-                bodyEl.innerHTML = `<p class="text-xs text-slate-600">${escapeHtml(t('profile.security.modal_body'))}</p>`;
+                bodyEl.innerHTML = `
+                    <div class="space-y-4">
+                        <p class="text-xs text-slate-600 leading-relaxed">${escapeHtml(t('profile.security.modal_body'))}</p>
+
+                        <form id="self-password-form" onsubmit="handleSelfPasswordChange(event)" class="pt-3 border-t border-slate-200/80 space-y-3 text-xs">
+                            <div>
+                                <p class="text-[10px] font-extrabold text-slate-700 uppercase tracking-wider">
+                                    ${isEs ? 'Cambiar Contraseña de la Cuenta' : 'Change Account Password'}
+                                </p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">
+                                    ${isEs ? 'Tu sesión actual permanecerá activa y se cerrarán sesiones en otros dispositivos.' : 'Your current session stays active while other devices are signed out.'}
+                                </p>
+                            </div>
+
+                            <div id="self-pw-msg" class="hidden p-2.5 rounded-xl text-xs font-medium"></div>
+
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                                    ${isEs ? 'Contraseña Actual *' : 'Current Password *'}
+                                </label>
+                                <input type="password" id="self-pw-current" required class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="••••••••">
+                            </div>
+
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                                    ${isEs ? 'Nueva Contraseña *' : 'New Password *'}
+                                </label>
+                                <input type="password" id="self-pw-new" required minlength="8" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="${isEs ? 'Mínimo 8 caracteres' : 'Minimum 8 characters'}">
+                            </div>
+
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                                    ${isEs ? 'Confirmar Nueva Contraseña *' : 'Confirm New Password *'}
+                                </label>
+                                <input type="password" id="self-pw-confirm" required minlength="8" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="${isEs ? 'Repite la nueva contraseña' : 'Re-enter new password'}">
+                            </div>
+
+                            <button type="submit" id="self-pw-submit-btn" class="w-full btn-primary py-2.5 rounded-xl text-xs shadow-sm">
+                                ${isEs ? 'Actualizar Contraseña' : 'Update Password'}
+                            </button>
+                        </form>
+                    </div>
+                `;
             }
 
             if (modal.classList.contains('hidden')) {
@@ -9701,6 +9744,80 @@ async function loadDashboardSummary() {
                     modal.classList.remove('opacity-0');
                     card.classList.remove('scale-95', 'translate-y-4');
                 }, 10);
+            }
+        }
+
+        async function handleSelfPasswordChange(e) {
+            e.preventDefault();
+            const isEs = (NuraI18n.currentLang === 'es');
+            const current_password = document.getElementById('self-pw-current')?.value || '';
+            const new_password = document.getElementById('self-pw-new')?.value || '';
+            const confirm_password = document.getElementById('self-pw-confirm')?.value || '';
+            const msgBox = document.getElementById('self-pw-msg');
+            const submitBtn = document.getElementById('self-pw-submit-btn');
+
+            const showMsg = (text, isError = true) => {
+                if (!msgBox) return;
+                msgBox.className = isError
+                    ? 'p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium'
+                    : 'p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold';
+                msgBox.innerText = text;
+                msgBox.classList.remove('hidden');
+            };
+
+            if (new_password !== confirm_password) {
+                showMsg(isEs ? 'Las contraseñas nuevas no coinciden.' : 'New passwords do not match.', true);
+                return;
+            }
+            if (new_password.trim().length < 8) {
+                showMsg(isEs ? 'La nueva contraseña debe tener al menos 8 caracteres.' : 'New password must be at least 8 characters long.', true);
+                return;
+            }
+            if (new_password === current_password) {
+                showMsg(isEs ? 'La nueva contraseña debe ser diferente a la actual.' : 'New password must be different from your current password.', true);
+                return;
+            }
+
+            if (msgBox) msgBox.classList.add('hidden');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = isEs ? 'Actualizando...' : 'Updating...';
+            }
+
+            try {
+                const res = await fetch('/api/auth/me/password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCookie('csrf_token')
+                    },
+                    body: JSON.stringify({ current_password, new_password })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const rawErr = typeof data.detail === 'string' ? data.detail : 'Could not update password.';
+                    const errMapEs = {
+                        "Current password is incorrect.": "La contraseña actual es incorrecta.",
+                        "New password must be different from your current password.": "La nueva contraseña debe ser diferente a la actual.",
+                        "Password must be at least 8 characters long.": "La contraseña debe tener al menos 8 caracteres.",
+                        "Could not update password.": "No fue posible actualizar la contraseña."
+                    };
+                    const finalErr = isEs ? (errMapEs[rawErr] || translateApiError(rawErr)) : rawErr;
+                    throw new Error(finalErr);
+                }
+
+                document.getElementById('self-password-form')?.reset();
+                showMsg(
+                    isEs ? '✓ Contraseña actualizada con éxito.' : '✓ Password updated successfully.',
+                    false
+                );
+            } catch (err) {
+                showMsg(err.message, true);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = isEs ? 'Actualizar Contraseña' : 'Update Password';
+                }
             }
         }
 
