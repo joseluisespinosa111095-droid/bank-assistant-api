@@ -2701,7 +2701,12 @@ def get_audit_logs(
 
 
 # --- STAGE 1 & 2: CUSTOMERS ENDPOINTS ---
-def serialize_customer(c: CustomerModel, active_loans_count: int = 0, unpaid_principal_cents: int = 0) -> dict:
+def serialize_customer(
+    c: CustomerModel,
+    active_loans_count: int = 0,
+    unpaid_principal_cents: int = 0,
+    last_payment_date: Optional[str] = None
+) -> dict:
     return {
         "id": c.id,
         "customer_number": c.customer_number,
@@ -2729,7 +2734,7 @@ def serialize_customer(c: CustomerModel, active_loans_count: int = 0, unpaid_pri
         "current_outstanding_balance_cents": unpaid_principal_cents,
         "current_outstanding_principal_cents": unpaid_principal_cents,
         "active_loans_count": active_loans_count,
-        "last_payment_date": None
+        "last_payment_date": last_payment_date
     }
 
 
@@ -2798,9 +2803,10 @@ def list_customers(
     offset = (page - 1) * page_size
     items = query.offset(offset).limit(page_size).all()
 
-    # Pre-fetch active loan balances for customers on this page
+    # Pre-fetch active loan balances and latest posted payment date for customers on this page
     cust_ids = [c.id for c in items]
     loan_stats = {}
+    last_payments_map = {}
     if cust_ids:
         active_loans = (
             db.query(LoanModel)
@@ -2812,10 +2818,38 @@ def list_customers(
             st["count"] += 1
             st["principal"] += l.unpaid_principal_cents
 
+        payment_rows = (
+            db.query(
+                LoanPaymentModel.customer_id,
+                func.max(LoanPaymentModel.paid_at)
+            )
+            .filter(
+                LoanPaymentModel.customer_id.in_(cust_ids),
+                LoanPaymentModel.status == "POSTED"
+            )
+            .group_by(LoanPaymentModel.customer_id)
+            .all()
+        )
+        crm_tz = get_crm_timezone()
+        for cid, max_paid_at in payment_rows:
+            if max_paid_at:
+                if isinstance(max_paid_at, str):
+                    last_payments_map[cid] = max_paid_at[:10]
+                else:
+                    dt_utc = max_paid_at if max_paid_at.tzinfo else max_paid_at.replace(tzinfo=timezone.utc)
+                    last_payments_map[cid] = dt_utc.astimezone(crm_tz).strftime("%Y-%m-%d")
+
     serialized_items = []
     for c in items:
         st = loan_stats.get(c.id, {"count": 0, "principal": 0})
-        serialized_items.append(serialize_customer(c, active_loans_count=st["count"], unpaid_principal_cents=st["principal"]))
+        serialized_items.append(
+            serialize_customer(
+                c,
+                active_loans_count=st["count"],
+                unpaid_principal_cents=st["principal"],
+                last_payment_date=last_payments_map.get(c.id)
+            )
+        )
 
     return {
         "total": total,
@@ -2999,7 +3033,13 @@ def get_customer_detail(
         LoanPaymentModel.customer_id == customer.id, LoanPaymentModel.status == 'POSTED'
     ).scalar()
     if last_payment:
-        data["credit_summary"]["last_payment_date"] = last_payment.astimezone(get_crm_timezone()).strftime("%Y-%m-%d")
+        if isinstance(last_payment, str):
+            formatted_last_pay = last_payment[:10]
+        else:
+            dt_utc = last_payment if last_payment.tzinfo else last_payment.replace(tzinfo=timezone.utc)
+            formatted_last_pay = dt_utc.astimezone(get_crm_timezone()).strftime("%Y-%m-%d")
+        data["last_payment_date"] = formatted_last_pay
+        data["credit_summary"]["last_payment_date"] = formatted_last_pay
 
     return data
 
