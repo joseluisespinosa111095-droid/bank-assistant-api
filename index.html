@@ -2862,6 +2862,24 @@
                                 <button type="button" onclick="setPaymentQuickAmount('payoff')" class="mt-1 text-[10px] font-bold text-emerald-700 hover:underline">Pay in Full</button>
                             </div>
                         </div>
+
+                        <!-- COTIZADOR DE LIQUIDACIÓN ANTICIPADA (EARLY PAYOFF REBATE) -->
+                        <div id="lpay-early-payoff-box" class="hidden p-3 rounded-xl bg-indigo-50/80 border border-indigo-200 space-y-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <p id="lpay-early-title" class="text-[10px] font-extrabold text-indigo-900 uppercase tracking-wider">⚡ Early Payoff Quote Today (Principal + Accrued Interest)</p>
+                                    <p id="lpay-early-sub" class="text-[10px] text-indigo-700 mt-0.5">Forgives unearned future interest (<span id="lpay-early-rebate" class="font-mono font-bold">-$0.00 MXN</span>)</p>
+                                </div>
+                                <div class="text-right">
+                                    <p id="lpay-early-amount" class="text-sm font-extrabold font-mono text-indigo-950">$0.00 MXN</p>
+                                    <button type="button" id="lpay-early-btn" onclick="setPaymentQuickAmount('early_payoff')" class="text-[10px] font-extrabold text-indigo-700 hover:underline">⚡ Use Early Payoff</button>
+                                </div>
+                            </div>
+                            <label id="lpay-early-check-wrap" class="flex items-center gap-2 pt-1.5 border-t border-indigo-200/70 cursor-pointer select-none">
+                                <input type="checkbox" id="lpay-early-rebate-check" onchange="handleEarlyRebateToggle(this.checked)" class="h-3.5 w-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
+                                <span id="lpay-early-check-label" class="text-[10px] font-bold text-indigo-950">Authorize forgiveness of unearned future interest and settle loan as PAID_OFF</span>
+                            </label>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -3776,7 +3794,8 @@
                     "loans.cq.log_call_btn": "📞 Log Call",
                     "loans.cq.payment_btn": "💳 Payment",
                     "loans.detail.back": "← Back to Loans Table",
-                    "loans.detail.print_statement": "🖨️ Print Statement",
+                 "loans.detail.print_statement": "🖨️ Print Statement",
+                 "loans.detail.print_contract": "📄 Contract & Pagaré",
                     "loans.detail.btn_approve": "✓ Approve Loan",
                     "loans.detail.btn_activate": "🏦 Record Disbursement & Activate",
                     "loans.detail.btn_cancel": "✕ Cancel Loan",
@@ -4402,7 +4421,8 @@
                     "loans.cq.log_call_btn": "📞 Registrar Llamada",
                     "loans.cq.payment_btn": "💳 Abonar Pago",
                     "loans.detail.back": "← Volver a la Tabla de Préstamos",
-                    "loans.detail.print_statement": "🖨️ Imprimir Estado de Cuenta",
+                 "loans.detail.print_statement": "🖨️ Imprimir Estado de Cuenta",
+                 "loans.detail.print_contract": "📄 Contrato y Pagaré",
                     "loans.detail.btn_approve": "✓ Aprobar Préstamo",
                     "loans.detail.btn_activate": "🏦 Registrar Desembolso y Activar",
                     "loans.detail.btn_cancel": "✕ Cancelar Préstamo",
@@ -8468,6 +8488,35 @@ async function loadDashboardSummary() {
             document.getElementById('lpay-notes').value = '';
             document.getElementById('lpay-confirm-check').checked = false;
 
+            // Populate Early Payoff Quote Card (Point 1B)
+            const earlyBox = document.getElementById('lpay-early-payoff-box');
+            const earlyCheck = document.getElementById('lpay-early-rebate-check');
+            if (earlyCheck) earlyCheck.checked = false;
+
+            const isEs = (NuraI18n.currentLang === 'es');
+            const rebateCents = Number.isSafeInteger(l.early_payoff_rebate_cents) ? l.early_payoff_rebate_cents : 0;
+            const earlyAmountCents = Number.isSafeInteger(l.early_payoff_amount_cents) ? l.early_payoff_amount_cents : remTotalCents;
+            const canAuthorizeRebate = ['OWNER_ADMIN', 'CREDIT_ADVISOR'].includes(currentUser?.role || '');
+
+            if (earlyBox) {
+                if (rebateCents > 0 && earlyAmountCents > 0 && canAuthorizeRebate) {
+                    document.getElementById('lpay-early-title').innerText = isEs
+                        ? '⚡ Liquidación Anticipada Hoy (Capital + Interés Devengado)'
+                        : '⚡ Early Payoff Quote Today (Principal + Accrued Interest)';
+                    document.getElementById('lpay-early-sub').innerHTML = isEs
+                        ? `Condona intereses futuros no devengados (<span id="lpay-early-rebate" class="font-mono font-bold">-${escapeHtml(NuraFinancialEngine.formatMXNFromCents(rebateCents))}</span>)`
+                        : `Forgives unearned future interest (<span id="lpay-early-rebate" class="font-mono font-bold">-${escapeHtml(NuraFinancialEngine.formatMXNFromCents(rebateCents))}</span>)`;
+                    document.getElementById('lpay-early-amount').innerText = NuraFinancialEngine.formatMXNFromCents(earlyAmountCents);
+                    document.getElementById('lpay-early-btn').innerText = isEs ? '⚡ Usar Liquidación Anticipada' : '⚡ Use Early Payoff';
+                    document.getElementById('lpay-early-check-label').innerText = isEs
+                        ? 'Autorizar condonación de intereses futuros no devengados y liquidar préstamo (PAID_OFF)'
+                        : 'Authorize forgiveness of unearned future interest and settle loan as PAID_OFF';
+                    earlyBox.classList.remove('hidden');
+                } else {
+                    earlyBox.classList.add('hidden');
+                }
+            }
+
             document.getElementById('loan-payment-modal')?.classList.remove('hidden');
 
             const resolvedCust = await resolveLoanCustomerDisplay(l);
@@ -8475,17 +8524,33 @@ async function loadDashboardSummary() {
             if (badgeEl) badgeEl.innerText = resolvedCust;
         }
 
+        function handleEarlyRebateToggle(isChecked) {
+            if (!currentSelectedLoan) return;
+            const l = currentSelectedLoan;
+            if (isChecked && Number.isSafeInteger(l.early_payoff_amount_cents) && l.early_payoff_amount_cents > 0) {
+                document.getElementById('lpay-amount').value = (l.early_payoff_amount_cents / 100).toFixed(2);
+            }
+            onLoanPaymentParamChange();
+        }
+
         function setPaymentQuickAmount(mode) {
             if (!currentSelectedLoan) return;
             const l = currentSelectedLoan;
+            const earlyCheck = document.getElementById('lpay-early-rebate-check');
             let targetCents = 0;
             if (mode === 'payable') {
                 targetCents = l.current_payable_amount_cents || 0;
+                if (earlyCheck) earlyCheck.checked = false;
             } else if (mode === 'installment') {
                 const unpaidInsts = (Array.isArray(l.installments) ? l.installments : []).filter(i => i && i.remaining_amount_cents > 0);
                 targetCents = unpaidInsts.length > 0 ? unpaidInsts[0].remaining_amount_cents : (l.regular_installment_cents || 0);
+                if (earlyCheck) earlyCheck.checked = false;
             } else if (mode === 'payoff') {
                 targetCents = l.remaining_contract_total_cents || 0;
+                if (earlyCheck) earlyCheck.checked = false;
+            } else if (mode === 'early_payoff') {
+                targetCents = l.early_payoff_amount_cents || 0;
+                if (earlyCheck) earlyCheck.checked = true;
             }
             if (targetCents > 0) {
                 document.getElementById('lpay-amount').value = (targetCents / 100).toFixed(2);
@@ -8540,13 +8605,27 @@ async function loadDashboardSummary() {
                 currentPaymentIdempotencyKey = generateFreshLoanIdempotencyKey();
             }
 
+            const applyEarlyRebate = Boolean(document.getElementById('lpay-early-rebate-check')?.checked);
+            if (applyEarlyRebate && Number.isSafeInteger(currentSelectedLoan.early_payoff_amount_cents)) {
+                if (amountCents !== currentSelectedLoan.early_payoff_amount_cents) {
+                    const isEs = (NuraI18n.currentLang === 'es');
+                    showError(
+                        isEs
+                            ? `Para aplicar la condonación por liquidación anticipada, el monto debe ser exactamente ${NuraFinancialEngine.formatMXNFromCents(currentSelectedLoan.early_payoff_amount_cents)}.`
+                            : `To apply the early payoff interest rebate, the payment amount must be exactly ${NuraFinancialEngine.formatMXNFromCents(currentSelectedLoan.early_payoff_amount_cents)}.`
+                    );
+                    return;
+                }
+            }
+
             const payload = {
                 idempotency_key: currentPaymentIdempotencyKey,
                 amount_cents: amountCents,
                 payment_method: method,
                 payment_reference: reference,
                 paid_at: paidAtRaw,
-                notes: notesVal
+                notes: notesVal,
+                apply_early_payoff_rebate: applyEarlyRebate
             };
 
             isSubmittingLoanLifecycle = true;
@@ -10484,10 +10563,193 @@ async function exportLoansCSV() {
     }
 }
 
+async function printLoanContractAndPagare() {
+    if (!currentSelectedLoan) return;
+    const l = currentSelectedLoan;
+    const isEs = (NuraI18n.currentLang === 'es');
+
+    let cust = (currentSelectedCustomer && currentSelectedCustomer.id === l.customer_id) ? currentSelectedCustomer : null;
+    if (!cust && Number.isSafeInteger(l.customer_id)) {
+        try {
+            const res = await fetch(`/api/customers/${l.customer_id}`);
+            if (res.ok) cust = await res.json();
+        } catch (_) {}
+    }
+
+    const borrowerName = cust?.full_legal_name || l.customer_name || `Customer #${l.customer_id}`;
+    const borrowerNumber = cust?.customer_number || l.customer_number || `CUST-${l.customer_id}`;
+    const borrowerRfc = cust?.tax_id_rfc || (isEs ? 'No proporcionado' : 'Not provided');
+    const borrowerPhone = cust?.phone_primary || l.customer_phone || 'N/A';
+    const borrowerEmail = cust?.email || 'N/A';
+    const borrowerAddress = cust?.address_full || (isEs ? 'Domicilio registrado en expediente KYC' : 'Address on file in KYC dossier');
+    const entityTypeLabel = tEnum(cust?.entity_type || 'INDIVIDUAL');
+    const legalRep = cust?.legal_representative_name || '';
+
+    const principalFormatted = NuraFinancialEngine.formatMXNFromCents(l.principal_cents);
+    const totalInterestFormatted = NuraFinancialEngine.formatMXNFromCents(l.total_interest_cents);
+    const totalRepayFormatted = NuraFinancialEngine.formatMXNFromCents(l.total_repayment_cents);
+    const regInstallmentFormatted = NuraFinancialEngine.formatMXNFromCents(l.regular_installment_cents);
+    const finalInstallmentFormatted = NuraFinancialEngine.formatMXNFromCents(l.final_installment_cents);
+    const rateFormatted = Number.isFinite(l.monthly_interest_rate_percent) ? `${l.monthly_interest_rate_percent.toFixed(2)}%` : '0.00%';
+    const methodLabel = tEnum(l.interest_calculation_method || 'FLAT_ORIGINAL_PRINCIPAL');
+
+    const pagareLegalText = isEs
+        ? `Por este <strong>PAGARÉ</strong>, yo <strong>${escapeHtml(borrowerName)}</strong>${legalRep ? ` (representado legalmente por <strong>${escapeHtml(legalRep)}</strong>)` : ''}, debo y pagaré incondicionalmente a la orden del Acreedor en las fechas estipuladas en la Tabla de Amortización de este contrato (con fecha de vencimiento final el día <strong>${escapeHtml(l.maturity_date)}</strong>), la cantidad total de <strong>${escapeHtml(totalRepayFormatted)}</strong> (integrada por un Capital Original de <strong>${escapeHtml(principalFormatted)}</strong> más un Interés Ordinario pactado de <strong>${escapeHtml(totalInterestFormatted)}</strong> calculado a razón de una tasa mensual del <strong>${escapeHtml(rateFormatted)}</strong> bajo el método <em>${escapeHtml(methodLabel)}</em>), mediante <strong>${escapeHtml(l.term_installments_count)}</strong> pagos semanales sucesivos. Valor recibido a mi entera satisfacción. La falta de pago oportuno de una o más cuotas semanales facultará al tenedor para dar por vencido anticipadamente el saldo total insoluto de este título conforme a la legislación mercantil aplicable.`
+        : `For value received, by this <strong>PROMISSORY NOTE (PAGARÉ)</strong>, I, <strong>${escapeHtml(borrowerName)}</strong>${legalRep ? ` (legally represented by <strong>${escapeHtml(legalRep)}</strong>)` : ''}, unconditionally promise to pay to the order of the Lender on the scheduled installment dates set forth herein (with final maturity on <strong>${escapeHtml(l.maturity_date)}</strong>), the total sum of <strong>${escapeHtml(totalRepayFormatted)}</strong> (comprising Original Principal of <strong>${escapeHtml(principalFormatted)}</strong> plus contractual ordinary interest of <strong>${escapeHtml(totalInterestFormatted)}</strong> at a monthly rate of <strong>${escapeHtml(rateFormatted)}</strong> under the <em>${escapeHtml(methodLabel)}</em> method), payable across <strong>${escapeHtml(l.term_installments_count)}</strong> consecutive weekly installments. Failure to pay any scheduled installment when due shall entitle the holder to accelerate the entire unpaid balance immediately.`;
+
+    const content = `
+        <div class="space-y-4 text-slate-900">
+            <div class="flex items-center justify-between bg-slate-100 border border-slate-400 rounded-lg p-3.5">
+                <div>
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-600">
+                        ${isEs ? 'Carátula Oficial de Contrato de Crédito y Tabla de Amortización' : 'Official Credit Contract Cover Sheet & Amortization Schedule'}
+                    </p>
+                    <h2 class="text-base font-extrabold text-slate-900 mt-0.5">
+                        ${escapeHtml(l.loan_number)} — ${escapeHtml(tEnum(l.product_name || 'Personal Loan'))}
+                    </h2>
+                </div>
+                <div class="text-right text-xs">
+                    <p class="text-[10px] font-bold uppercase text-slate-500">${isEs ? 'Estatus del Contrato' : 'Contract Status'}</p>
+                    <p class="text-xs font-extrabold font-mono text-slate-900 mt-0.5">${escapeHtml(tEnum(l.status))}</p>
+                </div>
+            </div>
+
+            <div class="border border-slate-300 rounded-lg p-3.5 text-xs space-y-2">
+                <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 border-b border-slate-200 pb-1">
+                    ${isEs ? 'I. Datos de Identificación del Acreditado (Deudor Principal)' : 'I. Borrower Identification Details'}
+                </p>
+                <div class="grid grid-cols-3 gap-2.5">
+                    <div class="col-span-2">
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Nombre Legal / Razón Social' : 'Full Legal Name / Entity'}</span>
+                        <strong class="text-xs text-slate-900">${escapeHtml(borrowerName)} (${escapeHtml(borrowerNumber)})</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Tipo de Persona y RFC' : 'Entity Type & Tax ID (RFC)'}</span>
+                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(entityTypeLabel)} • ${escapeHtml(borrowerRfc)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Teléfono Principal' : 'Primary Phone'}</span>
+                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(borrowerPhone)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Correo Electrónico' : 'Email Address'}</span>
+                        <strong class="text-xs text-slate-900">${escapeHtml(borrowerEmail)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Representante Legal' : 'Legal Representative'}</span>
+                        <strong class="text-xs text-slate-900">${escapeHtml(legalRep || (isEs ? 'N/A (Persona Física)' : 'N/A (Individual)'))}</strong>
+                    </div>
+                    <div class="col-span-3">
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Domicilio Residencial / Fiscal Declarado' : 'Declared Residential / Fiscal Address'}</span>
+                        <strong class="text-xs text-slate-900">${escapeHtml(borrowerAddress)}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border border-slate-300 rounded-lg p-3.5 text-xs space-y-2">
+                <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 border-b border-slate-200 pb-1">
+                    ${isEs ? 'II. Resumen de Condiciones Financieras Pactadas (Moneda: Pesos Mexicanos MXN)' : 'II. Agreed Financial Terms Summary (Currency: MXN)'}
+                </p>
+                <div class="grid grid-cols-4 gap-2.5">
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Capital Original' : 'Original Principal'}</span>
+                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(principalFormatted)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Tasa Ordinaria Mensual' : 'Monthly Interest Rate'}</span>
+                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(rateFormatted)} / ${isEs ? 'mes' : 'mo'}</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Interés Contractual Total' : 'Total Contractual Interest'}</span>
+                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(totalInterestFormatted)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Total Contractual a Pagar' : 'Total Contractual Repayment'}</span>
+                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(totalRepayFormatted)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Plazo y Frecuencia' : 'Term & Frequency'}</span>
+                        <strong class="text-xs text-slate-900">${escapeHtml(l.term_installments_count)} ${isEs ? 'semanas' : 'weeks'} (${escapeHtml(l.assumed_interest_months)} ${isEs ? 'meses' : 'months'})</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Cuota Semanal Regular' : 'Regular Weekly Payment'}</span>
+                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(regInstallmentFormatted)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Cuota Final Ajuste' : 'Final Installment'}</span>
+                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(finalInstallmentFormatted)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Inicio → 1er Pago → Vencimiento' : 'Start → 1st Pay → Maturity'}</span>
+                        <strong class="font-mono text-[11px] text-slate-900">${escapeHtml(l.start_date)} → ${escapeHtml(l.first_payment_date)} → ${escapeHtml(l.maturity_date)}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="font-extrabold mb-1.5 text-[10px] uppercase tracking-wider text-slate-700">
+                    ${isEs ? 'III. Calendario Contractual de Pagos Semanales (Tabla de Amortización)' : 'III. Contractual Weekly Payment Schedule (Amortization Table)'}
+                </h3>
+                <table class="w-full text-left text-[10px] border border-collapse">
+                    ${document.getElementById('ld-schedule-tbody').parentElement.innerHTML}
+                </table>
+            </div>
+
+            <div class="border-2 border-slate-900 rounded-lg p-4 bg-slate-50/40 space-y-3" style="break-inside: avoid;">
+                <div class="flex items-center justify-between border-b border-slate-400 pb-2">
+                    <div>
+                        <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">
+                            ${isEs ? 'PAGARÉ MERCANTIL INCONDICIONAL' : 'UNCONDITIONAL PROMISSORY NOTE (PAGARÉ)'}
+                        </h3>
+                        <p class="text-[10px] text-slate-600 font-mono">
+                            ${isEs ? 'Contrato / Folio:' : 'Contract / Ref:'} <strong>${escapeHtml(l.loan_number)}</strong> • ${isEs ? 'Fecha de Suscripción:' : 'Issue Date:'} <strong>${escapeHtml(l.start_date)}</strong>
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-bold uppercase text-slate-600 block">${isEs ? 'BUENO POR (TOTAL A PAGAR):' : 'GOOD FOR (TOTAL REPAYMENT):'}</span>
+                        <span class="text-sm font-extrabold font-mono text-slate-900">${escapeHtml(totalRepayFormatted)}</span>
+                    </div>
+                </div>
+
+                <p class="text-[10px] leading-relaxed text-justify text-slate-800">
+                    ${pagareLegalText}
+                </p>
+
+                <div class="grid grid-cols-3 gap-6 pt-8 text-[10px]">
+                    <div class="text-center border-t border-slate-900 pt-1.5">
+                        <p class="font-extrabold uppercase text-slate-900">${isEs ? 'EL SUSCRIPTOR / DEUDOR PRINCIPAL' : 'BORROWER SIGNATURE'}</p>
+                        <p class="font-semibold text-slate-800 mt-0.5">${escapeHtml(borrowerName)}</p>
+                        <p class="text-slate-600 font-mono">${escapeHtml(borrowerNumber)} • Tel: ${escapeHtml(borrowerPhone)}</p>
+                    </div>
+                    <div class="text-center border-t border-slate-900 pt-1.5">
+                        <p class="font-extrabold uppercase text-slate-900">${isEs ? 'AVAL / OBLIGADO SOLIDARIO (OPCIONAL)' : 'GUARANTOR / CO-SIGNER (OPTIONAL)'}</p>
+                        <p class="text-slate-600 mt-0.5">${isEs ? 'Nombre y Firma Autógrafa' : 'Full Name & Signature'}</p>
+                    </div>
+                    <div class="text-center border-t border-slate-900 pt-1.5">
+                        <p class="font-extrabold uppercase text-slate-900">${isEs ? 'AUTORIZACIÓN Y CONTROL NURA CRM' : 'AUTHORIZED BY NURA CRM'}</p>
+                        <p class="text-slate-600 mt-0.5">${isEs ? 'Mesa de Control y Expediente KYC' : 'Credit Operations & KYC Dossier'}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    executePrint(isEs ? 'Contrato y Pagaré' : 'Contract & Promissory Note', l.loan_number, content);
+}
+
 setTimeout(() => {
     const ldActionsContainer = document.getElementById('ld-lifecycle-actions');
     if (ldActionsContainer && !document.getElementById('btn-print-statement')) {
         const parent = ldActionsContainer.parentElement;
+
+        const printContractBtn = document.createElement('button');
+        printContractBtn.id = 'btn-print-contract';
+        printContractBtn.type = 'button';
+        printContractBtn.setAttribute('data-i18n', 'loans.detail.print_contract');
+        printContractBtn.className = "py-2 px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-semibold text-xs flex items-center gap-1.5 shadow-sm transition";
+        printContractBtn.innerText = (NuraI18n.currentLang === 'es') ? '📄 Contrato y Pagaré' : '📄 Contract & Pagaré';
+        printContractBtn.onclick = printLoanContractAndPagare;
+
         const printStmtBtn = document.createElement('button');
         printStmtBtn.id = 'btn-print-statement';
         printStmtBtn.type = 'button';
@@ -10495,7 +10757,9 @@ setTimeout(() => {
         printStmtBtn.className = "py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-sm transition";
         printStmtBtn.innerText = t('loans.detail.print_statement');
         printStmtBtn.onclick = printLoanStatement;
+
         parent.insertBefore(printStmtBtn, parent.firstChild);
+        parent.insertBefore(printContractBtn, printStmtBtn);
     }
 }, 500);
 
