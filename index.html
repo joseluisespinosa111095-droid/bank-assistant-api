@@ -6541,7 +6541,7 @@ async function loadDashboardSummary() {
                             <td class="py-3.5 px-4">
                                 <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${statusBadgeClass}">${escapeHtml(c.status)}</span>
                             </td>
-                            <td class="py-3.5 px-4 text-slate-400">${lastPayText}</td>
+                            <td class="py-3.5 px-4 ${c.last_payment_date ? 'font-mono font-semibold text-emerald-700' : 'text-slate-400'}">${lastPayText}</td>
                             <td class="py-3.5 px-4 text-right">
                                 <button type="button" class="text-xs font-bold text-blue-600 hover:underline">View Profile →</button>
                             </td>
@@ -6673,9 +6673,8 @@ async function loadDashboardSummary() {
                         : 'N/A';
                 }
                 if (lastPayEl) {
-                    lastPayEl.innerText = cs.last_payment_date ? String(cs.last_payment_date) : 'Pending Stage 4';
+                    lastPayEl.innerText = cs.last_payment_date ? String(cs.last_payment_date) : '—';
                 }
-
                 // Populate Tab C: Associated Customer Loans (c.loans)
                 const loansList = Array.isArray(c.loans) ? c.loans : [];
                 const loansTabBtn = document.getElementById('ctab-btn-loans');
