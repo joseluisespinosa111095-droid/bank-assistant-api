@@ -705,6 +705,9 @@
                                     <p class="text-xs text-slate-500 mt-0.5">Registered borrowers (Individuals & Businesses) with unique <code>CUST-XXXXX</code> identifiers</p>
                                 </div>
                                 <div class="flex items-center gap-2">
+                                    <button type="button" id="btn-export-customers-csv" onclick="exportCustomersCSV()" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
+                                        📥 Export CSV
+                                    </button>
                                     <button type="button" onclick="loadCustomers(1)" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
                                         Refresh
                                     </button>
@@ -1094,6 +1097,9 @@
                                             Collections Queue 📞
                                         </button>
                                     </div>
+                                    <button type="button" id="btn-export-loans-csv" onclick="exportLoansCSV()" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
+                                        📥 Export CSV
+                                    </button>
                                     <button type="button" onclick="refreshLoansOrCollectionsView()" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
                                         Refresh
                                     </button>
@@ -4838,6 +4844,7 @@
                 "Pipeline Stages": "Etapas del Pipeline",
                 "Call List & Follow-ups": "Cola de Llamadas y Seguimiento",
                 "Refresh": "Actualizar",
+                "📥 Export CSV": "📥 Exportar CSV",
                 "Stage: All Pipeline Stages": "Etapa: Todas las Etapas del Pipeline",
                 "Product: All Credit Products": "Producto: Todos los Productos de Crédito",
                 "Personal Loan": "Préstamo Personal",
@@ -10104,7 +10111,20 @@ if (typeof openCustomerDetail === 'function') {
     };
 }
 
-// --- BLOQUE I: IMPRESIÓN INSTITUCIONAL DE RECIBOS Y ESTADOS DE CUENTA (BILINGÜE EN / ES) ---
+// --- BLOQUE I: IMPRESIÓN INSTITUCIONAL DE RECIBOS, ESTADOS DE CUENTA Y EXPORTACIÓN CSV ---
+function formatLoanBorrowerPrintLabel(l) {
+    if (!l || typeof l !== 'object') return '—';
+    const isEs = (NuraI18n.currentLang === 'es');
+    const fallbackId = isEs ? `Cliente #${l.customer_id}` : `Customer #${l.customer_id}`;
+    const nameStr = (l.customer_name && String(l.customer_name).trim()) ? String(l.customer_name).trim() : '';
+    const numStr = (l.customer_number && String(l.customer_number).trim()) ? String(l.customer_number).trim() : '';
+
+    if (nameStr && numStr) {
+        return `${nameStr} (${numStr})`;
+    }
+    return nameStr || numStr || fallbackId;
+}
+
 function executePrint(title, metaId, contentHtml) {
     const appView = document.getElementById('app-view');
     appView.classList.add('no-print');
@@ -10125,7 +10145,10 @@ function printPaymentReceipt(btnElement) {
     const tds = tr ? tr.querySelectorAll('td') : null;
     if (!currentSelectedLoan || !tds || tds.length < 6) return;
     const l = currentSelectedLoan;
-    const custLabel = (NuraI18n.currentLang === 'es') ? `Cliente #${l.customer_id}` : `Customer #${l.customer_id}`;
+    const custLabel = formatLoanBorrowerPrintLabel(l);
+    const phoneSuffix = (l.customer_phone && String(l.customer_phone).trim())
+        ? ` • Tel: <strong>${escapeHtml(String(l.customer_phone).trim())}</strong>`
+        : '';
 
     const content = `
         <div class="space-y-5">
@@ -10133,7 +10156,7 @@ function printPaymentReceipt(btnElement) {
                 <div>
                     <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">${escapeHtml(t('print.receipt.title'))}</p>
                     <h2 class="text-lg font-extrabold text-slate-900 mt-0.5">${escapeHtml(l.loan_number)} • ${escapeHtml(tEnum(l.product_name || 'Personal Loan'))}</h2>
-                    <p class="text-xs text-slate-600 mt-0.5">${escapeHtml(t('print.receipt.borrower_id'))} <strong>${escapeHtml(custLabel)}</strong> • ${escapeHtml(t('print.receipt.currency'))} <strong>MXN</strong></p>
+                    <p class="text-xs text-slate-600 mt-0.5">${escapeHtml(t('print.receipt.borrower_id'))} <strong>${escapeHtml(custLabel)}</strong>${phoneSuffix} • ${escapeHtml(t('print.receipt.currency'))} <strong>MXN</strong></p>
                 </div>
                 <div class="text-right text-xs">
                     <p class="text-[10px] font-bold uppercase text-slate-500">${escapeHtml(t('print.receipt.status'))}</p>
@@ -10203,7 +10226,10 @@ function printPaymentReceipt(btnElement) {
 function printLoanStatement() {
     if (!currentSelectedLoan) return;
     const l = currentSelectedLoan;
-    const custLabel = (NuraI18n.currentLang === 'es') ? `Cliente #${l.customer_id}` : `Customer #${l.customer_id}`;
+    const custLabel = formatLoanBorrowerPrintLabel(l);
+    const phoneSuffix = (l.customer_phone && String(l.customer_phone).trim())
+        ? ` • Tel: <strong>${escapeHtml(String(l.customer_phone).trim())}</strong>`
+        : '';
     
     const content = `
         <div class="space-y-5">
@@ -10211,7 +10237,7 @@ function printLoanStatement() {
                 <div>
                     <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">${escapeHtml(t('print.stmt.title'))}</p>
                     <h2 class="text-lg font-extrabold text-slate-900 mt-0.5">${escapeHtml(l.loan_number)} — ${escapeHtml(tEnum(l.product_name || 'Personal Loan'))}</h2>
-                    <p class="text-xs text-slate-600 mt-0.5">${escapeHtml(t('print.stmt.borrower'))} <strong>${escapeHtml(custLabel)}</strong> • ${escapeHtml(t('print.stmt.start'))} <strong>${escapeHtml(l.start_date)}</strong> • ${escapeHtml(t('print.stmt.maturity'))} <strong>${escapeHtml(l.maturity_date)}</strong></p>
+                    <p class="text-xs text-slate-600 mt-0.5">${escapeHtml(t('print.stmt.borrower'))} <strong>${escapeHtml(custLabel)}</strong>${phoneSuffix} • ${escapeHtml(t('print.stmt.start'))} <strong>${escapeHtml(l.start_date)}</strong> • ${escapeHtml(t('print.stmt.maturity'))} <strong>${escapeHtml(l.maturity_date)}</strong></p>
                 </div>
                 <div class="text-right text-xs">
                     <p class="text-[10px] font-bold uppercase text-slate-500">${escapeHtml(t('print.stmt.contract_status'))}</p>
@@ -10255,6 +10281,207 @@ function printLoanStatement() {
         </div>
     `;
     executePrint(t('print.stmt.title'), l.loan_number, content);
+}
+
+// --- EXPORTACIÓN A EXCEL / CSV (UTF-8 BOM CON PREVENCIÓN DE INYECCIÓN DE FÓRMULAS) ---
+function escapeCsvCell(val) {
+    if (val === null || val === undefined) return '""';
+    let str = String(val).replace(/\r?\n/g, ' ').trim();
+    if (/^[=+\-@]/.test(str) && !/^-[0-9]+(\.[0-9]+)?$/.test(str)) {
+        str = "'" + str;
+    }
+    return `"${str.replace(/"/g, '""')}"`;
+}
+
+function triggerCsvDownload(filename, headersRow, dataRows) {
+    const csvLines = [
+        headersRow.map(escapeCsvCell).join(','),
+        ...dataRows.map(row => row.map(escapeCsvCell).join(','))
+    ];
+    // \uFEFF guarantees Microsoft Excel opens UTF-8 accents and special characters properly
+    const blob = new Blob(['\uFEFF' + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+async function exportCustomersCSV() {
+    const btn = document.getElementById('btn-export-customers-csv');
+    const isEs = (NuraI18n.currentLang === 'es');
+    const origText = btn ? btn.innerText : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = isEs ? 'Exportando...' : 'Exporting...';
+    }
+
+    try {
+        const search = document.getElementById('customer-search-input')?.value.trim() || '';
+        const status = document.getElementById('customer-status-filter')?.value || 'ALL';
+        const sort = document.getElementById('customer-sort-select')?.value || 'CREATED_DESC';
+
+        let allItems = [];
+        let page = 1;
+        while (page <= 20) {
+            const params = new URLSearchParams({ page: String(page), page_size: '100', sort });
+            if (search) params.set('search', search);
+            if (status && status !== 'ALL') params.set('status', status);
+
+            const res = await fetch(`/api/customers?${params.toString()}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const items = Array.isArray(data.items) ? data.items : [];
+            allItems = allItems.concat(items);
+            if (allItems.length >= (data.total || 0) || items.length < 100) break;
+            page++;
+        }
+
+        const headers = isEs
+            ? [
+                'No. Cliente', 'Nombre Legal / Razón Social', 'Tipo de Persona', 'Estatus',
+                'Verificación KYC', 'Teléfono Principal', 'Teléfono Secundario', 'Correo Electrónico',
+                'RFC', 'Préstamos Activos', 'Capital Insoluto (MXN)', 'Fecha Último Pago', 'Cliente Desde'
+              ]
+            : [
+                'Customer Number', 'Full Legal Name', 'Entity Type', 'Customer Status',
+                'KYC Verification', 'Primary Phone', 'Secondary Phone', 'Email Address',
+                'Tax ID (RFC)', 'Active Loans', 'Outstanding Principal (MXN)', 'Last Payment Date', 'Customer Since'
+              ];
+
+        const rows = allItems.map(c => [
+            c.customer_number || '',
+            c.full_legal_name || '',
+            tEnum(c.entity_type || 'INDIVIDUAL'),
+            tEnum(c.status || 'ACTIVE'),
+            tEnum(c.verification_status || 'PENDING_VERIFICATION'),
+            c.phone_primary || '',
+            c.phone_secondary || '',
+            c.email || '',
+            c.tax_id_rfc || '',
+            Number.isSafeInteger(c.active_loans_count) ? c.active_loans_count : 0,
+            ((Number(c.current_outstanding_balance_cents) || 0) / 100).toFixed(2),
+            c.last_payment_date || 'N/A',
+            c.customer_since ? String(c.customer_since).slice(0, 10) : ''
+        ]);
+
+        const dateStr = getLocalTodayISO();
+        const filePrefix = isEs ? 'NURA_Clientes' : 'NURA_Customers';
+        triggerCsvDownload(`${filePrefix}_${dateStr}.csv`, headers, rows);
+    } catch (err) {
+        alert((isEs ? 'Error al exportar CSV: ' : 'CSV Export Error: ') + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = origText || (isEs ? '📥 Exportar CSV' : '📥 Export CSV');
+        }
+    }
+}
+
+async function exportLoansCSV() {
+    const btn = document.getElementById('btn-export-loans-csv');
+    const isEs = (NuraI18n.currentLang === 'es');
+    const origText = btn ? btn.innerText : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = isEs ? 'Exportando...' : 'Exporting...';
+    }
+
+    try {
+        const search = document.getElementById('loan-search-input')?.value.trim() || '';
+        const filterKey = (currentLoanFilter || 'all').toLowerCase();
+        const isDerived = (filterKey === 'current' || filterKey === 'overdue');
+
+        let allItems = [];
+        let page = 1;
+        while (page <= 20) {
+            const params = new URLSearchParams({ page: String(page), page_size: '100' });
+            if (search) params.set('search', search);
+
+            if (isDerived) {
+                params.set('status', 'ACTIVE');
+            } else if (filterKey !== 'all') {
+                const statusMap = {
+                    active: 'ACTIVE',
+                    draft: 'DRAFT',
+                    approved: 'APPROVED',
+                    paidoff: 'PAID_OFF',
+                    cancelled: 'CANCELLED',
+                    defaulted: 'DEFAULTED'
+                };
+                if (statusMap[filterKey]) params.set('status', statusMap[filterKey]);
+            }
+
+            const res = await fetch(`/api/loans?${params.toString()}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const items = Array.isArray(data.items) ? data.items : [];
+            allItems = allItems.concat(items);
+            if (allItems.length >= (data.total || 0) || items.length < 100) break;
+            page++;
+        }
+
+        if (filterKey === 'current') {
+            allItems = allItems.filter(l => l && l.status === 'ACTIVE' && Number(l.overdue_amount_cents) === 0);
+        } else if (filterKey === 'overdue') {
+            allItems = allItems.filter(l => l && l.status === 'ACTIVE' && Number(l.overdue_amount_cents) > 0);
+        }
+
+        const headers = isEs
+            ? [
+                'No. Préstamo', 'No. Cliente', 'Nombre del Cliente', 'Teléfono Cliente',
+                'Producto', 'Estatus', 'Días de Mora (DPD)', 'Cuotas Vencidas',
+                'Tasa Mensual (%)', 'Plazo (Semanas)', 'Capital Original (MXN)',
+                'Capital Insoluto (MXN)', 'Interés Restante (MXN)', 'Total Contrato Restante (MXN)',
+                'Vence Hoy (MXN)', 'Monto en Mora (MXN)', 'Exigible Hoy (MXN)',
+                'Fecha Inicio', 'Primer Pago', 'Fecha Vencimiento'
+              ]
+            : [
+                'Loan Number', 'Customer Number', 'Customer Name', 'Customer Phone',
+                'Product', 'Status', 'Days Past Due (DPD)', 'Overdue Installments',
+                'Monthly Rate (%)', 'Term (Weeks)', 'Original Principal (MXN)',
+                'Unpaid Principal (MXN)', 'Remaining Interest (MXN)', 'Remaining Contract Total (MXN)',
+                'Due Today (MXN)', 'Overdue Amount (MXN)', 'Current Payable Today (MXN)',
+                'Start Date', 'First Payment Date', 'Maturity Date'
+              ];
+
+        const rows = allItems.map(l => [
+            l.loan_number || '',
+            l.customer_number || '',
+            l.customer_name || '',
+            l.customer_phone || '',
+            tEnum(l.product_name || 'Personal Loan'),
+            tEnum(l.status || 'DRAFT'),
+            Number.isSafeInteger(l.days_past_due) ? l.days_past_due : 0,
+            Number.isSafeInteger(l.overdue_installments_count) ? l.overdue_installments_count : 0,
+            Number.isFinite(l.monthly_interest_rate_percent) ? l.monthly_interest_rate_percent.toFixed(2) : '0.00',
+            l.term_installments_count || 0,
+            ((Number(l.principal_cents) || 0) / 100).toFixed(2),
+            ((Number(l.unpaid_principal_cents) || 0) / 100).toFixed(2),
+            ((Number(l.remaining_contractual_interest_cents) || 0) / 100).toFixed(2),
+            ((Number(l.remaining_contract_total_cents) || 0) / 100).toFixed(2),
+            ((Number(l.due_today_cents) || 0) / 100).toFixed(2),
+            ((Number(l.overdue_amount_cents) || 0) / 100).toFixed(2),
+            ((Number(l.current_payable_amount_cents) || 0) / 100).toFixed(2),
+            l.start_date || '',
+            l.first_payment_date || '',
+            l.maturity_date || ''
+        ]);
+
+        const dateStr = getLocalTodayISO();
+        const filePrefix = isEs ? 'NURA_Prestamos' : 'NURA_Loans';
+        triggerCsvDownload(`${filePrefix}_${dateStr}.csv`, headers, rows);
+    } catch (err) {
+        alert((isEs ? 'Error al exportar CSV: ' : 'CSV Export Error: ') + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = origText || (isEs ? '📥 Exportar CSV' : '📥 Export CSV');
+        }
+    }
 }
 
 setTimeout(() => {
