@@ -7,12 +7,14 @@ import ipaddress
 import json
 import logging
 import secrets
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta, date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Optional, List
 from contextlib import asynccontextmanager
 from zoneinfo import ZoneInfo
+from urllib.parse import quote as url_quote
 
 from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request, Query, UploadFile, File, Form
 from fastapi.responses import FileResponse, StreamingResponse
@@ -23,7 +25,8 @@ from sqlalchemy import (
     DateTime, Date, Boolean, ForeignKey, UniqueConstraint,
     CheckConstraint, Index, event, text, or_, inspect, func, LargeBinary
 )
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session, joinedload, selectinload
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session, joinedload, selectinload, deferred
+from sqlalchemy.exc import IntegrityError
 from passlib.context import CryptContext
 
 # --- SERVER LOGGING ---
@@ -271,7 +274,7 @@ class CustomerDocumentModel(Base):
     mime_type = Column(String(100), nullable=False)
     file_size_bytes = Column(Integer, nullable=False)
     file_hash = Column(String(64), nullable=False)
-    file_data = Column(LargeBinary, nullable=False)  # BYTEA
+    file_data = deferred(Column(LargeBinary, nullable=False))  # BYTEA (deferred: solo se carga al descargar)
     status = Column(String(30), default="ACTIVE", nullable=False)
     uploaded_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -490,8 +493,12 @@ class LoanPaymentModel(Base):
     reversed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
     reversed_at = Column(DateTime(timezone=True), nullable=True)
     reversal_reason = Column(String(255), nullable=True)
+    # Detalle del rebate por pronto pago (JSON versionado). Se escribe junto con el pago y es inmutable.
+    rebate_detail_json = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
+    # NOTA: el indice unico parcial uq_loan_payments_posted_reference (referencia de pago unica entre
+    # pagos POSTED SPEI/DEPOSITO/CHEQUE) se crea en la migracion 010.
     __table_args__ = (
         CheckConstraint("loan_payment_seq >= 1", name="ck_loan_payments_seq_positive"),
         CheckConstraint("status IN ('POSTED', 'REVERSED')", name="ck_loan_payments_status_valid"),
@@ -607,7 +614,7 @@ def _enforce_payment_reversal_only_update(mapper, connection, target):
         "prev_unpaid_principal_cents", "prev_remaining_interest_cents",
         "prev_remaining_total_cents", "prev_amount_paid_cents",
         "payment_method", "payment_reference", "paid_at", "notes",
-        "recorded_by_user_id", "created_at"
+        "recorded_by_user_id", "created_at", "rebate_detail_json"
     )
     for attr_name in immutable_attrs:
         hist = state.attrs[attr_name].history
@@ -782,6 +789,9 @@ def is_auth_security_schema_ready(db: Optional[Session] = None) -> bool:
     return False
 
 
+EXPECTED_ALEMBIC_REVISION = "010"  # al crear una nueva migracion, actualizar solo esta constante
+
+
 def verify_database_schema_compatibility(db_engine):
     global _AUTH_SECURITY_SCHEMA_READY
     if not IS_PRODUCTION and "sqlite" in str(db_engine.url):
@@ -806,9 +816,9 @@ def verify_database_schema_compatibility(db_engine):
             if not res:
                 raise RuntimeError("No alembic_version record found in database.")
             rev = res[0]
-            if rev != "009":
+            if rev != EXPECTED_ALEMBIC_REVISION:
                 raise RuntimeError(
-                    f"Database schema is at revision '{rev}', expected '009' (User Preferred Language). Run 'alembic upgrade head'."
+                    f"Database schema is at revision '{rev}', expected '{EXPECTED_ALEMBIC_REVISION}'. Run 'alembic upgrade head'."
                 )
             _AUTH_SECURITY_SCHEMA_READY = True
 
@@ -1283,6 +1293,45 @@ def generate_next_payment_number(db: Session) -> str:
             return candidate
         next_seq += 1
 
+# --- REBATE DETAIL (PURE HELPERS) BEGIN ---
+# El detalle del rebate por pronto pago vive en loan_payments.rebate_detail_json (se escribe
+# en la misma transaccion que el pago). NO se lee de la bitacora de auditoria: alla cada valor
+# se convierte a texto y se trunca a 255 caracteres.
+def serialize_rebate_detail(rebated_map: dict) -> Optional[str]:
+    if not rebated_map:
+        return None
+    clean = {}
+    for inst_id, cents in rebated_map.items():
+        inst_id_int = int(inst_id)
+        cents_int = int(cents)
+        if inst_id_int <= 0 or cents_int <= 0:
+            raise ValueError("Invalid rebate detail entry.")
+        clean[str(inst_id_int)] = cents_int
+    return json.dumps({"v": 1, "rebated_installments": clean}, sort_keys=True, separators=(",", ":"))
+
+
+def parse_rebate_detail(raw: Optional[str]) -> dict:
+    # Devuelve {installment_id: centavos}. Si el dato esta corrupto lanza ValueError a proposito:
+    # es preferible abortar la reversa que dejar el prestamo a medio restaurar.
+    if not raw:
+        return {}
+    data = json.loads(raw)
+    if not isinstance(data, dict) or data.get("v") != 1:
+        raise ValueError("Unsupported rebate detail format.")
+    entries = data.get("rebated_installments")
+    if not isinstance(entries, dict) or not entries:
+        raise ValueError("Invalid rebate detail payload.")
+    out = {}
+    for inst_id, cents in entries.items():
+        inst_id_int = int(inst_id)
+        cents_int = int(cents)
+        if inst_id_int <= 0 or cents_int <= 0:
+            raise ValueError("Invalid rebate detail entry.")
+        out[inst_id_int] = cents_int
+    return out
+# --- REBATE DETAIL (PURE HELPERS) END ---
+
+
 class LoanPaymentEngine:
     @staticmethod
     def _verify_ledger_integrity_python(loan: LoanModel, installments: List[LoanInstallmentModel], db: Session):
@@ -1310,7 +1359,7 @@ class LoanPaymentEngine:
             raise RuntimeError("Python Ledger Violation: remaining_contract_total_cents mismatch.")
 
     @staticmethod
-    def execute_waterfall_allocation(db: Session, loan: LoanModel, installments: List[LoanInstallmentModel], amount_cents: int, payment_method: str, payment_reference: str, paid_at_dt: datetime, notes: str, user_id: int, idempotency_key: str, payload_hash: str) -> dict:
+    def execute_waterfall_allocation(db: Session, loan: LoanModel, installments: List[LoanInstallmentModel], amount_cents: int, payment_method: str, payment_reference: str, paid_at_dt: datetime, notes: str, user_id: int, idempotency_key: str, payload_hash: str, rebate_detail_json: Optional[str] = None) -> dict:
         if amount_cents <= 0 or amount_cents > loan.remaining_contract_total_cents:
             raise ValueError("Payment amount must be > 0 and cannot exceed the remaining contract total.")
 
@@ -1399,6 +1448,7 @@ class LoanPaymentEngine:
             payment_reference=payment_reference,
             paid_at=paid_at_dt,
             notes=notes,
+            rebate_detail_json=rebate_detail_json,
             recorded_by_user_id=user_id
         )
         db.add(payment)
@@ -1535,14 +1585,14 @@ def get_db():
 # --- PYDANTIC SCHEMAS ---
 class UserRegister(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, max_length=128)
     full_name: Optional[str] = Field(default=None, max_length=120)
-    role: str = Field(default="OWNER_ADMIN")
+    role: str = Field(default="SALES_AGENT")  # minimo privilegio por defecto
 
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=1, max_length=128)
 
 
 class PasswordResetRequest(BaseModel):
@@ -2489,8 +2539,8 @@ def change_my_password(
             headers={"Retry-After": str(retry_after)}
         )
 
-    new_pw = payload.new_password.strip()
-    if len(new_pw) < 8:
+    new_pw = payload.new_password  # no mutar: el login verifica la contrasena exactamente como se escribio
+    if len(new_pw.strip()) < 8:
         raise HTTPException(status_code=422, detail="Password must be at least 8 characters long.")
 
     try:
@@ -3302,11 +3352,101 @@ def create_customer_interaction(
         raise HTTPException(status_code=500, detail="Could not save customer interaction.")
 
 
+# --- DOCUMENT UPLOAD SECURITY (PURE HELPERS) BEGIN ---
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 ALLOWED_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
+UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
+MULTIPART_OVERHEAD_BYTES = 512 * 1024  # holgura para boundaries y campos del formulario
+
+
+class UploadTooLarge(Exception):
+    pass
+
+
+def read_upload_limited(fileobj, max_bytes: int, chunk_size: int = UPLOAD_READ_CHUNK_BYTES) -> bytes:
+    # Lee en bloques y aborta apenas se supera max_bytes: nunca se carga mas de max_bytes + 1 en RAM.
+    chunks = []
+    total = 0
+    while True:
+        chunk = fileobj.read(min(chunk_size, max_bytes + 1 - total))
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise UploadTooLarge()
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def detect_document_mime(data: bytes) -> Optional[str]:
+    # Tipo REAL por "magic bytes". No se confia en el Content-Type que declara el cliente.
+    if data[:5] == b"%PDF-":
+        return "application/pdf"
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
+def sanitize_upload_filename(raw_name: Optional[str]) -> str:
+    name = (raw_name or "").replace("\\", "/").split("/")[-1]
+    name = "".join(ch for ch in name if ch.isprintable() and ch not in '"<>|:*?')
+    name = name.strip().strip(".")
+    return name[:255] if name else "document"
+
+
+def build_content_disposition(filename: Optional[str], disposition: str = "inline") -> str:
+    safe_name = sanitize_upload_filename(filename)
+    ascii_fallback = unicodedata.normalize("NFKD", safe_name).encode("ascii", "ignore").decode("ascii")
+    ascii_fallback = ascii_fallback.replace("\\", "").replace('"', "").strip() or "document"
+    return f'{disposition}; filename="{ascii_fallback}"; filename*=UTF-8\'\'{url_quote(safe_name, safe="")}'
+
+
+_DOCUMENT_UPLOAD_PATH_RE = re.compile(r"^/api/customers/\d+/documents/?$")
+
+
+class DocumentUploadSizeGuard:
+    # Middleware ASGI puro: rechaza con 413 las subidas cuyo Content-Length ya excede el limite,
+    # antes de que el servidor reciba y guarde en disco todo el cuerpo.
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if (
+            scope["type"] == "http"
+            and scope["method"] == "POST"
+            and _DOCUMENT_UPLOAD_PATH_RE.match(scope["path"])
+        ):
+            for header_name, header_value in scope.get("headers", []):
+                if header_name == b"content-length":
+                    try:
+                        declared_length = int(header_value)
+                    except ValueError:
+                        declared_length = 0
+                    if declared_length > MAX_FILE_SIZE_BYTES + MULTIPART_OVERHEAD_BYTES:
+                        body = b'{"detail":"File must be between 1 byte and 10 MB."}'
+                        await send({
+                            "type": "http.response.start", "status": 413,
+                            "headers": [
+                                (b"content-type", b"application/json"),
+                                (b"content-length", str(len(body)).encode("ascii")),
+                            ],
+                        })
+                        await send({"type": "http.response.body", "body": body})
+                        return
+                    break
+        await self.app(scope, receive, send)
+# --- DOCUMENT UPLOAD SECURITY (PURE HELPERS) END ---
+
+
+app.add_middleware(DocumentUploadSizeGuard)
+
 
 @app.post("/api/customers/{customer_id}/documents", dependencies=[Depends(verify_csrf)])
-async def upload_customer_document(
+def upload_customer_document(
     customer_id: int,
     request: Request,
     document_type: str = Form(...),
@@ -3322,15 +3462,23 @@ async def upload_customer_document(
     if document_type not in VALID_DOCUMENT_TYPES:
         raise HTTPException(status_code=422, detail="Invalid document type.")
 
-    file_data = await file.read()
-    file_size = len(file_data)
+    declared_mime = (file.content_type or "").split(";")[0].strip().lower()
+    if declared_mime not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=422, detail="Invalid file type. Only PDF, JPG, PNG, WEBP are allowed.")
 
-    if file_size == 0 or file_size > MAX_FILE_SIZE_BYTES:
+    try:
+        file_data = read_upload_limited(file.file, MAX_FILE_SIZE_BYTES)
+    except UploadTooLarge:
         raise HTTPException(status_code=422, detail="File must be between 1 byte and 10 MB.")
 
-    mime_type = file.content_type
-    if mime_type not in ALLOWED_MIME_TYPES:
-        raise HTTPException(status_code=422, detail="Invalid file type. Only PDF, JPG, PNG, WEBP are allowed.")
+    file_size = len(file_data)
+    if file_size == 0:
+        raise HTTPException(status_code=422, detail="File must be between 1 byte and 10 MB.")
+
+    # El tipo que se guarda es el detectado por contenido, no el declarado por el cliente.
+    mime_type = detect_document_mime(file_data)
+    if mime_type is None:
+        raise HTTPException(status_code=422, detail="File content is not a valid PDF, JPG, PNG or WEBP.")
 
     file_hash = hashlib.sha256(file_data).hexdigest()
 
@@ -3338,7 +3486,7 @@ async def upload_customer_document(
         new_doc = CustomerDocumentModel(
             customer_id=customer.id,
             document_type=document_type,
-            original_filename=file.filename[:255],
+            original_filename=sanitize_upload_filename(file.filename),
             mime_type=mime_type,
             file_size_bytes=file_size,
             file_hash=file_hash,
@@ -3397,7 +3545,15 @@ def download_customer_document(
         db, "CUSTOMER_DOCUMENT_DOWNLOADED", "document", "SUCCESS", actor=current_user,
         resource_id=str(doc.id), ip_address=get_client_ip(request), commit=True
     )
-    return Response(content=doc.file_data, media_type=doc.mime_type, headers={"Content-Disposition": f'inline; filename="{doc.original_filename}"'})
+    return Response(
+        content=doc.file_data,
+        media_type=doc.mime_type,
+        headers={
+            "Content-Disposition": build_content_disposition(doc.original_filename, "inline"),
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, no-store",
+        }
+    )
 
 @app.delete("/api/customers/{customer_id}/documents/{doc_id}", dependencies=[Depends(verify_csrf)])
 def delete_customer_document(
@@ -3411,12 +3567,19 @@ def delete_customer_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found.")
 
-    doc.status = "DELETED"
-    record_audit_event(
-        db, "CUSTOMER_DOCUMENT_DELETED", "document", "SUCCESS", actor=current_user,
-        resource_id=str(doc.id), ip_address=get_client_ip(request), commit=True
-    )
-    db.commit()
+    try:
+        doc.status = "DELETED"
+        # commit=False: el cambio y su auditoria se confirman juntos. Con commit=True, si el insert
+        # de auditoria fallaba, el rollback interno deshacia el borrado y aun asi se respondia "exito".
+        record_audit_event(
+            db, "CUSTOMER_DOCUMENT_DELETED", "document", "SUCCESS", actor=current_user,
+            resource_id=str(doc.id), ip_address=get_client_ip(request), commit=False
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Document delete failed")
+        raise HTTPException(status_code=500, detail="Could not delete document.")
     return {"message": "Document deleted successfully"}
 
 
@@ -4887,7 +5050,7 @@ def activate_loan(
     except Exception as e:
         db.rollback()
         logger.exception("Failed to activate loan")
-        raise HTTPException(status_code=500, detail=f"Could not activate loan: {type(e).__name__} — {str(e)}")
+        raise HTTPException(status_code=500, detail="Could not activate loan.")
 
 
 @app.post("/api/loans/{loan_id}/cancel", dependencies=[Depends(verify_csrf)])
@@ -5242,7 +5405,7 @@ def create_loan_payment(
         raise HTTPException(status_code=409, detail="Idempotency key collision with different payload.")
 
     try:
-        if payload.payment_method in ('SPEI_TRANSFER', 'BANK_DEPOSIT', 'CHECK') and payload.payment_reference:
+        if payload.payment_method in ('SPEI_TRANSFER', 'BANK_DEPOSIT', 'CHECK') and payload.payment_reference and payload.payment_reference.strip():
             ref_clean = payload.payment_reference.strip().upper()
             dup_ref = db.query(LoanPaymentModel).filter(
                 LoanPaymentModel.payment_method == payload.payment_method,
@@ -5323,7 +5486,6 @@ def create_loan_payment(
             loan.total_repayment_cents = int(loan.principal_cents or 0) + loan.total_interest_cents
             loan.remaining_contractual_interest_cents = max(0, int(loan.remaining_contractual_interest_cents or 0) - total_rebated_interest_cents)
             loan.remaining_contract_total_cents = int(loan.unpaid_principal_cents or 0) + loan.remaining_contractual_interest_cents
-            loan.early_payoff_rebate_rule = f"UNEARNED_INTEREST_REBATED:{total_rebated_interest_cents}_CENTS"
 
             rebate_tag = f"[Early Payoff Rebate: -${total_rebated_interest_cents / 100:,.2f} MXN future interest forgiven]"
             effective_notes = f"{effective_notes} {rebate_tag}".strip() if effective_notes else rebate_tag
@@ -5332,7 +5494,8 @@ def create_loan_payment(
             db=db, loan=loan, installments=installments, amount_cents=amount_cents,
             payment_method=payload.payment_method, payment_reference=payload.payment_reference,
             paid_at_dt=paid_at_dt, notes=effective_notes, user_id=current_user.id,
-            idempotency_key=payload.idempotency_key, payload_hash=payload_hash
+            idempotency_key=payload.idempotency_key, payload_hash=payload_hash,
+            rebate_detail_json=serialize_rebate_detail(rebated_installments_map)
         )
 
         record_audit_event(
@@ -5343,7 +5506,7 @@ def create_loan_payment(
                 "amount_cents": amount_cents,
                 "method": payload.payment_method,
                 "early_payoff_rebate_cents": total_rebated_interest_cents,
-                "rebated_installments": rebated_installments_map
+                "rebated_installments_count": len(rebated_installments_map)
             },
             commit=False
         )
@@ -5357,10 +5520,19 @@ def create_loan_payment(
     except HTTPException:
         db.rollback()
         raise
-    except Exception as e:
+    except IntegrityError as e:
+        db.rollback()
+        orig_msg = str(getattr(e, "orig", e))
+        if "uq_loan_payments_posted_reference" in orig_msg:
+            raise HTTPException(status_code=409, detail="Duplicate payment reference detected.")
+        if "uq_loan_payments_idempotency_key" in orig_msg:
+            raise HTTPException(status_code=409, detail="Concurrency collision on idempotency key.")
+        logger.exception("Integrity error while recording payment")
+        raise HTTPException(status_code=500, detail="Payment could not be recorded.")
+    except Exception:
         db.rollback()
         logger.exception("Failed to record payment")
-        raise HTTPException(status_code=500, detail=f"Payment execution failed: {type(e).__name__} — {str(e)}")
+        raise HTTPException(status_code=500, detail="Payment could not be recorded.")
 
 
 @app.post("/api/loans/{loan_id}/payments/{payment_id}/reverse", dependencies=[Depends(verify_csrf)])
@@ -5398,48 +5570,46 @@ def reverse_loan_payment(
 
         LoanPaymentEngine.execute_reversal_restoration(db, loan, target_payment, payload.reversal_reason.strip(), current_user.id)
 
-        # Restore rebated future interest if this payment was an early payoff settlement
-        recorded_audit = (
-            db.query(AuditLogModel)
-            .filter(
-                AuditLogModel.event_type == "LOAN_PAYMENT_RECORDED",
-                AuditLogModel.resource_id == target_payment.payment_number
+        # Restore rebated future interest if this payment was an early payoff settlement.
+        # Fuente de verdad: loan_payments.rebate_detail_json. Cualquier error aqui aborta TODA la
+        # reversa (rollback): nunca se debe dejar el prestamo a medio restaurar.
+        rebated_map = parse_rebate_detail(target_payment.rebate_detail_json)
+        if rebated_map:
+            rebated_insts = (
+                db.query(LoanInstallmentModel)
+                .filter(
+                    LoanInstallmentModel.loan_id == loan.id,
+                    LoanInstallmentModel.id.in_(list(rebated_map.keys()))
+                )
+                .with_for_update()
+                .all()
             )
-            .order_by(AuditLogModel.id.desc())
-            .first()
-        )
-        if recorded_audit and recorded_audit.details_json:
-            try:
-                audit_details = json.loads(recorded_audit.details_json)
-                rebated_map = audit_details.get("rebated_installments") or {}
-                if isinstance(rebated_map, dict) and rebated_map:
-                    all_insts = (
-                        db.query(LoanInstallmentModel)
-                        .filter(LoanInstallmentModel.loan_id == loan.id)
-                        .with_for_update()
-                        .all()
-                    )
-                    inst_by_id = {int(i.id): i for i in all_insts}
-                    restored_total_cents = 0
-                    for inst_id_str, rebated_val in rebated_map.items():
-                        inst_obj = inst_by_id.get(int(inst_id_str))
-                        add_cents = int(rebated_val or 0)
-                        if inst_obj and add_cents > 0:
-                            inst_obj.interest_due_cents = int(inst_obj.interest_due_cents or 0) + add_cents
-                            inst_obj.scheduled_payment_cents = int(inst_obj.principal_due_cents or 0) + inst_obj.interest_due_cents
-                            if hasattr(inst_obj, "remaining_interest_cents"):
-                                inst_obj.remaining_interest_cents = max(0, inst_obj.interest_due_cents - int(inst_obj.interest_paid_cents or 0))
-                            inst_obj.remaining_amount_cents = max(0, inst_obj.scheduled_payment_cents - int(inst_obj.amount_paid_cents or 0))
-                            restored_total_cents += add_cents
+            inst_by_id = {int(i.id): i for i in rebated_insts}
+            missing_ids = set(rebated_map.keys()) - set(inst_by_id.keys())
+            if missing_ids:
+                raise ValueError(f"Data corruption: rebated installments not found: {sorted(missing_ids)}")
 
-                    if restored_total_cents > 0:
-                        loan.total_interest_cents = int(loan.total_interest_cents or 0) + restored_total_cents
-                        loan.total_repayment_cents = int(loan.principal_cents or 0) + loan.total_interest_cents
-                        loan.remaining_contractual_interest_cents = max(0, loan.total_interest_cents - int(loan.interest_paid_cents or 0))
-                        loan.remaining_contract_total_cents = int(loan.unpaid_principal_cents or 0) + loan.remaining_contractual_interest_cents
-                        loan.early_payoff_rebate_rule = "NOT_DEFINED_PENDING_POLICY"
-            except Exception:
-                pass
+            restored_total_cents = 0
+            for inst_id, add_cents in rebated_map.items():
+                inst_obj = inst_by_id[inst_id]
+                inst_obj.interest_due_cents = int(inst_obj.interest_due_cents or 0) + add_cents
+                inst_obj.scheduled_payment_cents = int(inst_obj.principal_due_cents or 0) + inst_obj.interest_due_cents
+                inst_obj.remaining_amount_cents = max(
+                    0, inst_obj.scheduled_payment_cents - int(inst_obj.amount_paid_cents or 0)
+                )
+                restored_total_cents += add_cents
+
+            # execute_reversal_restoration dejo los saldos del prestamo en sus valores "prev_*"
+            # (ya con el rebate aplicado); sumar de vuelta lo perdonado reconstruye el estado original.
+            loan.total_interest_cents = int(loan.total_interest_cents or 0) + restored_total_cents
+            loan.total_repayment_cents = int(loan.principal_cents or 0) + loan.total_interest_cents
+            loan.remaining_contractual_interest_cents = (
+                int(loan.remaining_contractual_interest_cents or 0) + restored_total_cents
+            )
+            loan.remaining_contract_total_cents = (
+                int(loan.remaining_contract_total_cents or 0) + restored_total_cents
+            )
+            db.flush()
 
         record_audit_event(
             db, "LOAN_PAYMENT_REVERSED", "loan", "SUCCESS", actor=current_user,
