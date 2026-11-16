@@ -10563,11 +10563,160 @@ async function exportLoansCSV() {
     }
 }
 
+// =====================================================================
+// NURA CRM — CONTRATO DE CRÉDITO SIMPLE + ANEXO A + PAGARÉ MERCANTIL
+//
+// REEMPLAZA en index.html desde:
+//     async function printLoanContractAndPagare() {
+// hasta el cierre del bloque:
+//     setTimeout(() => { ... }, 500);
+// (el que inyecta #btn-print-contract y #btn-print-statement).
+//
+// Las 3 funciones auxiliares van ARRIBA de printLoanContractAndPagare().
+// =====================================================================
+
+/**
+ * Convierte centavos a importe en letra con formato legal bancario (mayúsculas).
+ * 5000000 -> "CINCUENTA MIL PESOS 00/100 M.N."
+ * Rango soportado: $0.00 a $99,999,999.99. Fuera de rango o inválido -> null
+ * (quien llama debe abortar la impresión: nunca imprimir una cantidad en letra errónea).
+ */
+function numberToSpanishWordsMXN(cents) {
+    const raw = Number(cents);
+    if (!Number.isFinite(raw) || raw < 0) return null;
+    const totalCents = Math.round(raw);
+    if (totalCents > 9999999999) return null; // > $99,999,999.99
+
+    const pesos = Math.floor(totalCents / 100);
+    const centavos = totalCents % 100;
+
+    // Índices 1, 21 usan apócope ("UN", "VEINTIÚN") porque siempre preceden a
+    // "PESOS", "MIL" o "MILLONES" (sustantivo masculino).
+    const UNITS = [
+        '', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE',
+        'DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE',
+        'DIECIOCHO', 'DIECINUEVE', 'VEINTE', 'VEINTIÚN', 'VEINTIDÓS', 'VEINTITRÉS',
+        'VEINTICUATRO', 'VEINTICINCO', 'VEINTISÉIS', 'VEINTISIETE', 'VEINTIOCHO', 'VEINTINUEVE'
+    ];
+    const TENS = ['', '', '', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+    const HUNDREDS = [
+        '', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS',
+        'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'
+    ];
+
+    function below1000(num) {
+        if (num === 0) return '';
+        if (num === 100) return 'CIEN';
+        const h = Math.floor(num / 100);
+        const rest = num % 100;
+        const parts = [];
+        if (h) parts.push(HUNDREDS[h]);
+        if (rest) {
+            if (rest < 30) {
+                parts.push(UNITS[rest]);
+            } else {
+                const tens = Math.floor(rest / 10);
+                const unit = rest % 10;
+                parts.push(unit ? `${TENS[tens]} Y ${UNITS[unit]}` : TENS[tens]);
+            }
+        }
+        return parts.join(' ');
+    }
+
+    const millions = Math.floor(pesos / 1000000);
+    const thousands = Math.floor((pesos % 1000000) / 1000);
+    const units = pesos % 1000;
+
+    const parts = [];
+    if (millions) parts.push(millions === 1 ? 'UN MILLÓN' : `${below1000(millions)} MILLONES`);
+    if (thousands) parts.push(thousands === 1 ? 'MIL' : `${below1000(thousands)} MIL`);
+    if (units) parts.push(below1000(units));
+
+    let pesosWords;
+    if (pesos === 0) {
+        pesosWords = 'CERO PESOS';
+    } else if (pesos === 1) {
+        pesosWords = 'UN PESO';
+    } else if (millions && !thousands && !units) {
+        pesosWords = `${parts.join(' ')} DE PESOS`; // "UN MILLÓN DE PESOS", "DOS MILLONES DE PESOS"
+    } else {
+        pesosWords = `${parts.join(' ')} PESOS`;
+    }
+
+    return `${pesosWords} ${String(centavos).padStart(2, '0')}/100 M.N.`;
+}
+
+/**
+ * "2026-10-17" -> "17 DE OCTUBRE DE 2026" (sin desfase de zona horaria).
+ * Si la fecha falta o es inválida devuelve una línea en blanco para llenar a mano.
+ */
+function formatDateLongEs(isoDateStr) {
+    const MONTHS = [
+        'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+        'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
+    ];
+    const FALLBACK = '____ DE ______________ DE ______';
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(isoDateStr ?? ''));
+    if (!m) return FALLBACK;
+    const year = Number(m[1]);
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const check = new Date(Date.UTC(year, month - 1, day));
+    if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) {
+        return FALLBACK;
+    }
+    return `${day} DE ${MONTHS[month - 1]} DE ${year}`;
+}
+
+/**
+ * Edad en años cumplidos a partir de "YYYY-MM-DD". Si no hay fecha válida -> "____".
+ */
+function calculateCustomerAge(dobStr) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dobStr ?? ''));
+    if (!m) return '____';
+    const by = Number(m[1]);
+    const bm = Number(m[2]);
+    const bd = Number(m[3]);
+    const now = new Date();
+    let age = now.getFullYear() - by;
+    const hadBirthday = (now.getMonth() + 1 > bm) || ((now.getMonth() + 1 === bm) && now.getDate() >= bd);
+    if (!hadBirthday) age -= 1;
+    return (age >= 0 && age < 130) ? String(age) : '____';
+}
+
 async function printLoanContractAndPagare() {
     if (!currentSelectedLoan) return;
     const l = currentSelectedLoan;
     const isEs = (NuraI18n.currentLang === 'es');
 
+    // ------------------------------------------------------------------
+    // CONSTANTES EDITABLES DEL ACREDITANTE
+    // ------------------------------------------------------------------
+    const LENDER_NAME = "JEDMA CAPITAL";
+    const LENDER_ENTITY_TYPE = "MORAL";
+    const LENDER_ADDRESS = "____________________________________________________________________";
+    const SIGNING_PLACE = "__________________________________________________";
+    const DAILY_LATE_FEE_TEXT = "$200.00 MXN (DOSCIENTOS PESOS 00/100 M.N.)";
+
+    const E = (v) => escapeHtml(String(v ?? ''));
+    const BLANK_LINE = '______________________________';
+    const BLANK_LONG = '____________________________________________________________';
+
+    // ------------------------------------------------------------------
+    // GUARDAS: no imprimir un anexo legal con la tabla "cargando" o ausente
+    // ------------------------------------------------------------------
+    const scheduleTbody = document.getElementById('ld-schedule-tbody');
+    const scheduleTable = scheduleTbody ? scheduleTbody.parentElement : null;
+    if (!scheduleTable || scheduleTbody.querySelector('td[colspan]') || !scheduleTbody.querySelector('tr')) {
+        alert(isEs
+            ? 'El calendario de pagos aún no está disponible. Espera a que cargue la tabla de amortización e inténtalo de nuevo.'
+            : 'The payment schedule is not available yet. Wait for the amortization table to load and try again.');
+        return;
+    }
+
+    // ------------------------------------------------------------------
+    // CLIENTE
+    // ------------------------------------------------------------------
     let cust = (currentSelectedCustomer && currentSelectedCustomer.id === l.customer_id) ? currentSelectedCustomer : null;
     if (!cust && Number.isSafeInteger(l.customer_id)) {
         try {
@@ -10577,162 +10726,241 @@ async function printLoanContractAndPagare() {
     }
 
     const borrowerName = cust?.full_legal_name || l.customer_name || `Customer #${l.customer_id}`;
-    const borrowerNumber = cust?.customer_number || l.customer_number || `CUST-${l.customer_id}`;
-    const borrowerRfc = cust?.tax_id_rfc || (isEs ? 'No proporcionado' : 'Not provided');
-    const borrowerPhone = cust?.phone_primary || l.customer_phone || 'N/A';
-    const borrowerEmail = cust?.email || 'N/A';
-    const borrowerAddress = cust?.address_full || (isEs ? 'Domicilio registrado en expediente KYC' : 'Address on file in KYC dossier');
-    const entityTypeLabel = tEnum(cust?.entity_type || 'INDIVIDUAL');
+    const borrowerRfc = cust?.tax_id_rfc ? E(cust.tax_id_rfc) : BLANK_LINE;
+    const borrowerAddress = cust?.address_full ? E(cust.address_full) : BLANK_LONG;
     const legalRep = cust?.legal_representative_name || '';
+    const isBusiness = (cust?.entity_type === 'BUSINESS');
+    const age = calculateCustomerAge(cust?.date_of_birth);
 
+    // ------------------------------------------------------------------
+    // CANTIDADES (número + letra). Si alguna no se puede convertir, se aborta.
+    // ------------------------------------------------------------------
     const principalFormatted = NuraFinancialEngine.formatMXNFromCents(l.principal_cents);
     const totalInterestFormatted = NuraFinancialEngine.formatMXNFromCents(l.total_interest_cents);
     const totalRepayFormatted = NuraFinancialEngine.formatMXNFromCents(l.total_repayment_cents);
     const regInstallmentFormatted = NuraFinancialEngine.formatMXNFromCents(l.regular_installment_cents);
     const finalInstallmentFormatted = NuraFinancialEngine.formatMXNFromCents(l.final_installment_cents);
-    const rateFormatted = Number.isFinite(l.monthly_interest_rate_percent) ? `${l.monthly_interest_rate_percent.toFixed(2)}%` : '0.00%';
-    const methodLabel = tEnum(l.interest_calculation_method || 'FLAT_ORIGINAL_PRINCIPAL');
 
-    const pagareLegalText = isEs
-        ? `Por este <strong>PAGARÉ</strong>, yo <strong>${escapeHtml(borrowerName)}</strong>${legalRep ? ` (representado legalmente por <strong>${escapeHtml(legalRep)}</strong>)` : ''}, debo y pagaré incondicionalmente a la orden del Acreedor en las fechas estipuladas en la Tabla de Amortización de este contrato (con fecha de vencimiento final el día <strong>${escapeHtml(l.maturity_date)}</strong>), la cantidad total de <strong>${escapeHtml(totalRepayFormatted)}</strong> (integrada por un Capital Original de <strong>${escapeHtml(principalFormatted)}</strong> más un Interés Ordinario pactado de <strong>${escapeHtml(totalInterestFormatted)}</strong> calculado a razón de una tasa mensual del <strong>${escapeHtml(rateFormatted)}</strong> bajo el método <em>${escapeHtml(methodLabel)}</em>), mediante <strong>${escapeHtml(l.term_installments_count)}</strong> pagos semanales sucesivos. Valor recibido a mi entera satisfacción. La falta de pago oportuno de una o más cuotas semanales facultará al tenedor para dar por vencido anticipadamente el saldo total insoluto de este título conforme a la legislación mercantil aplicable.`
-        : `For value received, by this <strong>PROMISSORY NOTE (PAGARÉ)</strong>, I, <strong>${escapeHtml(borrowerName)}</strong>${legalRep ? ` (legally represented by <strong>${escapeHtml(legalRep)}</strong>)` : ''}, unconditionally promise to pay to the order of the Lender on the scheduled installment dates set forth herein (with final maturity on <strong>${escapeHtml(l.maturity_date)}</strong>), the total sum of <strong>${escapeHtml(totalRepayFormatted)}</strong> (comprising Original Principal of <strong>${escapeHtml(principalFormatted)}</strong> plus contractual ordinary interest of <strong>${escapeHtml(totalInterestFormatted)}</strong> at a monthly rate of <strong>${escapeHtml(rateFormatted)}</strong> under the <em>${escapeHtml(methodLabel)}</em> method), payable across <strong>${escapeHtml(l.term_installments_count)}</strong> consecutive weekly installments. Failure to pay any scheduled installment when due shall entitle the holder to accelerate the entire unpaid balance immediately.`;
+    const principalWords = numberToSpanishWordsMXN(l.principal_cents);
+    const totalRepayWords = numberToSpanishWordsMXN(l.total_repayment_cents);
+    const regInstallmentWords = numberToSpanishWordsMXN(l.regular_installment_cents);
 
-    const content = `
-        <div class="space-y-4 text-slate-900">
-            <div class="flex items-center justify-between bg-slate-100 border border-slate-400 rounded-lg p-3.5">
-                <div>
-                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-600">
-                        ${isEs ? 'Carátula Oficial de Contrato de Crédito y Tabla de Amortización' : 'Official Credit Contract Cover Sheet & Amortization Schedule'}
-                    </p>
-                    <h2 class="text-base font-extrabold text-slate-900 mt-0.5">
-                        ${escapeHtml(l.loan_number)} — ${escapeHtml(tEnum(l.product_name || 'Personal Loan'))}
-                    </h2>
-                </div>
-                <div class="text-right text-xs">
-                    <p class="text-[10px] font-bold uppercase text-slate-500">${isEs ? 'Estatus del Contrato' : 'Contract Status'}</p>
-                    <p class="text-xs font-extrabold font-mono text-slate-900 mt-0.5">${escapeHtml(tEnum(l.status))}</p>
-                </div>
+    const hasDistinctFinal = Number.isFinite(Number(l.final_installment_cents))
+        && Number(l.final_installment_cents) > 0
+        && Number(l.final_installment_cents) !== Number(l.regular_installment_cents);
+    const finalInstallmentWords = hasDistinctFinal ? numberToSpanishWordsMXN(l.final_installment_cents) : '';
+
+    if (principalWords === null || totalRepayWords === null || regInstallmentWords === null
+        || (hasDistinctFinal && finalInstallmentWords === null)) {
+        alert(isEs
+            ? 'No se pudo generar el contrato: alguna cantidad del préstamo no es válida o excede el límite soportado.'
+            : 'Contract could not be generated: a loan amount is invalid or exceeds the supported limit.');
+        return;
+    }
+
+    const rateNum = Number(l.monthly_interest_rate_percent);
+    const rateFormatted = Number.isFinite(rateNum) ? `${rateNum.toFixed(2)}%` : '0.00%';
+    const baseCalculoTexto = (l.interest_calculation_method === 'FLAT_ORIGINAL_PRINCIPAL')
+        ? 'CAPITAL ORIGINAL'
+        : 'SALDOS INSOLUTOS';
+
+    const startLong = formatDateLongEs(l.start_date);
+    const firstPayLong = formatDateLongEs(l.first_payment_date);
+    const maturityLong = formatDateLongEs(l.maturity_date);
+    const productLabel = tEnum(l.product_name || 'Personal Loan');
+
+    // ------------------------------------------------------------------
+    // PIEZAS REUTILIZABLES
+    // ------------------------------------------------------------------
+    const lettered = (items) => items
+        .map((txt, i) => `<p class="pl-4 mb-0.5 text-justify">${String.fromCharCode(97 + i)}) ${txt}</p>`)
+        .join('');
+    const clause = (ordinal, title, body) =>
+        `<p class="mb-1.5 text-justify"><strong>${ordinal}. ${title}.</strong> ${body}</p>`;
+
+    const lenderH = E(LENDER_NAME);
+    const borrowerH = E(borrowerName);
+
+    // Declaraciones del ACREDITADO (persona física o moral)
+    const declAcreditado = isBusiness
+        ? [
+            `Ser una persona <strong>MORAL</strong> denominada <strong>${borrowerH}</strong>, legalmente constituida conforme a las leyes mexicanas, con capacidad jurídica para obligarse y representada en este acto por <strong>${legalRep ? E(legalRep) : BLANK_LINE}</strong>, quien cuenta con facultades suficientes para obligarla.`,
+            `Tener su domicilio en <strong>${borrowerAddress}</strong>.`,
+            `Identificarse con RFC / Identificación oficial <strong>${borrowerRfc}</strong>.`,
+            `Que los recursos derivados del crédito serán destinados a actividades lícitas / capital de trabajo (<strong>${E(productLabel)}</strong>).`,
+            `Que la información y documentación proporcionada a “EL ACREDITANTE” es verdadera y completa.`
+        ]
+        : [
+            `Llamarse <strong>${borrowerH}</strong>, ser de nacionalidad <strong>MEXICANA</strong>, tener <strong>${E(age)}</strong> años de edad y contar con capacidad legal para obligarse${legalRep ? `, actuando por conducto de su representante legal <strong>${E(legalRep)}</strong>` : ''}.`,
+            `Tener su domicilio en <strong>${borrowerAddress}</strong>.`,
+            `Identificarse con RFC / Identificación oficial <strong>${borrowerRfc}</strong>.`,
+            `Que los recursos derivados del crédito serán destinados a actividades lícitas / capital de trabajo (<strong>${E(productLabel)}</strong>).`,
+            `Que la información y documentación proporcionada a “EL ACREDITANTE” es verdadera y completa.`
+        ];
+
+    const declAcreditante = [
+        `Ser una persona <strong>${E(LENDER_ENTITY_TYPE)}</strong>, legalmente constituida conforme a las leyes mexicanas, con capacidad jurídica para celebrar el presente contrato.`,
+        `Señalar como domicilio para efectos del presente contrato el ubicado en <strong>${E(LENDER_ADDRESS)}</strong>.`,
+        `Contar con facultades suficientes para celebrar el presente contrato.`
+    ];
+
+    const finalInstallmentClause = hasDistinctFinal
+        ? ` (y una cuota final de ajuste de <strong>${E(finalInstallmentFormatted)} (${E(finalInstallmentWords)})</strong> en caso de diferencia por redondeo)`
+        : '';
+
+    // ------------------------------------------------------------------
+    // SECCIÓN 1: CONTRATO DE CRÉDITO SIMPLE INDIVIDUAL
+    // ------------------------------------------------------------------
+    const contractSection = `
+        <section class="text-[11px] leading-relaxed text-slate-900">
+            <div class="text-center mb-3">
+                <h1 class="text-sm font-extrabold uppercase tracking-wide">CONTRATO DE CRÉDITO SIMPLE INDIVIDUAL</h1>
+                <p class="text-[10px] font-mono text-slate-600 mt-0.5">Folio: <strong>${E(l.loan_number)}</strong></p>
             </div>
 
-            <div class="border border-slate-300 rounded-lg p-3.5 text-xs space-y-2">
-                <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 border-b border-slate-200 pb-1">
-                    ${isEs ? 'I. Datos de Identificación del Acreditado (Deudor Principal)' : 'I. Borrower Identification Details'}
+            <p class="mb-2 text-justify">
+                Que celebran por una parte <strong>${lenderH}</strong>, a quien en lo sucesivo se le denominará <strong>“EL ACREDITANTE”</strong>, y por la otra <strong>${borrowerH}</strong>, a quien en lo sucesivo se le denominará <strong>“EL ACREDITADO”</strong>, conjuntamente denominados <strong>“LAS PARTES”</strong>, al tenor de las siguientes declaraciones y cláusulas:
+            </p>
+
+            <h2 class="text-center font-extrabold uppercase tracking-wider mt-3 mb-1.5">DECLARACIONES</h2>
+
+            <p class="mb-0.5 font-bold">I. Declara “EL ACREDITANTE”:</p>
+            ${lettered(declAcreditante)}
+
+            <p class="mt-1.5 mb-0.5 font-bold">II. Declara “EL ACREDITADO”:</p>
+            ${lettered(declAcreditado)}
+
+            <h2 class="text-center font-extrabold uppercase tracking-wider mt-3 mb-1.5">CLÁUSULAS</h2>
+
+            ${clause('PRIMERA', 'OBJETO DEL CONTRATO',
+                `“EL ACREDITANTE” otorga a “EL ACREDITADO” un Crédito Simple Individual por la cantidad de capital principal de <strong>${E(principalFormatted)} (${E(principalWords)})</strong>. “EL ACREDITADO” se obliga a restituir dicho capital más los intereses ordinarios pactados en la Cláusula Quinta, sumando un importe total contractual a pagar de <strong>${E(totalRepayFormatted)} (${E(totalRepayWords)})</strong>.`)}
+
+            ${clause('SEGUNDA', 'DISPOSICIÓN DEL CRÉDITO',
+                `“EL ACREDITANTE” entregará el importe del crédito a “EL ACREDITADO” mediante transferencia electrónica de fondos (SPEI), depósito bancario, cheque o efectivo, según conste en el comprobante de desembolso que se integra al expediente del crédito.`)}
+
+            ${clause('TERCERA', 'PLAZO',
+                `El crédito tendrá un plazo de <strong>${E(l.assumed_interest_months)} meses (${E(l.term_installments_count)} amortizaciones semanales)</strong>, iniciando el día <strong>${E(startLong)}</strong> y concluyendo el día <strong>${E(maturityLong)}</strong>.`)}
+
+            ${clause('CUARTA', 'FORMA DE PAGO',
+                `“EL ACREDITADO” se obliga a realizar <strong>${E(l.term_installments_count)} pagos con periodicidad SEMANAL</strong> de <strong>${E(regInstallmentFormatted)} (${E(regInstallmentWords)})</strong> cada uno${finalInstallmentClause}, hasta cubrir la suma total de <strong>${E(totalRepayFormatted)}</strong>, de acuerdo con el calendario de pagos que forma parte integral del presente contrato como <strong>ANEXO A</strong>. El primer pago deberá realizarse el día <strong>${E(firstPayLong)}</strong> y los subsecuentes en las fechas señaladas en dicho calendario.`)}
+
+            ${clause('QUINTA', 'INTERESES ORDINARIOS',
+                `El crédito causará un interés ordinario del <strong>${E(rateFormatted)} MENSUAL</strong>, calculado sobre <strong>${E(baseCalculoTexto)}</strong>, reflejado en el calendario de pagos entregado a “EL ACREDITADO”.`)}
+
+            ${clause('SEXTA', 'INTERESES MORATORIOS',
+                `En caso de incumplimiento en cualquiera de los pagos establecidos, “EL ACREDITADO” cubrirá sobre las cantidades vencidas y no pagadas un interés moratorio a razón de <strong>${E(DAILY_LATE_FEE_TEXT)} DIARIOS</strong> durante todo el periodo de mora, sin perjuicio de las demás consecuencias contractuales y legales que correspondan.`)}
+
+            ${clause('SÉPTIMA', 'PAGOS ANTICIPADOS',
+                `“EL ACREDITADO” podrá realizar pagos anticipados, totales o parciales, conforme a las condiciones establecidas en el presente contrato y a las políticas de liquidación anticipada autorizadas por “EL ACREDITANTE”.`)}
+
+            ${clause('OCTAVA', 'APLICACIÓN DE PAGOS',
+                `Los pagos recibidos se aplicarán en el siguiente orden de prelación: 1) gastos y conceptos exigibles; 2) intereses moratorios vencidos; 3) intereses ordinarios vencidos; 4) capital vencido; y 5) capital insoluto.`)}
+
+            ${clause('NOVENA', 'OBLIGACIONES DEL ACREDITADO',
+                `“EL ACREDITADO” se obliga a: a) pagar oportunamente las cantidades establecidas; b) proporcionar información y documentación verdadera; c) informar por escrito cualquier cambio de domicilio, teléfono o datos de contacto; d) destinar el crédito al fin declarado; y e) cumplir las demás obligaciones de este contrato.`)}
+
+            ${clause('DÉCIMA', 'VENCIMIENTO ANTICIPADO',
+                `“EL ACREDITANTE” podrá declarar vencido anticipadamente el saldo total insoluto cuando ocurra cualquiera de los siguientes supuestos: a) falta de pago oportuno de <strong>1 (UNA)</strong> o más parcialidades semanales; b) proporcionar información o documentación falsa; c) incumplimiento de obligaciones esenciales del contrato.`)}
+
+            ${clause('DÉCIMA PRIMERA', 'DOMICILIO Y NOTIFICACIONES',
+                `Todos los avisos y notificaciones relacionados con este contrato se realizarán en los domicilios señalados por “LAS PARTES” en el apartado de declaraciones.`)}
+
+            ${clause('DÉCIMA SEGUNDA', 'DATOS PERSONALES',
+                `“EL ACREDITANTE” tratará los datos personales de “EL ACREDITADO” conforme a la legislación aplicable en materia de protección de datos personales.`)}
+
+            ${clause('DÉCIMA TERCERA', 'JURISDICCIÓN',
+                `Para lo relativo a la interpretación y cumplimiento de este contrato, “LAS PARTES” se sujetan a las leyes aplicables y a los tribunales competentes.`)}
+
+            ${clause('DÉCIMA CUARTA', 'INTEGRIDAD DEL CONTRATO',
+                `El presente contrato, junto con su Anexo A y el título de crédito (Pagaré) que lo respalda, constituye el acuerdo total entre “LAS PARTES” respecto de su objeto.`)}
+
+            <div class="mt-3" style="break-inside: avoid;">
+                <p class="mb-1 text-justify">
+                    Leído que fue el presente contrato y enteradas “LAS PARTES” de su contenido y alcance legal, lo firman por duplicado en <strong>${E(SIGNING_PLACE)}</strong>, el día <strong>${E(startLong)}</strong>.
                 </p>
-                <div class="grid grid-cols-3 gap-2.5">
-                    <div class="col-span-2">
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Nombre Legal / Razón Social' : 'Full Legal Name / Entity'}</span>
-                        <strong class="text-xs text-slate-900">${escapeHtml(borrowerName)} (${escapeHtml(borrowerNumber)})</strong>
+                <div class="grid grid-cols-2 gap-10 pt-12 text-[11px]">
+                    <div class="text-center border-t border-slate-900 pt-1.5">
+                        <p class="font-extrabold uppercase">“EL ACREDITANTE”</p>
+                        <p class="font-semibold mt-0.5">${lenderH}</p>
                     </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Tipo de Persona y RFC' : 'Entity Type & Tax ID (RFC)'}</span>
-                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(entityTypeLabel)} • ${escapeHtml(borrowerRfc)}</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Teléfono Principal' : 'Primary Phone'}</span>
-                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(borrowerPhone)}</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Correo Electrónico' : 'Email Address'}</span>
-                        <strong class="text-xs text-slate-900">${escapeHtml(borrowerEmail)}</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Representante Legal' : 'Legal Representative'}</span>
-                        <strong class="text-xs text-slate-900">${escapeHtml(legalRep || (isEs ? 'N/A (Persona Física)' : 'N/A (Individual)'))}</strong>
-                    </div>
-                    <div class="col-span-3">
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Domicilio Residencial / Fiscal Declarado' : 'Declared Residential / Fiscal Address'}</span>
-                        <strong class="text-xs text-slate-900">${escapeHtml(borrowerAddress)}</strong>
+                    <div class="text-center border-t border-slate-900 pt-1.5">
+                        <p class="font-extrabold uppercase">“EL ACREDITADO”</p>
+                        <p class="font-semibold mt-0.5">${borrowerH}</p>
                     </div>
                 </div>
             </div>
+        </section>
+    `;
 
-            <div class="border border-slate-300 rounded-lg p-3.5 text-xs space-y-2">
-                <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 border-b border-slate-200 pb-1">
-                    ${isEs ? 'II. Resumen de Condiciones Financieras Pactadas (Moneda: Pesos Mexicanos MXN)' : 'II. Agreed Financial Terms Summary (Currency: MXN)'}
-                </p>
+    // ------------------------------------------------------------------
+    // SECCIÓN 2: ANEXO A (AMORTIZACIÓN) + PAGARÉ MERCANTIL
+    // ------------------------------------------------------------------
+    const pagareText = `
+        Debo y pagaré incondicionalmente, por este <strong>PAGARÉ</strong>, a la orden de <strong>${lenderH}</strong>, en el domicilio ubicado en <strong>${E(LENDER_ADDRESS)}</strong> o en el lugar que su tenedor me indique por escrito, la cantidad de <strong>${E(totalRepayFormatted)} (${E(totalRepayWords)})</strong>, valor recibido a mi entera satisfacción. Dicha cantidad será cubierta mediante <strong>${E(l.term_installments_count)}</strong> pagos semanales sucesivos conforme al calendario de pagos del Anexo A, cuyo primer pago vence el día <strong>${E(firstPayLong)}</strong> y cuyo vencimiento final es el día <strong>${E(maturityLong)}</strong>.
+        La falta de pago oportuno de cualquiera de las parcialidades facultará al tenedor para dar por vencido anticipadamente el saldo total insoluto de este título. Las cantidades vencidas y no pagadas causarán intereses moratorios a razón de <strong>${E(DAILY_LATE_FEE_TEXT)} DIARIOS</strong> desde la fecha de su vencimiento y hasta su total liquidación.
+        El presente pagaré se suscribe en <strong>${E(SIGNING_PLACE)}</strong>, el día <strong>${E(startLong)}</strong>.
+    `;
+
+    const annexSection = `
+        <section class="text-[11px] leading-relaxed text-slate-900" style="page-break-before: always;">
+            <div class="text-center mb-3">
+                <h2 class="text-sm font-extrabold uppercase tracking-wide">ANEXO A — CALENDARIO DE PAGOS (TABLA DE AMORTIZACIÓN)</h2>
+                <p class="text-[10px] font-mono text-slate-600 mt-0.5">Contrato / Folio: <strong>${E(l.loan_number)}</strong> • Acreditado: <strong>${borrowerH}</strong></p>
+            </div>
+
+            <div class="border border-slate-400 rounded-lg p-3 mb-3">
+                <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 border-b border-slate-300 pb-1 mb-2">Resumen de condiciones financieras pactadas (Moneda: Pesos Mexicanos MXN)</p>
                 <div class="grid grid-cols-4 gap-2.5">
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Capital Original' : 'Original Principal'}</span>
-                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(principalFormatted)}</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Tasa Ordinaria Mensual' : 'Monthly Interest Rate'}</span>
-                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(rateFormatted)} / ${isEs ? 'mes' : 'mo'}</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Interés Contractual Total' : 'Total Contractual Interest'}</span>
-                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(totalInterestFormatted)}</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Total Contractual a Pagar' : 'Total Contractual Repayment'}</span>
-                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(totalRepayFormatted)}</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Plazo y Frecuencia' : 'Term & Frequency'}</span>
-                        <strong class="text-xs text-slate-900">${escapeHtml(l.term_installments_count)} ${isEs ? 'semanas' : 'weeks'} (${escapeHtml(l.assumed_interest_months)} ${isEs ? 'meses' : 'months'})</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Cuota Semanal Regular' : 'Regular Weekly Payment'}</span>
-                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(regInstallmentFormatted)}</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Cuota Final Ajuste' : 'Final Installment'}</span>
-                        <strong class="font-mono text-xs text-slate-900">${escapeHtml(finalInstallmentFormatted)}</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-500 uppercase block">${isEs ? 'Inicio → 1er Pago → Vencimiento' : 'Start → 1st Pay → Maturity'}</span>
-                        <strong class="font-mono text-[11px] text-slate-900">${escapeHtml(l.start_date)} → ${escapeHtml(l.first_payment_date)} → ${escapeHtml(l.maturity_date)}</strong>
-                    </div>
+                    <div><span class="text-[9px] text-slate-500 uppercase block">Capital Original</span><strong class="font-mono">${E(principalFormatted)}</strong></div>
+                    <div><span class="text-[9px] text-slate-500 uppercase block">Tasa Ordinaria Mensual</span><strong class="font-mono">${E(rateFormatted)} / mes</strong></div>
+                    <div><span class="text-[9px] text-slate-500 uppercase block">Interés Total</span><strong class="font-mono">${E(totalInterestFormatted)}</strong></div>
+                    <div><span class="text-[9px] text-slate-500 uppercase block">Total a Pagar</span><strong class="font-mono">${E(totalRepayFormatted)}</strong></div>
+                    <div><span class="text-[9px] text-slate-500 uppercase block">Plazo Semanal</span><strong>${E(l.term_installments_count)} pagos (${E(l.assumed_interest_months)} meses)</strong></div>
+                    <div><span class="text-[9px] text-slate-500 uppercase block">Cuota Regular</span><strong class="font-mono">${E(regInstallmentFormatted)}</strong></div>
+                    <div><span class="text-[9px] text-slate-500 uppercase block">Base de Cálculo</span><strong>${E(baseCalculoTexto)}</strong></div>
+                    <div><span class="text-[9px] text-slate-500 uppercase block">Fechas clave</span><strong class="font-mono text-[10px]">${E(l.start_date)} → ${E(l.first_payment_date)} → ${E(l.maturity_date)}</strong></div>
                 </div>
             </div>
 
-            <div>
-                <h3 class="font-extrabold mb-1.5 text-[10px] uppercase tracking-wider text-slate-700">
-                    ${isEs ? 'III. Calendario Contractual de Pagos Semanales (Tabla de Amortización)' : 'III. Contractual Weekly Payment Schedule (Amortization Table)'}
-                </h3>
-                <table class="w-full text-left text-[10px] border border-collapse">
-                    ${document.getElementById('ld-schedule-tbody').parentElement.innerHTML}
-                </table>
-            </div>
+            <table class="w-full text-left text-[10px] border border-collapse mb-4">
+                ${scheduleTable.innerHTML}
+            </table>
 
-            <div class="border-2 border-slate-900 rounded-lg p-4 bg-slate-50/40 space-y-3" style="break-inside: avoid;">
+            <div class="border-2 border-slate-900 rounded-lg p-4 space-y-3" style="break-inside: avoid;">
                 <div class="flex items-center justify-between border-b border-slate-400 pb-2">
                     <div>
-                        <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">
-                            ${isEs ? 'PAGARÉ MERCANTIL INCONDICIONAL' : 'UNCONDITIONAL PROMISSORY NOTE (PAGARÉ)'}
-                        </h3>
-                        <p class="text-[10px] text-slate-600 font-mono">
-                            ${isEs ? 'Contrato / Folio:' : 'Contract / Ref:'} <strong>${escapeHtml(l.loan_number)}</strong> • ${isEs ? 'Fecha de Suscripción:' : 'Issue Date:'} <strong>${escapeHtml(l.start_date)}</strong>
-                        </p>
+                        <h3 class="text-sm font-extrabold uppercase tracking-wider">PAGARÉ MERCANTIL INCONDICIONAL</h3>
+                        <p class="text-[10px] text-slate-600 font-mono">Contrato / Folio: <strong>${E(l.loan_number)}</strong> • Fecha de suscripción: <strong>${E(startLong)}</strong></p>
                     </div>
                     <div class="text-right">
-                        <span class="text-[10px] font-bold uppercase text-slate-600 block">${isEs ? 'BUENO POR (TOTAL A PAGAR):' : 'GOOD FOR (TOTAL REPAYMENT):'}</span>
-                        <span class="text-sm font-extrabold font-mono text-slate-900">${escapeHtml(totalRepayFormatted)}</span>
+                        <span class="text-[10px] font-bold uppercase text-slate-600 block">BUENO POR:</span>
+                        <span class="text-sm font-extrabold font-mono">${E(totalRepayFormatted)}</span>
                     </div>
                 </div>
 
-                <p class="text-[10px] leading-relaxed text-justify text-slate-800">
-                    ${pagareLegalText}
-                </p>
+                <p class="text-[11px] leading-relaxed text-justify text-slate-900">${pagareText}</p>
 
-                <div class="grid grid-cols-3 gap-6 pt-8 text-[10px]">
+                <div class="grid grid-cols-3 gap-6 pt-10 text-[10px]">
                     <div class="text-center border-t border-slate-900 pt-1.5">
-                        <p class="font-extrabold uppercase text-slate-900">${isEs ? 'EL SUSCRIPTOR / DEUDOR PRINCIPAL' : 'BORROWER SIGNATURE'}</p>
-                        <p class="font-semibold text-slate-800 mt-0.5">${escapeHtml(borrowerName)}</p>
-                        <p class="text-slate-600 font-mono">${escapeHtml(borrowerNumber)} • Tel: ${escapeHtml(borrowerPhone)}</p>
+                        <p class="font-extrabold uppercase">EL SUSCRIPTOR / DEUDOR PRINCIPAL</p>
+                        <p class="font-semibold mt-0.5">${borrowerH}</p>
+                        <p class="text-slate-600 mt-0.5">Firma autógrafa</p>
                     </div>
                     <div class="text-center border-t border-slate-900 pt-1.5">
-                        <p class="font-extrabold uppercase text-slate-900">${isEs ? 'AVAL / OBLIGADO SOLIDARIO (OPCIONAL)' : 'GUARANTOR / CO-SIGNER (OPTIONAL)'}</p>
-                        <p class="text-slate-600 mt-0.5">${isEs ? 'Nombre y Firma Autógrafa' : 'Full Name & Signature'}</p>
+                        <p class="font-extrabold uppercase">AVAL / OBLIGADO SOLIDARIO</p>
+                        <p class="text-slate-600 mt-0.5">Nombre y firma autógrafa</p>
+                        <p class="text-slate-600 mt-2">Domicilio: ______________________</p>
                     </div>
                     <div class="text-center border-t border-slate-900 pt-1.5">
-                        <p class="font-extrabold uppercase text-slate-900">${isEs ? 'AUTORIZACIÓN Y CONTROL NURA CRM' : 'AUTHORIZED BY NURA CRM'}</p>
-                        <p class="text-slate-600 mt-0.5">${isEs ? 'Mesa de Control y Expediente KYC' : 'Credit Operations & KYC Dossier'}</p>
+                        <p class="font-extrabold uppercase">AUTORIZACIÓN Y CONTROL ${lenderH}</p>
+                        <p class="text-slate-600 mt-0.5">Mesa de control y expediente</p>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     `;
+
+    const content = `<div>${contractSection}${annexSection}</div>`;
 
     executePrint(isEs ? 'Contrato y Pagaré' : 'Contract & Promissory Note', l.loan_number, content);
 }
