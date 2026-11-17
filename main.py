@@ -236,6 +236,11 @@ class CustomerModel(Base):
     status = Column(String(30), default="ACTIVE", index=True, nullable=False)
     verification_status = Column(String(30), default="PENDING_VERIFICATION", nullable=False)
     full_legal_name = Column(String(180), index=True, nullable=False)
+    # Personas fisicas: nombre / segundo nombre (opcional) / apellidos. full_legal_name se arma a partir de ellos.
+    # Personas morales: estas columnas quedan en NULL y full_legal_name es la razon social.
+    first_name = Column(String(50), nullable=True)
+    middle_name = Column(String(50), nullable=True)
+    last_name = Column(String(75), nullable=True)
     trade_name = Column(String(160), nullable=True)
     legal_representative_name = Column(String(160), nullable=True)
     tax_id_rfc = Column(String(20), index=True, nullable=True)
@@ -789,7 +794,7 @@ def is_auth_security_schema_ready(db: Optional[Session] = None) -> bool:
     return False
 
 
-EXPECTED_ALEMBIC_REVISION = "010"  # al crear una nueva migracion, actualizar solo esta constante
+EXPECTED_ALEMBIC_REVISION = "011"  # al crear una nueva migracion, actualizar solo esta constante
 
 
 def verify_database_schema_compatibility(db_engine):
@@ -1516,6 +1521,7 @@ SENSITIVE_AUDIT_KEYS = {
     "rate_limit_hmac_secret", "api_key", "email", "raw_email",
     "phone", "phone_primary", "phone_secondary", "address_full",
     "tax_id_rfc", "date_of_birth", "full_legal_name", "full_name",
+    "first_name", "middle_name", "last_name",
     "content", "summary_notes", "reason_or_note", "approval_notes", "disbursement_notes"
 }
 
@@ -1632,7 +1638,11 @@ class CustomerCreateRequest(BaseModel):
     entity_type: str = Field(default="INDIVIDUAL")
     status: str = Field(default="ACTIVE")
     verification_status: str = Field(default="PENDING_VERIFICATION")
-    full_legal_name: str = Field(..., min_length=3, max_length=180)
+    # INDIVIDUAL: first_name y last_name obligatorios, middle_name opcional.  BUSINESS: full_legal_name (razon social) obligatorio.
+    first_name: Optional[str] = Field(default=None, max_length=50)
+    middle_name: Optional[str] = Field(default=None, max_length=50)
+    last_name: Optional[str] = Field(default=None, max_length=75)
+    full_legal_name: Optional[str] = Field(default=None, min_length=3, max_length=180)
     trade_name: Optional[str] = Field(default=None, max_length=160)
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
@@ -1652,6 +1662,9 @@ class CustomerUpdateRequest(BaseModel):
     entity_type: Optional[str] = None
     status: Optional[str] = None
     verification_status: Optional[str] = None
+    first_name: Optional[str] = Field(default=None, max_length=50)
+    middle_name: Optional[str] = Field(default=None, max_length=50)
+    last_name: Optional[str] = Field(default=None, max_length=75)
     full_legal_name: Optional[str] = Field(default=None, min_length=3, max_length=180)
     trade_name: Optional[str] = Field(default=None, max_length=160)
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
@@ -2752,6 +2765,82 @@ def get_audit_logs(
 
 
 # --- STAGE 1 & 2: CUSTOMERS ENDPOINTS ---
+# --- CUSTOMER NAME (PURE HELPERS) BEGIN ---
+# Limites: 50 + 1 + 50 + 1 + 75 = 177 caracteres, siempre cabe en full_legal_name (180).
+def normalize_name_part(value: Optional[str]) -> str:
+    return re.sub(r"\s+", " ", value or "").strip()
+
+
+def compose_full_legal_name(first: Optional[str], middle: Optional[str], last: Optional[str]) -> str:
+    return " ".join(
+        p for p in (normalize_name_part(first), normalize_name_part(middle), normalize_name_part(last)) if p
+    )
+
+
+def resolve_customer_name_for_create(entity_type, first_name, middle_name, last_name, full_legal_name) -> dict:
+    # Devuelve los 4 campos de nombre a guardar o lanza ValueError con el mensaje para el usuario.
+    if entity_type == "BUSINESS":
+        legal_name = normalize_name_part(full_legal_name)
+        if len(legal_name) < 3:
+            raise ValueError("Legal entity name is required for Business (Persona Moral) customers.")
+        return {"first_name": None, "middle_name": None, "last_name": None, "full_legal_name": legal_name}
+
+    first = normalize_name_part(first_name)
+    middle = normalize_name_part(middle_name)
+    last = normalize_name_part(last_name)
+    if not first or not last:
+        raise ValueError("First name and last name are required for individual customers.")
+    return {
+        "first_name": first,
+        "middle_name": middle or None,
+        "last_name": last,
+        "full_legal_name": compose_full_legal_name(first, middle, last),
+    }
+
+
+def resolve_customer_name_for_update(final_entity_type, type_changed, current_first, current_middle, current_last,
+                                     first_name, middle_name, last_name, full_legal_name) -> Optional[dict]:
+    # Devuelve {campo: valor} con lo que hay que cambiar, None si el nombre no cambia, o lanza ValueError.
+    if final_entity_type == "BUSINESS":
+        out = {}
+        if full_legal_name is not None:
+            legal_name = normalize_name_part(full_legal_name)
+            if len(legal_name) < 3:
+                raise ValueError("Legal entity name must have at least 3 characters.")
+            out["full_legal_name"] = legal_name
+        elif type_changed:
+            raise ValueError("Legal entity name is required for Business (Persona Moral) customers.")
+        if type_changed or current_first or current_middle or current_last:
+            out.update({"first_name": None, "middle_name": None, "last_name": None})
+        return out or None
+
+    # INDIVIDUAL
+    parts_sent = any(p is not None for p in (first_name, middle_name, last_name))
+    if parts_sent or type_changed:
+        first = normalize_name_part(first_name) if first_name is not None else normalize_name_part(current_first)
+        middle = normalize_name_part(middle_name) if middle_name is not None else normalize_name_part(current_middle)
+        last = normalize_name_part(last_name) if last_name is not None else normalize_name_part(current_last)
+        if not first or not last:
+            raise ValueError("First name and last name are required for individual customers.")
+        return {
+            "first_name": first,
+            "middle_name": middle or None,
+            "last_name": last,
+            "full_legal_name": compose_full_legal_name(first, middle, last),
+        }
+
+    if full_legal_name is not None:
+        # Clientes anteriores al cambio (sin partes) pueden seguir editando solo el nombre completo.
+        if normalize_name_part(current_first) or normalize_name_part(current_last):
+            raise ValueError("To change an individual's name, send first_name, middle_name and last_name.")
+        legal_name = normalize_name_part(full_legal_name)
+        if len(legal_name) < 3:
+            raise ValueError("Name must have at least 3 characters.")
+        return {"full_legal_name": legal_name}
+    return None
+# --- CUSTOMER NAME (PURE HELPERS) END ---
+
+
 def serialize_customer(
     c: CustomerModel,
     active_loans_count: int = 0,
@@ -2765,6 +2854,9 @@ def serialize_customer(
         "status": c.status,
         "verification_status": c.verification_status,
         "full_legal_name": c.full_legal_name,
+        "first_name": c.first_name,
+        "middle_name": c.middle_name,
+        "last_name": c.last_name,
         "trade_name": c.trade_name,
         "legal_representative_name": c.legal_representative_name,
         "tax_id_rfc": c.tax_id_rfc,
@@ -2931,8 +3023,14 @@ def create_customer(
     if verification_status not in VALID_VERIFICATION_STATUSES:
         raise HTTPException(status_code=422, detail="Invalid verification_status.")
 
-    full_legal_name = payload.full_legal_name.strip()
     legal_rep = payload.legal_representative_name.strip() if payload.legal_representative_name else None
+    try:
+        name_fields = resolve_customer_name_for_create(
+            entity_type, payload.first_name, payload.middle_name, payload.last_name, payload.full_legal_name
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    full_legal_name = name_fields["full_legal_name"]
 
     if entity_type == "BUSINESS" and not legal_rep:
         raise HTTPException(
@@ -2978,6 +3076,9 @@ def create_customer(
             status=status,
             verification_status=verification_status,
             full_legal_name=full_legal_name,
+            first_name=name_fields["first_name"],
+            middle_name=name_fields["middle_name"],
+            last_name=name_fields["last_name"],
             trade_name=payload.trade_name.strip() if payload.trade_name and payload.trade_name.strip() else None,
             legal_representative_name=legal_rep,
             tax_id_rfc=rfc_clean,
@@ -3112,6 +3213,7 @@ def update_customer(
             raise HTTPException(status_code=404, detail="Customer not found.")
 
         updated_fields = []
+        previous_entity_type = customer.entity_type
 
         if payload.entity_type is not None:
             et = payload.entity_type.strip().upper()
@@ -3134,9 +3236,18 @@ def update_customer(
             customer.verification_status = vs
             updated_fields.append("verification_status")
 
-        if payload.full_legal_name is not None:
-            customer.full_legal_name = payload.full_legal_name.strip()
-            updated_fields.append("full_legal_name")
+        try:
+            name_updates = resolve_customer_name_for_update(
+                customer.entity_type, customer.entity_type != previous_entity_type,
+                customer.first_name, customer.middle_name, customer.last_name,
+                payload.first_name, payload.middle_name, payload.last_name, payload.full_legal_name
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        if name_updates:
+            for field_name, field_value in name_updates.items():
+                setattr(customer, field_name, field_value)
+                updated_fields.append(field_name)
 
         if payload.trade_name is not None:
             customer.trade_name = payload.trade_name.strip() or None
