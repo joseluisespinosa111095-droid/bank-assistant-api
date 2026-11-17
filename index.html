@@ -2522,9 +2522,24 @@
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div class="sm:col-span-2">
-                            <label id="cf-name-label" class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Full Legal Name *</label>
-                            <input type="text" id="cf-full-name" required minlength="3" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Full legal name or Razón Social">
+                        <div id="cf-individual-name-group" class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">First Name *</label>
+                                <input type="text" id="cf-first-name" required maxlength="50" autocomplete="off" autocapitalize="words" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="First name">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Middle Name</label>
+                                <input type="text" id="cf-middle-name" maxlength="50" autocomplete="off" autocapitalize="words" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Optional middle name">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Last Name *</label>
+                                <input type="text" id="cf-last-name" required maxlength="75" autocomplete="off" autocapitalize="words" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Last name(s)">
+                            </div>
+                            <p id="cf-legacy-name-hint" class="hidden sm:col-span-3 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5"></p>
+                        </div>
+                        <div id="cf-business-name-group" class="hidden sm:col-span-2">
+                            <label id="cf-name-label" class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Legal Entity Name (Razón Social) *</label>
+                            <input type="text" id="cf-full-name" minlength="3" maxlength="180" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Full legal name or Razón Social">
                         </div>
 
                         <div id="cf-business-group" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-blue-50/50 border border-blue-200/70">
@@ -4762,6 +4777,9 @@
                 "Optional address": "Domicilio opcional",
                 "Optional conversion note": "Nota opcional de conversión",
                 "Full legal name or Razón Social": "Nombre legal completo o Razón Social",
+                "First name": "Primer nombre",
+                "Optional middle name": "Segundo nombre (opcional)",
+                "Last name(s)": "Apellidos",
                 "Commercial brand name": "Nombre comercial de la marca",
                 "Optional secondary phone": "Teléfono secundario opcional",
                 "customer@email.com": "cliente@correo.com",
@@ -5278,6 +5296,9 @@
                 "Customer Status *": "Estatus del Cliente *",
                 "KYC Verification *": "Verificación KYC *",
                 "Full Legal Name *": "Nombre Legal Completo *",
+                "First Name *": "Primer Nombre *",
+                "Middle Name": "Segundo Nombre",
+                "Last Name *": "Apellidos *",
                 "Legal Representative Name *": "Nombre del Representante Legal *",
                 "Approve Credit Underwriting": "Aprobar Suscripción de Crédito",
                 "Authorize contractual terms before bank disbursement and schedule activation": "Autoriza los términos contractuales antes del desembolso bancario y la activación del calendario",
@@ -6859,9 +6880,12 @@ async function loadDashboardSummary() {
             const isBiz = entityType === 'BUSINESS';
             document.getElementById('cf-business-group').classList.toggle('hidden', !isBiz);
             document.getElementById('cf-legal-rep').required = isBiz;
-            document.getElementById('cf-name-label').innerText = isBiz
-                ? 'Legal Entity Name (Razón Social) *'
-                : 'Full Legal Name *';
+            // Persona física: nombre, segundo nombre (opcional) y apellidos. Persona moral: razón social.
+            document.getElementById('cf-individual-name-group').classList.toggle('hidden', isBiz);
+            document.getElementById('cf-business-name-group').classList.toggle('hidden', !isBiz);
+            document.getElementById('cf-first-name').required = !isBiz;
+            document.getElementById('cf-last-name').required = !isBiz;
+            document.getElementById('cf-full-name').required = isBiz;
         }
 
         function openCustomerFormModal(mode) {
@@ -6870,6 +6894,7 @@ async function loadDashboardSummary() {
             errBox.classList.add('hidden');
             const form = document.getElementById('customer-form');
             form.reset();
+            document.getElementById('cf-legacy-name-hint').classList.add('hidden');
 
             if (mode === 'edit' && currentSelectedCustomer) {
                 const c = currentSelectedCustomer;
@@ -6877,7 +6902,18 @@ async function loadDashboardSummary() {
                 document.getElementById('cf-entity-type').value = c.entity_type || 'INDIVIDUAL';
                 document.getElementById('cf-status').value = c.status || 'ACTIVE';
                 document.getElementById('cf-verification').value = c.verification_status || 'PENDING_VERIFICATION';
-                document.getElementById('cf-full-name').value = c.full_legal_name || '';
+                document.getElementById('cf-full-name').value = c.entity_type === 'BUSINESS' ? (c.full_legal_name || '') : '';
+                document.getElementById('cf-first-name').value = c.first_name || '';
+                document.getElementById('cf-middle-name').value = c.middle_name || '';
+                document.getElementById('cf-last-name').value = c.last_name || '';
+                // Clientes registrados antes de este cambio no tienen el nombre separado: se avisa para capturarlo.
+                if (c.entity_type !== 'BUSINESS' && !c.first_name && !c.last_name && c.full_legal_name) {
+                    const legacyHint = document.getElementById('cf-legacy-name-hint');
+                    legacyHint.innerText = (NuraI18n.currentLang === 'es')
+                        ? `Nombre actual registrado: ${c.full_legal_name}. Captúralo separado en nombre y apellidos.`
+                        : `Name currently on file: ${c.full_legal_name}. Please enter it split into first and last name.`;
+                    legacyHint.classList.remove('hidden');
+                }
                 document.getElementById('cf-legal-rep').value = c.legal_representative_name || '';
                 document.getElementById('cf-trade-name').value = c.trade_name || '';
                 document.getElementById('cf-phone-primary').value = c.phone_primary || '';
@@ -6909,11 +6945,15 @@ async function loadDashboardSummary() {
             errBox.classList.add('hidden');
             submitBtn.disabled = true;
 
+            const isBizEntity = document.getElementById('cf-entity-type').value === 'BUSINESS';
             const payload = {
                 entity_type: document.getElementById('cf-entity-type').value,
                 status: document.getElementById('cf-status').value,
                 verification_status: document.getElementById('cf-verification').value,
-                full_legal_name: document.getElementById('cf-full-name').value.trim(),
+                full_legal_name: isBizEntity ? (document.getElementById('cf-full-name').value.trim() || null) : null,
+                first_name: isBizEntity ? null : document.getElementById('cf-first-name').value.trim(),
+                middle_name: isBizEntity ? null : document.getElementById('cf-middle-name').value.trim(),
+                last_name: isBizEntity ? null : document.getElementById('cf-last-name').value.trim(),
                 legal_representative_name: document.getElementById('cf-legal-rep').value.trim() || null,
                 trade_name: document.getElementById('cf-trade-name').value.trim() || null,
                 phone_primary: document.getElementById('cf-phone-primary').value.trim(),
