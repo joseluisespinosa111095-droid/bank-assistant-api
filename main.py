@@ -5498,48 +5498,80 @@ def create_loan_payment(
         raise HTTPException(status_code=422, detail="Payment amount must be greater than zero.")
     if payload.payment_method not in VALID_PAYMENT_METHODS:
         raise HTTPException(status_code=422, detail="Invalid payment method.")
-        
-    paid_at_dt = parse_optional_datetime_utc(payload.paid_at) or datetime.now(timezone.utc)
-    if paid_at_dt > datetime.now(timezone.utc) + timedelta(minutes=5):
+
+    explicit_paid_at_dt = parse_optional_datetime_utc(payload.paid_at)
+    if explicit_paid_at_dt and explicit_paid_at_dt > datetime.now(timezone.utc) + timedelta(minutes=5):
         raise HTTPException(status_code=422, detail="Payment effective date cannot be in the future.")
 
+    payment_ref_clean = (payload.payment_reference or "").strip() or None
+    notes_clean = (payload.notes or "").strip() or None
+    apply_rebate = bool(getattr(payload, "apply_early_payoff_rebate", False))
+
+    # Hash determinista: si el cliente omite paid_at se hashea None, nunca datetime.now()
     canonical = {
-        "loan_id": loan_id, "amount_cents": amount_cents, "payment_method": payload.payment_method,
-        "payment_reference": payload.payment_reference, "paid_at": paid_at_dt.isoformat()
+        "loan_id": loan_id,
+        "amount_cents": amount_cents,
+        "payment_method": payload.payment_method,
+        "payment_reference": payment_ref_clean.upper() if payment_ref_clean else None,
+        "paid_at": explicit_paid_at_dt.isoformat() if explicit_paid_at_dt else None,
+        "apply_early_payoff_rebate": apply_rebate,
+        "notes": notes_clean
     }
     payload_hash = hashlib.sha256(json.dumps(canonical, sort_keys=True).encode("utf-8")).hexdigest()
+
+    def _build_replay_response(existing_pay: LoanPaymentModel, target_loan: Optional[LoanModel] = None) -> dict:
+        _, _, _, today_replay = get_local_day_bounds_utc()
+        loan_obj = target_loan or db.query(LoanModel).filter(LoanModel.id == existing_pay.loan_id).first()
+        latest_posted = (
+            db.query(LoanPaymentModel.id)
+            .filter(LoanPaymentModel.loan_id == existing_pay.loan_id, LoanPaymentModel.status == "POSTED")
+            .order_by(LoanPaymentModel.loan_payment_seq.desc())
+            .first()
+        )
+        is_top = bool(latest_posted and latest_posted[0] == existing_pay.id)
+        return {
+            "idempotent_replay": True,
+            "payment": serialize_loan_payment(existing_pay, include_allocations=True, is_top_reversible=is_top),
+            "loan": serialize_loan_detail(loan_obj, today_replay, db=db) if loan_obj else None
+        }
 
     existing = db.query(LoanPaymentModel).filter(LoanPaymentModel.idempotency_key == payload.idempotency_key).first()
     if existing:
         if existing.request_payload_hash == payload_hash:
-            return {"idempotent_replay": True, "payment": serialize_loan_payment(existing)}
+            return _build_replay_response(existing)
         raise HTTPException(status_code=409, detail="Idempotency key collision with different payload.")
 
     try:
-        if payload.payment_method in ('SPEI_TRANSFER', 'BANK_DEPOSIT', 'CHECK') and payload.payment_reference and payload.payment_reference.strip():
-            ref_clean = payload.payment_reference.strip().upper()
-            dup_ref = db.query(LoanPaymentModel).filter(
-                LoanPaymentModel.payment_method == payload.payment_method,
-                func.upper(func.trim(LoanPaymentModel.payment_reference)) == ref_clean,
-                LoanPaymentModel.status == 'POSTED'
-            ).first()
-            if dup_ref:
-                raise HTTPException(status_code=409, detail=f"Duplicate payment reference detected: {ref_clean}")
-
         loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
         if not loan:
             raise HTTPException(status_code=404, detail="Loan not found.")
+
+        # Re-verificar idempotencia bajo el lock del préstamo ANTES de validar estatus, saldo o referencia duplicada
+        existing_locked = db.query(LoanPaymentModel).filter(LoanPaymentModel.idempotency_key == payload.idempotency_key).first()
+        if existing_locked:
+            if existing_locked.request_payload_hash == payload_hash:
+                replay_resp = _build_replay_response(existing_locked, target_loan=loan)
+                db.rollback()
+                return replay_resp
+            db.rollback()
+            raise HTTPException(status_code=409, detail="Concurrency collision on idempotency key.")
+
         if loan.status != "ACTIVE":
             raise HTTPException(status_code=409, detail=f"Payments can only be applied to ACTIVE loans. Current: {loan.status}")
         if amount_cents > loan.remaining_contract_total_cents:
             raise HTTPException(status_code=422, detail=f"Amount exceeds remaining balance. Max allowed: ${loan.remaining_contract_total_cents / 100:,.2f} MXN")
 
-        existing_locked = db.query(LoanPaymentModel).filter(LoanPaymentModel.idempotency_key == payload.idempotency_key).first()
-        if existing_locked:
-            db.rollback()
-            if existing_locked.request_payload_hash == payload_hash:
-                return {"idempotent_replay": True, "payment": serialize_loan_payment(existing_locked)}
-            raise HTTPException(status_code=409, detail="Concurrency collision on idempotency key.")
+        if payload.payment_method in ("SPEI_TRANSFER", "BANK_DEPOSIT", "CHECK") and payment_ref_clean:
+            ref_upper = payment_ref_clean.upper()
+            dup_ref = db.query(LoanPaymentModel).filter(
+                LoanPaymentModel.payment_method == payload.payment_method,
+                func.upper(func.trim(LoanPaymentModel.payment_reference)) == ref_upper,
+                LoanPaymentModel.status == "POSTED"
+            ).first()
+            if dup_ref:
+                raise HTTPException(status_code=409, detail=f"Duplicate payment reference detected: {ref_upper}")
+
+        paid_at_dt = explicit_paid_at_dt or datetime.now(timezone.utc)
 
         installments = db.query(LoanInstallmentModel).filter(
             LoanInstallmentModel.loan_id == loan_id, LoanInstallmentModel.remaining_amount_cents > 0
@@ -5548,9 +5580,9 @@ def create_loan_payment(
         _, _, _, today_local = get_local_day_bounds_utc()
         rebated_installments_map = {}
         total_rebated_interest_cents = 0
-        effective_notes = payload.notes
+        effective_notes = notes_clean
 
-        if getattr(payload, "apply_early_payoff_rebate", False):
+        if apply_rebate:
             if current_user.role not in ("OWNER_ADMIN", "CREDIT_ADVISOR"):
                 raise HTTPException(
                     status_code=403,
@@ -5603,7 +5635,7 @@ def create_loan_payment(
 
         result = LoanPaymentEngine.execute_waterfall_allocation(
             db=db, loan=loan, installments=installments, amount_cents=amount_cents,
-            payment_method=payload.payment_method, payment_reference=payload.payment_reference,
+            payment_method=payload.payment_method, payment_reference=payment_ref_clean,
             paid_at_dt=paid_at_dt, notes=effective_notes, user_id=current_user.id,
             idempotency_key=payload.idempotency_key, payload_hash=payload_hash,
             rebate_detail_json=serialize_rebate_detail(rebated_installments_map)
