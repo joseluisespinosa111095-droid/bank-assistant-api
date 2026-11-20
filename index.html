@@ -11044,9 +11044,22 @@ if (typeof loadLoanPayments === 'function') {
         if (!tbody) return;
         const rows = tbody.querySelectorAll('tr');
         rows.forEach(row => {
-            if (row.children.length === 7 && !row.querySelector('td[colspan]') && !row.innerHTML.includes('printPaymentReceipt')) {
+            if (row.children.length === 7 && !row.querySelector('td[colspan]')) {
                 const actionTd = row.children[6];
-                actionTd.innerHTML += ` <button type="button" onclick="printPaymentReceipt(this)" data-i18n="loans.payments.receipt_btn" class="text-[10px] text-slate-700 hover:text-slate-900 ml-1.5 font-bold bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition" title="Print Official Receipt">${escapeHtml(t('loans.payments.receipt_btn'))}</button>`;
+                if (actionTd.querySelector('.btn-print-receipt')) return;
+
+                const printBtn = document.createElement('button');
+                printBtn.type = 'button';
+                printBtn.setAttribute('data-i18n', 'loans.payments.receipt_btn');
+                printBtn.className = 'btn-print-receipt text-[10px] text-slate-700 hover:text-slate-900 ml-1.5 font-bold bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition';
+                printBtn.title = (NuraI18n.currentLang === 'es') ? 'Imprimir Recibo Oficial' : 'Print Official Receipt';
+                printBtn.innerText = t('loans.payments.receipt_btn');
+                printBtn.addEventListener('click', function () {
+                    printPaymentReceipt(this);
+                });
+
+                actionTd.appendChild(document.createTextNode(' '));
+                actionTd.appendChild(printBtn);
             }
         });
     };
