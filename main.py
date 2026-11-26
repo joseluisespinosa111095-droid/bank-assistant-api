@@ -1422,10 +1422,40 @@ def get_current_user(
     return user
 
 
+def require_commercial_tenant(
+    request: Request,
+    user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> UserModel:
+    tenant = db.query(TenantModel).filter(TenantModel.id == user.tenant_id).first()
+    if user.is_superadmin or not tenant or tenant.slug == PLATFORM_TENANT_SLUG:
+        record_audit_event(
+            db,
+            "COMMERCIAL_ACCESS_DENIED",
+            "commercial",
+            "DENIED",
+            actor=user,
+            resource_id=request.url.path,
+            ip_address=get_client_ip(request),
+            details={
+                "is_superadmin": bool(user.is_superadmin),
+                "tenant_slug": tenant.slug if tenant else "unknown"
+            },
+            commit=True,
+            scope="PLATFORM",
+            tenant_id=None
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: platform accounts cannot access commercial tenant routes."
+        )
+    return user
+
+
 def require_roles(*allowed_roles: str):
     def role_checker(
         request: Request,
-        user: UserModel = Depends(get_current_user),
+        user: UserModel = Depends(require_commercial_tenant),
         db: Session = Depends(get_db)
     ) -> UserModel:
         if user.role not in allowed_roles:
@@ -1505,7 +1535,157 @@ def platform_list_tenants(
     db: Session = Depends(get_db)
 ):
     tenants = db.query(TenantModel).order_by(TenantModel.id.asc()).all()
-    return [serialize_tenant(t) for t in tenants]
+    users_counts = {
+        tid: int(cnt)
+        for tid, cnt in db.query(UserModel.tenant_id, func.count(UserModel.id))
+        .group_by(UserModel.tenant_id)
+        .all()
+    }
+    customers_counts = {
+        tid: int(cnt)
+        for tid, cnt in db.query(CustomerModel.tenant_id, func.count(CustomerModel.id))
+        .group_by(CustomerModel.tenant_id)
+        .all()
+    }
+    loans_counts = {
+        tid: int(cnt)
+        for tid, cnt in db.query(LoanModel.tenant_id, func.count(LoanModel.id))
+        .group_by(LoanModel.tenant_id)
+        .all()
+    }
+    result = []
+    for t in tenants:
+        item = serialize_tenant(t)
+        item["users_count"] = users_counts.get(t.id, 0)
+        item["customers_count"] = customers_counts.get(t.id, 0)
+        item["loans_count"] = loans_counts.get(t.id, 0)
+        result.append(item)
+    return result
+
+
+@app.get("/api/platform/tenants/{tenant_id}")
+def platform_get_tenant_detail(
+    tenant_id: int,
+    superadmin: UserModel = Depends(require_superadmin),
+    db: Session = Depends(get_db)
+):
+    tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found.")
+
+    users_count = (
+        db.query(func.count(UserModel.id))
+        .filter(UserModel.tenant_id == tenant.id)
+        .scalar()
+        or 0
+    )
+    active_users_count = (
+        db.query(func.count(UserModel.id))
+        .filter(UserModel.tenant_id == tenant.id, UserModel.is_active.is_(True))
+        .scalar()
+        or 0
+    )
+    customers_count = (
+        db.query(func.count(CustomerModel.id))
+        .filter(CustomerModel.tenant_id == tenant.id)
+        .scalar()
+        or 0
+    )
+    leads_count = (
+        db.query(func.count(LeadModel.id))
+        .filter(LeadModel.tenant_id == tenant.id)
+        .scalar()
+        or 0
+    )
+    loans_count = (
+        db.query(func.count(LoanModel.id))
+        .filter(LoanModel.tenant_id == tenant.id)
+        .scalar()
+        or 0
+    )
+
+    item = serialize_tenant(tenant)
+    item.update({
+        "users_count": int(users_count),
+        "active_users_count": int(active_users_count),
+        "customers_count": int(customers_count),
+        "leads_count": int(leads_count),
+        "loans_count": int(loans_count),
+    })
+    return item
+
+
+@app.get("/api/platform/tenants/{tenant_id}/users")
+def platform_list_tenant_users(
+    tenant_id: int,
+    superadmin: UserModel = Depends(require_superadmin),
+    db: Session = Depends(get_db)
+):
+    tenant_exists = db.query(TenantModel.id).filter(TenantModel.id == tenant_id).first()
+    if not tenant_exists:
+        raise HTTPException(status_code=404, detail="Tenant not found.")
+
+    rows = (
+        db.query(
+            UserModel.id,
+            UserModel.email,
+            UserModel.full_name,
+            UserModel.role,
+            UserModel.is_active,
+            UserModel.created_at,
+        )
+        .filter(UserModel.tenant_id == tenant_id)
+        .order_by(UserModel.id.asc())
+        .all()
+    )
+    return [
+        {
+            "id": row.id,
+            "email": row.email,
+            "full_name": row.full_name,
+            "role": row.role,
+            "is_active": bool(row.is_active),
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row in rows
+    ]
+
+
+@app.get("/api/platform/audit-logs")
+def platform_list_audit_logs(
+    event_type: Optional[str] = None,
+    resource_id: Optional[str] = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    superadmin: UserModel = Depends(require_superadmin),
+    db: Session = Depends(get_db)
+):
+    query = db.query(AuditLogModel).filter(AuditLogModel.scope == "PLATFORM")
+    if event_type is not None and event_type.strip():
+        query = query.filter(AuditLogModel.event_type == event_type.strip())
+    if resource_id is not None and resource_id.strip():
+        query = query.filter(AuditLogModel.resource_id == resource_id.strip())
+
+    logs = (
+        query.order_by(AuditLogModel.created_at.desc(), AuditLogModel.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": l.id,
+            "scope": l.scope,
+            "created_at": l.created_at.isoformat() if l.created_at else None,
+            "actor_user_id": l.actor_user_id,
+            "actor_role": l.actor_role,
+            "event_type": l.event_type,
+            "resource_type": l.resource_type,
+            "resource_id": l.resource_id,
+            "outcome": l.outcome,
+            "ip_address": l.ip_address,
+            "details": json.loads(l.details_json) if l.details_json else None,
+        }
+        for l in logs
+    ]
 
 
 @app.post("/api/platform/tenants", dependencies=[Depends(verify_csrf)])
@@ -1876,6 +2056,8 @@ def login(user_data: UserLogin, request: Request, response: Response, db: Sessio
         "full_name": user.full_name,
         "role": user.role,
         "tenant_id": user.tenant_id,
+        "tenant_slug": tenant.slug,
+        "tenant_name": tenant.name,
         "is_superadmin": bool(user.is_superadmin),
         "preferred_language": user.preferred_language if user.preferred_language in VALID_LANGUAGES else "en"
     }
@@ -2141,10 +2323,16 @@ def logout(
 
 
 @app.get("/api/auth/me")
-def get_me(current_user: UserModel = Depends(get_current_user)):
+def get_me(
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    tenant = db.query(TenantModel).filter(TenantModel.id == current_user.tenant_id).first()
     return {
         "id": current_user.id,
         "tenant_id": current_user.tenant_id,
+        "tenant_slug": tenant.slug if tenant else None,
+        "tenant_name": tenant.name if tenant else None,
         "email": current_user.email,
         "full_name": current_user.full_name,
         "role": current_user.role,
@@ -5803,7 +5991,7 @@ def reverse_loan_payment(
 
 @app.get("/api/dashboard/summary")
 def get_dashboard_summary(
-    current_user: UserModel = Depends(get_current_user),
+    current_user: UserModel = Depends(require_commercial_tenant),
     db: Session = Depends(get_db)
 ):
     _, _, _, today_local = get_local_day_bounds_utc()
@@ -5909,7 +6097,7 @@ def get_dashboard_summary(
 
 # --- CONVERSATIONS & NURA ASSISTANT ---
 @app.get("/api/conversations")
-def listar_conversaciones(current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
+def listar_conversaciones(current_user: UserModel = Depends(require_commercial_tenant), db: Session = Depends(get_db)):
     convs = (
         db.query(ConversationModel)
         .filter(
@@ -5923,7 +6111,7 @@ def listar_conversaciones(current_user: UserModel = Depends(get_current_user), d
 
 
 @app.post("/api/conversations", dependencies=[Depends(verify_csrf)])
-def crear_conversacion(payload: dict, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
+def crear_conversacion(payload: dict, current_user: UserModel = Depends(require_commercial_tenant), db: Session = Depends(get_db)):
     nueva = ConversationModel(
         tenant_id=current_user.tenant_id,
         user_id=current_user.id,
@@ -5936,7 +6124,7 @@ def crear_conversacion(payload: dict, current_user: UserModel = Depends(get_curr
 
 
 @app.get("/api/conversations/{conv_id}/messages")
-def obtener_mensajes(conv_id: int, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
+def obtener_mensajes(conv_id: int, current_user: UserModel = Depends(require_commercial_tenant), db: Session = Depends(get_db)):
     conv = (
         db.query(ConversationModel)
         .filter(
@@ -5961,7 +6149,7 @@ def obtener_mensajes(conv_id: int, current_user: UserModel = Depends(get_current
 
 
 @app.delete("/api/conversations/{conv_id}", dependencies=[Depends(verify_csrf)])
-def eliminar_conversacion(conv_id: int, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
+def eliminar_conversacion(conv_id: int, current_user: UserModel = Depends(require_commercial_tenant), db: Session = Depends(get_db)):
     conv = (
         db.query(ConversationModel)
         .filter(
@@ -5982,7 +6170,7 @@ def eliminar_conversacion(conv_id: int, current_user: UserModel = Depends(get_cu
 def chat_ejecutivo(
     req: ChatRequest,
     request: Request,
-    current_user: UserModel = Depends(get_current_user),
+    current_user: UserModel = Depends(require_commercial_tenant),
     db: Session = Depends(get_db)
 ):
     ip = get_client_ip(request)
