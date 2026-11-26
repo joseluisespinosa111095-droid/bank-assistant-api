@@ -1977,22 +1977,81 @@
                                 <p class="text-xs text-slate-500 mt-0.5">Manage NURA SaaS tenant organizations, onboarding, and operational status</p>
                             </div>
                             <div id="platform-orgs-toolbar" class="flex items-center gap-2 flex-wrap">
-                                <button type="button" id="btn-platform-new-org" disabled class="btn-primary py-2.5 px-4 rounded-xl text-xs font-semibold shadow-sm opacity-60 cursor-not-allowed">
+                                <button type="button" id="btn-platform-refresh-orgs" onclick="loadPlatformOrganizations()" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-sm transition flex items-center gap-1.5">
+                                    <span>Refresh</span>
+                                </button>
+                                <button type="button" id="btn-platform-new-org" onclick="openPlatformCreateOrgModal()" class="btn-primary py-2.5 px-4 rounded-xl text-xs font-semibold shadow-sm">
                                     + New Organization
                                 </button>
                             </div>
                         </div>
 
-                        <div id="platform-orgs-content" class="fintech-card bg-white p-6">
-                            <div class="flex items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                                <div>
-                                    <h2 class="text-sm font-bold text-slate-900">Tenant Directory</h2>
-                                    <p class="text-xs text-slate-500 mt-0.5">Organization directory, onboarding workflow, and status controls will load here.</p>
-                                </div>
-                                <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">Platform Scope</span>
+                        <!-- PLATFORM KPI SUMMARY CARDS -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="fintech-card bg-white p-4 sm:p-5">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Organizations</p>
+                                <p id="plat-kpi-total" class="text-2xl font-extrabold text-slate-900 mt-1.5">—</p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Registered SaaS tenants</p>
                             </div>
-                            <div class="py-10 text-center text-xs text-slate-500">
-                                Platform Console shell ready. Organization table and lifecycle actions are scheduled for Block 3.
+                            <div class="fintech-card bg-white p-4 sm:p-5">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Active</p>
+                                <p id="plat-kpi-active" class="text-2xl font-extrabold text-emerald-700 mt-1.5">—</p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Operational tenants</p>
+                            </div>
+                            <div class="fintech-card bg-white p-4 sm:p-5">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-red-500">Suspended</p>
+                                <p id="plat-kpi-suspended" class="text-2xl font-extrabold text-red-600 mt-1.5">—</p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Access revoked</p>
+                            </div>
+                            <div class="fintech-card bg-white p-4 sm:p-5">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Total Users</p>
+                                <p id="plat-kpi-users" class="text-2xl font-extrabold text-indigo-700 mt-1.5">—</p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Across all organizations</p>
+                            </div>
+                        </div>
+
+                        <!-- DIRECTORY CARD: SEARCH, FILTER & RESPONSIVE TABLE -->
+                        <div id="platform-orgs-content" class="fintech-card bg-white overflow-hidden">
+                            <div class="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
+                                    <input
+                                        type="text"
+                                        id="plat-orgs-search"
+                                        oninput="renderPlatformOrganizations()"
+                                        placeholder="Search by organization name, legal name, or slug..."
+                                        class="fintech-input rounded-xl px-3.5 py-2 text-xs w-full sm:max-w-xs"
+                                    >
+                                    <select
+                                        id="plat-orgs-status-filter"
+                                        onchange="renderPlatformOrganizations()"
+                                        class="fintech-input rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 bg-white sm:w-40"
+                                    >
+                                        <option value="ALL">All Statuses</option>
+                                        <option value="ACTIVE">Active</option>
+                                        <option value="SUSPENDED">Suspended</option>
+                                    </select>
+                                </div>
+                                <span id="plat-orgs-count-label" class="text-[11px] font-semibold text-slate-500 shrink-0">Loading...</span>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse min-w-[760px]">
+                                    <thead>
+                                        <tr class="bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                            <th class="py-3 px-4">Organization</th>
+                                            <th class="py-3 px-4">Slug</th>
+                                            <th class="py-3 px-4">Status</th>
+                                            <th class="py-3 px-4">Metrics</th>
+                                            <th class="py-3 px-4">Created</th>
+                                            <th class="py-3 px-4 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="plat-orgs-tbody" class="divide-y divide-slate-100 text-xs">
+                                        <tr>
+                                            <td colspan="6" class="py-10 px-4 text-center text-slate-400">Loading organizations...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </section>
@@ -3261,6 +3320,208 @@
                 <h3 class="text-center font-bold text-slate-900 text-base mb-2">Scheduled for Next Stage</h3>
                 <p class="text-center text-slate-500 text-xs leading-relaxed mb-6">The <span id="info-modal-action" class="font-semibold text-slate-800"></span> operation will be activated in its corresponding backend phase.</p>
                 <button type="button" onclick="cerrarModalProximamente()" class="w-full btn-primary py-3 rounded-xl text-xs font-semibold">Understood</button>
+            </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- PLATFORM CONSOLE MODALS (ONBOARDING, DETAIL/USERS, CONFIRMATION)  -->
+        <!-- ================================================================= -->
+
+        <!-- 1. PLATFORM ONBOARDING MODAL (+ NEW ORGANIZATION) -->
+        <div id="platform-create-org-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[560px] max-h-[90vh] overflow-y-auto shadow-2xl space-y-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">Onboard New Organization</h3>
+                        <p class="text-[11px] text-slate-500">Creates the tenant workspace, sequences, and its initial OWNER_ADMIN atomically</p>
+                    </div>
+                    <button type="button" onclick="closePlatformCreateOrgModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">✕</button>
+                </div>
+
+                <form id="platform-create-org-form" onsubmit="handlePlatformCreateOrgSubmit(event)" autocomplete="off" class="space-y-5 text-xs">
+                    <!-- Section 1: Organization -->
+                    <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                        <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">1. Organization Details</p>
+                        <div>
+                            <label for="plat-create-name" class="block text-[11px] font-semibold text-slate-700 mb-1">Organization Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="plat-create-name" required minlength="2" maxlength="160" oninput="handlePlatformOrgNameInput()" class="w-full fintech-input bg-white rounded-xl px-3 py-2.5 text-xs" placeholder="e.g., Acme Credit Group">
+                        </div>
+                        <div>
+                            <label for="plat-create-legal-name" class="block text-[11px] font-semibold text-slate-700 mb-1">Legal Name <span class="text-slate-400 font-normal">(optional)</span></label>
+                            <input type="text" id="plat-create-legal-name" maxlength="200" class="w-full fintech-input bg-white rounded-xl px-3 py-2.5 text-xs" placeholder="e.g., Acme Credit SAPI de CV">
+                        </div>
+                        <div>
+                            <label for="plat-create-slug" class="block text-[11px] font-semibold text-slate-700 mb-1">Tenant Slug <span class="text-red-500">*</span></label>
+                            <input type="text" id="plat-create-slug" required minlength="2" maxlength="80" oninput="handlePlatformOrgSlugManualInput()" class="w-full fintech-input bg-white rounded-xl px-3 py-2.5 text-xs font-mono" placeholder="e.g., acme-credit-group">
+                            <p class="text-[10px] text-slate-500 mt-1">Lowercase letters, numbers, and hyphens only (<code>^[a-z0-9]+(?:-[a-z0-9]+)*$</code>). Cannot be changed after creation.</p>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Initial OWNER_ADMIN -->
+                    <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                        <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">2. Initial OWNER_ADMIN Account</p>
+                        <div>
+                            <label for="plat-create-owner-name" class="block text-[11px] font-semibold text-slate-700 mb-1">Owner Full Name <span class="text-slate-400 font-normal">(recommended)</span></label>
+                            <input type="text" id="plat-create-owner-name" maxlength="120" class="w-full fintech-input bg-white rounded-xl px-3 py-2.5 text-xs" placeholder="e.g., Maria Fernanda Gomez">
+                        </div>
+                        <div>
+                            <label for="plat-create-owner-email" class="block text-[11px] font-semibold text-slate-700 mb-1">Owner Email <span class="text-red-500">*</span></label>
+                            <input type="email" id="plat-create-owner-email" required class="w-full fintech-input bg-white rounded-xl px-3 py-2.5 text-xs" placeholder="owner@acmecredit.com">
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label for="plat-create-owner-password" class="block text-[11px] font-semibold text-slate-700 mb-1">Initial Password <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <input type="password" id="plat-create-owner-password" required minlength="8" maxlength="128" autocomplete="new-password" class="w-full fintech-input bg-white rounded-xl px-3 py-2.5 pr-14 text-xs" placeholder="Min. 8 characters">
+                                    <button type="button" id="plat-create-pw-toggle" onclick="togglePlatformPasswordVisibility('plat-create-owner-password', this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg bg-slate-100">Show</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="plat-create-owner-password-confirm" class="block text-[11px] font-semibold text-slate-700 mb-1">Confirm Password <span class="text-red-500">*</span></label>
+                                <input type="password" id="plat-create-owner-password-confirm" required minlength="8" maxlength="128" autocomplete="new-password" class="w-full fintech-input bg-white rounded-xl px-3 py-2.5 text-xs" placeholder="Repeat password">
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-slate-500">Initial credentials are sent securely over HTTPS and are never stored in the browser or shown again.</p>
+                    </div>
+
+                    <div id="plat-create-org-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closePlatformCreateOrgModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">Cancel</button>
+                        <button type="submit" id="plat-create-org-submit" class="btn-primary py-2.5 px-5 rounded-xl text-xs font-semibold shadow-sm">Create Organization</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 2. PLATFORM ORGANIZATION DETAIL MODAL (2 TABS: OVERVIEW & SETTINGS / USERS) -->
+        <div id="platform-org-detail-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[680px] max-h-[90vh] flex flex-col shadow-2xl space-y-4">
+                <div class="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h3 id="plat-detail-title" class="font-bold text-slate-900 text-base truncate">Organization Details</h3>
+                            <span id="plat-detail-slug-badge" class="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">—</span>
+                            <span id="plat-detail-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">—</span>
+                            <span id="plat-detail-system-badge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">System</span>
+                        </div>
+                        <p id="plat-detail-created-at" class="text-[11px] text-slate-500 mt-1">Created: —</p>
+                    </div>
+                    <button type="button" onclick="closePlatformOrgDetailModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0 transition">✕</button>
+                </div>
+
+                <!-- Internal Tabs -->
+                <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                    <button type="button" id="plat-detail-tab-btn-overview" onclick="switchPlatformDetailTab('overview')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white transition">Overview &amp; Settings</button>
+                    <button type="button" id="plat-detail-tab-btn-users" onclick="switchPlatformDetailTab('users')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Users <span id="plat-detail-users-tab-count" class="ml-1 text-[10px] opacity-80">(0)</span></button>
+                </div>
+
+                <div id="plat-detail-loading" class="hidden py-10 text-center text-xs text-slate-400">Loading organization details...</div>
+                <div id="plat-detail-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <div id="plat-detail-body" class="flex-1 overflow-y-auto space-y-4 pr-1">
+                    <!-- TAB 1: OVERVIEW & SETTINGS -->
+                    <div id="plat-detail-pane-overview" class="space-y-4">
+                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Users</p>
+                                <p id="plat-detail-kpi-users" class="text-lg font-extrabold text-slate-900 mt-0.5">0</p>
+                            </div>
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Active Users</p>
+                                <p id="plat-detail-kpi-active-users" class="text-lg font-extrabold text-emerald-700 mt-0.5">0</p>
+                            </div>
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Customers</p>
+                                <p id="plat-detail-kpi-customers" class="text-lg font-extrabold text-slate-900 mt-0.5">0</p>
+                            </div>
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Leads</p>
+                                <p id="plat-detail-kpi-leads" class="text-lg font-extrabold text-slate-900 mt-0.5">0</p>
+                            </div>
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Loans</p>
+                                <p id="plat-detail-kpi-loans" class="text-lg font-extrabold text-slate-900 mt-0.5">0</p>
+                            </div>
+                        </div>
+
+                        <form id="platform-edit-org-form" onsubmit="handlePlatformEditOrgSubmit(event)" class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 text-xs">
+                            <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Organization Settings</p>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Tenant Slug <span class="text-slate-400 font-normal">(read-only)</span></label>
+                                <input type="text" id="plat-edit-slug-readonly" readonly class="w-full fintech-input bg-slate-100 text-slate-500 rounded-xl px-3 py-2 text-xs font-mono cursor-not-allowed">
+                            </div>
+                            <div>
+                                <label for="plat-edit-name" class="block text-[11px] font-semibold text-slate-700 mb-1">Organization Name <span class="text-red-500">*</span></label>
+                                <input type="text" id="plat-edit-name" required minlength="2" maxlength="160" class="w-full fintech-input bg-white rounded-xl px-3 py-2 text-xs">
+                            </div>
+                            <div>
+                                <label for="plat-edit-legal-name" class="block text-[11px] font-semibold text-slate-700 mb-1">Legal Name <span class="text-slate-400 font-normal">(optional)</span></label>
+                                <input type="text" id="plat-edit-legal-name" maxlength="200" class="w-full fintech-input bg-white rounded-xl px-3 py-2 text-xs" placeholder="Legal entity name">
+                            </div>
+
+                            <div id="plat-edit-org-error" class="hidden p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                            <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/70">
+                                <button type="button" id="plat-detail-status-action-btn" onclick="openPlatformStatusConfirmFromDetail()" class="hidden py-2 px-3.5 rounded-xl text-xs font-bold border transition"></button>
+                                <div class="flex items-center gap-2 ml-auto">
+                                    <button type="submit" id="plat-edit-org-submit" class="btn-primary py-2 px-4 rounded-xl text-xs font-semibold shadow-sm">Save Changes</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TAB 2: USERS (READ-ONLY ADMINISTRATIVE VIEW) -->
+                    <div id="plat-detail-pane-users" class="hidden space-y-3">
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600">
+                            Read-only administrative directory. User passwords are never visible or editable from the Platform Console.
+                        </div>
+                        <div class="overflow-x-auto border border-slate-200/80 rounded-2xl">
+                            <table class="w-full text-left border-collapse min-w-[540px]">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                        <th class="py-2.5 px-3.5">User</th>
+                                        <th class="py-2.5 px-3.5">Role</th>
+                                        <th class="py-2.5 px-3.5">Status</th>
+                                        <th class="py-2.5 px-3.5">Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="plat-detail-users-tbody" class="divide-y divide-slate-100 text-xs">
+                                    <tr>
+                                        <td colspan="4" class="py-8 text-center text-slate-400">No users found.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. PLATFORM SENSITIVE CONFIRMATION MODAL (SUSPEND / ACTIVATE) -->
+        <div id="platform-status-confirm-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[110] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[440px] shadow-2xl space-y-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <span id="plat-confirm-kicker" class="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border">Confirm Action</span>
+                        <h3 id="plat-confirm-title" class="font-bold text-slate-900 text-base mt-2">Update Organization Status</h3>
+                    </div>
+                    <button type="button" onclick="closePlatformStatusConfirmModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center shrink-0 transition">✕</button>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-1">
+                    <p class="font-bold text-slate-900" id="plat-confirm-org-name">—</p>
+                    <p class="text-[11px] text-slate-500">Slug: <code id="plat-confirm-org-slug" class="font-mono font-semibold text-slate-700">—</code></p>
+                </div>
+
+                <div id="plat-confirm-message-box" class="p-3.5 rounded-2xl border text-xs leading-relaxed"></div>
+
+                <div id="plat-confirm-status-error" class="hidden p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="closePlatformStatusConfirmModal()" class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">Cancel</button>
+                    <button type="button" id="plat-confirm-submit-btn" onclick="executePlatformStatusToggle()" class="py-2.5 px-4 rounded-xl text-xs font-bold text-white shadow-sm transition">Confirm</button>
+                </div>
             </div>
         </div>
 
@@ -5884,8 +6145,23 @@
             }
         }
 
+        // Platform Console State (no credentials are ever stored in global state)
+        const PLATFORM_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+        let platformTenantsCache = [];
+        let platformSelectedTenant = null;
+        let platformPendingStatusTenantId = null;
+        let platformSlugManuallyEdited = false;
+
         function resetShellMode() {
             hidePlatformNotice();
+            platformTenantsCache = [];
+            platformSelectedTenant = null;
+            platformPendingStatusTenantId = null;
+            platformSlugManuallyEdited = false;
+            closePlatformCreateOrgModal();
+            closePlatformOrgDetailModal();
+            closePlatformStatusConfirmModal();
+
             document.getElementById('sidebar-platform-nav')?.classList.add('hidden');
             document.getElementById('mobile-platform-nav')?.classList.add('hidden');
             document.getElementById('sidebar-commercial-nav')?.classList.remove('hidden');
@@ -5913,6 +6189,644 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.side-nav-item').forEach(el => el.classList.remove('active'));
+        }
+
+        /* =========================================================================
+           2B. PLATFORM CONSOLE — ORGANIZATIONS, ONBOARDING, DETAIL & STATUS TOGGLE
+           ========================================================================= */
+        function generateSlugFromOrgName(rawName) {
+            return String(rawName || '')
+                .normalize('NFKD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .replace(/-{2,}/g, '-')
+                .slice(0, 80);
+        }
+
+        function updatePlatformOrgsKPIs(tenants) {
+            const list = Array.isArray(tenants) ? tenants : [];
+            const total = list.length;
+            const active = list.filter(item => Boolean(item.is_active)).length;
+            const suspended = total - active;
+            const totalUsers = list.reduce((acc, item) => acc + (Number(item.users_count) || 0), 0);
+
+            const elTotal = document.getElementById('plat-kpi-total');
+            const elActive = document.getElementById('plat-kpi-active');
+            const elSuspended = document.getElementById('plat-kpi-suspended');
+            const elUsers = document.getElementById('plat-kpi-users');
+            if (elTotal) elTotal.innerText = String(total);
+            if (elActive) elActive.innerText = String(active);
+            if (elSuspended) elSuspended.innerText = String(suspended);
+            if (elUsers) elUsers.innerText = String(totalUsers);
+        }
+
+        function renderPlatformOrganizations() {
+            const tbody = document.getElementById('plat-orgs-tbody');
+            const countLabel = document.getElementById('plat-orgs-count-label');
+            if (!tbody) return;
+
+            const search = (document.getElementById('plat-orgs-search')?.value || '').trim().toLowerCase();
+            const statusFilter = document.getElementById('plat-orgs-status-filter')?.value || 'ALL';
+
+            const filtered = platformTenantsCache.filter(item => {
+                if (statusFilter === 'ACTIVE' && !item.is_active) return false;
+                if (statusFilter === 'SUSPENDED' && item.is_active) return false;
+                if (search) {
+                    const haystack = `${item.name || ''} ${item.legal_name || ''} ${item.slug || ''}`.toLowerCase();
+                    if (!haystack.includes(search)) return false;
+                }
+                return true;
+            });
+
+            if (countLabel) {
+                countLabel.innerText = `Showing ${filtered.length} of ${platformTenantsCache.length} organizations`;
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-10 px-4 text-center">
+                            <p class="text-xs font-bold text-slate-700">No organizations found</p>
+                            <p class="text-[11px] text-slate-500 mt-0.5">Adjust the search or status filter, or onboard a new organization.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(item => {
+                const tenantId = Number(item.id);
+                const isPlatformTenant = (item.slug === 'platform');
+                const isActive = Boolean(item.is_active);
+                const usersCount = Number(item.users_count) || 0;
+                const customersCount = Number(item.customers_count) || 0;
+                const loansCount = Number(item.loans_count) || 0;
+
+                const statusBadge = isActive
+                    ? '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>'
+                    : '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">Suspended</span>';
+
+                const systemBadge = isPlatformTenant
+                    ? '<span class="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">System</span>'
+                    : '';
+
+                const statusActionHtml = isPlatformTenant
+                    ? '<span class="text-[10px] font-semibold text-slate-400 px-2 py-1">Protected</span>'
+                    : (isActive
+                        ? `<button type="button" onclick="openPlatformStatusConfirmModal(${tenantId})" class="py-1.5 px-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-[11px] font-bold transition">Suspend</button>`
+                        : `<button type="button" onclick="openPlatformStatusConfirmModal(${tenantId})" class="py-1.5 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-bold transition">Activate</button>`
+                    );
+
+                const legalLine = item.legal_name
+                    ? `<p class="text-[11px] text-slate-500 truncate max-w-[240px]">${escapeHtml(item.legal_name)}</p>`
+                    : '';
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-4">
+                            <p class="font-bold text-slate-900">${escapeHtml(item.name)}</p>
+                            ${legalLine}
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="font-mono text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(item.slug)}</span>
+                                ${systemBadge}
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4">${statusBadge}</td>
+                        <td class="py-3.5 px-4">
+                            <div class="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-600">
+                                <span class="px-2 py-0.5 rounded-lg bg-slate-100 font-semibold">${usersCount} users</span>
+                                <span class="px-2 py-0.5 rounded-lg bg-slate-100 font-semibold">${customersCount} customers</span>
+                                <span class="px-2 py-0.5 rounded-lg bg-slate-100 font-semibold">${loansCount} loans</span>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-[11px] text-slate-500 whitespace-nowrap">${escapeHtml(formatDateTimeShort(item.created_at))}</td>
+                        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div class="inline-flex items-center gap-1.5">
+                                <button type="button" onclick="openPlatformOrgDetailModal(${tenantId})" class="py-1.5 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition">View / Edit</button>
+                                ${statusActionHtml}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function loadPlatformOrganizations() {
+            if (!isPlatformSuperadmin(currentUser)) return;
+            const tbody = document.getElementById('plat-orgs-tbody');
+            const countLabel = document.getElementById('plat-orgs-count-label');
+            const refreshBtn = document.getElementById('btn-platform-refresh-orgs');
+
+            if (tbody && platformTenantsCache.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-10 px-4 text-center text-slate-400">Loading organizations...</td></tr>';
+            }
+            if (countLabel) countLabel.innerText = 'Loading...';
+            if (refreshBtn) refreshBtn.disabled = true;
+
+            try {
+                const data = await platformFetch('/api/platform/tenants');
+                platformTenantsCache = Array.isArray(data) ? data : [];
+                updatePlatformOrgsKPIs(platformTenantsCache);
+                renderPlatformOrganizations();
+            } catch (err) {
+                if (err.status !== 401) {
+                    showPlatformNotice('error', err.message || 'Could not load organizations.');
+                    if (tbody) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="py-10 px-4 text-center space-y-2">
+                                    <p class="text-xs font-bold text-red-700">Failed to load organizations</p>
+                                    <p class="text-[11px] text-slate-500">${escapeHtml(err.message || 'Unexpected error')}</p>
+                                    <button type="button" onclick="loadPlatformOrganizations()" class="mt-2 py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold">Retry</button>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                    if (countLabel) countLabel.innerText = 'Error loading directory';
+                }
+            } finally {
+                if (refreshBtn) refreshBtn.disabled = false;
+            }
+        }
+
+        function clearPlatformCreatePasswordFields() {
+            const pwInput = document.getElementById('plat-create-owner-password');
+            const confirmInput = document.getElementById('plat-create-owner-password-confirm');
+            const toggleBtn = document.getElementById('plat-create-pw-toggle');
+            if (pwInput) {
+                pwInput.value = '';
+                pwInput.type = 'password';
+            }
+            if (confirmInput) {
+                confirmInput.value = '';
+                confirmInput.type = 'password';
+            }
+            if (toggleBtn) toggleBtn.innerText = 'Show';
+        }
+
+        function togglePlatformPasswordVisibility(inputId, btnEl) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const reveal = (input.type === 'password');
+            input.type = reveal ? 'text' : 'password';
+            if (btnEl) btnEl.innerText = reveal ? 'Hide' : 'Show';
+        }
+
+        function handlePlatformOrgNameInput() {
+            if (platformSlugManuallyEdited) return;
+            const nameVal = document.getElementById('plat-create-name')?.value || '';
+            const slugInput = document.getElementById('plat-create-slug');
+            if (slugInput) {
+                slugInput.value = generateSlugFromOrgName(nameVal);
+            }
+        }
+
+        function handlePlatformOrgSlugManualInput() {
+            const slugInput = document.getElementById('plat-create-slug');
+            if (!slugInput) return;
+            platformSlugManuallyEdited = slugInput.value.trim().length > 0;
+        }
+
+        function openPlatformCreateOrgModal() {
+            if (!isPlatformSuperadmin(currentUser)) return;
+            const form = document.getElementById('platform-create-org-form');
+            if (form) form.reset();
+            clearPlatformCreatePasswordFields();
+            platformSlugManuallyEdited = false;
+
+            const errBox = document.getElementById('plat-create-org-error');
+            if (errBox) {
+                errBox.innerText = '';
+                errBox.classList.add('hidden');
+            }
+            const submitBtn = document.getElementById('plat-create-org-submit');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Create Organization';
+            }
+            document.getElementById('platform-create-org-modal')?.classList.remove('hidden');
+        }
+
+        function closePlatformCreateOrgModal() {
+            clearPlatformCreatePasswordFields();
+            document.getElementById('platform-create-org-modal')?.classList.add('hidden');
+        }
+
+        async function handlePlatformCreateOrgSubmit(e) {
+            e.preventDefault();
+            if (!isPlatformSuperadmin(currentUser)) return;
+
+            const errBox = document.getElementById('plat-create-org-error');
+            const submitBtn = document.getElementById('plat-create-org-submit');
+            const showErr = (msg) => {
+                if (errBox) {
+                    errBox.innerText = msg;
+                    errBox.classList.remove('hidden');
+                }
+            };
+            if (errBox) errBox.classList.add('hidden');
+
+            const name = (document.getElementById('plat-create-name')?.value || '').trim();
+            const legalNameRaw = (document.getElementById('plat-create-legal-name')?.value || '').trim();
+            const slug = (document.getElementById('plat-create-slug')?.value || '').trim().toLowerCase();
+            const ownerFullNameRaw = (document.getElementById('plat-create-owner-name')?.value || '').trim();
+            const ownerEmail = (document.getElementById('plat-create-owner-email')?.value || '').trim().toLowerCase();
+            const ownerPassword = document.getElementById('plat-create-owner-password')?.value || '';
+            const ownerPasswordConfirm = document.getElementById('plat-create-owner-password-confirm')?.value || '';
+
+            const slugInput = document.getElementById('plat-create-slug');
+            if (slugInput) slugInput.value = slug;
+
+            if (name.length < 2) {
+                showErr('Organization name must be at least 2 characters.');
+                return;
+            }
+            if (!PLATFORM_SLUG_RE.test(slug) || slug.length < 2) {
+                showErr("Invalid slug. Use lowercase letters, numbers, and hyphens only (e.g., 'acme-credit').");
+                return;
+            }
+            if (!ownerEmail || !ownerEmail.includes('@')) {
+                showErr('Please enter a valid email address for the initial OWNER_ADMIN.');
+                return;
+            }
+            if (ownerPassword.trim().length < 8 || ownerPassword.length > 128) {
+                showErr('Initial password must be between 8 and 128 characters.');
+                return;
+            }
+            if (ownerPassword !== ownerPasswordConfirm) {
+                showErr('Password confirmation does not match.');
+                return;
+            }
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Creating...';
+            }
+
+            try {
+                const payload = {
+                    name,
+                    slug,
+                    legal_name: legalNameRaw || null,
+                    owner_email: ownerEmail,
+                    owner_password: ownerPassword,
+                    owner_full_name: ownerFullNameRaw || null
+                };
+                const created = await platformFetch('/api/platform/tenants', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                clearPlatformCreatePasswordFields();
+                closePlatformCreateOrgModal();
+                const createdSlug = created?.tenant?.slug || slug;
+                const createdEmail = created?.owner_admin?.email || ownerEmail;
+                showPlatformNotice('success', `Organization "${createdSlug}" created with initial OWNER_ADMIN ${createdEmail}.`);
+                await loadPlatformOrganizations();
+            } catch (err) {
+                if (err.status !== 401) {
+                    showErr(err.message || 'Could not create organization.');
+                }
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Create Organization';
+                }
+            }
+        }
+
+        function switchPlatformDetailTab(tabName) {
+            const isOverview = (tabName !== 'users');
+            const btnOverview = document.getElementById('plat-detail-tab-btn-overview');
+            const btnUsers = document.getElementById('plat-detail-tab-btn-users');
+            const paneOverview = document.getElementById('plat-detail-pane-overview');
+            const paneUsers = document.getElementById('plat-detail-pane-users');
+
+            if (btnOverview) {
+                btnOverview.className = isOverview
+                    ? 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white transition'
+                    : 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
+            }
+            if (btnUsers) {
+                btnUsers.className = !isOverview
+                    ? 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white transition'
+                    : 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
+            }
+            paneOverview?.classList.toggle('hidden', !isOverview);
+            paneUsers?.classList.toggle('hidden', isOverview);
+        }
+
+        function renderPlatformOrgDetail(detail, users) {
+            platformSelectedTenant = detail;
+            const isPlatformTenant = (detail.slug === 'platform');
+            const isActive = Boolean(detail.is_active);
+
+            const titleEl = document.getElementById('plat-detail-title');
+            const slugBadge = document.getElementById('plat-detail-slug-badge');
+            const statusBadge = document.getElementById('plat-detail-status-badge');
+            const systemBadge = document.getElementById('plat-detail-system-badge');
+            const createdAtEl = document.getElementById('plat-detail-created-at');
+
+            if (titleEl) titleEl.innerText = detail.name || 'Organization';
+            if (slugBadge) slugBadge.innerText = detail.slug || '—';
+            if (statusBadge) {
+                statusBadge.innerText = isActive ? 'Active' : 'Suspended';
+                statusBadge.className = isActive
+                    ? 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200';
+            }
+            systemBadge?.classList.toggle('hidden', !isPlatformTenant);
+            if (createdAtEl) createdAtEl.innerText = `Created: ${formatDateTimeShort(detail.created_at)}`;
+
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = String(val);
+            };
+            setVal('plat-detail-kpi-users', Number(detail.users_count) || 0);
+            setVal('plat-detail-kpi-active-users', Number(detail.active_users_count) || 0);
+            setVal('plat-detail-kpi-customers', Number(detail.customers_count) || 0);
+            setVal('plat-detail-kpi-leads', Number(detail.leads_count) || 0);
+            setVal('plat-detail-kpi-loans', Number(detail.loans_count) || 0);
+
+            const slugInput = document.getElementById('plat-edit-slug-readonly');
+            const nameInput = document.getElementById('plat-edit-name');
+            const legalInput = document.getElementById('plat-edit-legal-name');
+            if (slugInput) slugInput.value = detail.slug || '';
+            if (nameInput) nameInput.value = detail.name || '';
+            if (legalInput) legalInput.value = detail.legal_name || '';
+
+            const editErr = document.getElementById('plat-edit-org-error');
+            if (editErr) {
+                editErr.innerText = '';
+                editErr.classList.add('hidden');
+            }
+
+            const statusBtn = document.getElementById('plat-detail-status-action-btn');
+            if (statusBtn) {
+                if (isPlatformTenant) {
+                    statusBtn.classList.add('hidden');
+                } else {
+                    statusBtn.classList.remove('hidden');
+                    if (isActive) {
+                        statusBtn.innerText = 'Suspend Organization';
+                        statusBtn.className = 'py-2 px-3.5 rounded-xl text-xs font-bold border transition bg-red-50 hover:bg-red-100 text-red-700 border-red-200';
+                    } else {
+                        statusBtn.innerText = 'Activate Organization';
+                        statusBtn.className = 'py-2 px-3.5 rounded-xl text-xs font-bold border transition bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200';
+                    }
+                }
+            }
+
+            const userList = Array.isArray(users) ? users : [];
+            const tabCount = document.getElementById('plat-detail-users-tab-count');
+            if (tabCount) tabCount.innerText = `(${userList.length})`;
+
+            const usersTbody = document.getElementById('plat-detail-users-tbody');
+            if (usersTbody) {
+                if (userList.length === 0) {
+                    usersTbody.innerHTML = '<tr><td colspan="4" class="py-8 px-3.5 text-center text-slate-400">No users registered in this organization.</td></tr>';
+                } else {
+                    usersTbody.innerHTML = userList.map(u => {
+                        const uActive = Boolean(u.is_active);
+                        const uStatus = uActive
+                            ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>'
+                            : '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">Inactive</span>';
+                        return `
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-2.5 px-3.5">
+                                    <p class="font-bold text-slate-900">${escapeHtml(u.full_name || '—')}</p>
+                                    <p class="text-[11px] text-slate-500">${escapeHtml(u.email)}</p>
+                                </td>
+                                <td class="py-2.5 px-3.5">
+                                    <span class="font-mono text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(u.role)}</span>
+                                </td>
+                                <td class="py-2.5 px-3.5">${uStatus}</td>
+                                <td class="py-2.5 px-3.5 text-[11px] text-slate-500 whitespace-nowrap">${escapeHtml(formatDateTimeShort(u.created_at))}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        async function openPlatformOrgDetailModal(tenantId) {
+            if (!isPlatformSuperadmin(currentUser)) return;
+            const idNum = Number(tenantId);
+            if (!Number.isFinite(idNum) || idNum <= 0) return;
+
+            const modal = document.getElementById('platform-org-detail-modal');
+            const loadingEl = document.getElementById('plat-detail-loading');
+            const errEl = document.getElementById('plat-detail-error');
+            const bodyEl = document.getElementById('plat-detail-body');
+
+            switchPlatformDetailTab('overview');
+            if (errEl) {
+                errEl.innerText = '';
+                errEl.classList.add('hidden');
+            }
+            loadingEl?.classList.remove('hidden');
+            bodyEl?.classList.add('hidden');
+            modal?.classList.remove('hidden');
+
+            try {
+                const [detail, users] = await Promise.all([
+                    platformFetch(`/api/platform/tenants/${idNum}`),
+                    platformFetch(`/api/platform/tenants/${idNum}/users`)
+                ]);
+                renderPlatformOrgDetail(detail, users);
+                bodyEl?.classList.remove('hidden');
+            } catch (err) {
+                if (err.status !== 401) {
+                    if (errEl) {
+                        errEl.innerText = err.message || 'Could not load organization details.';
+                        errEl.classList.remove('hidden');
+                    }
+                    showPlatformNotice('error', err.message || 'Could not load organization details.');
+                }
+            } finally {
+                loadingEl?.classList.add('hidden');
+            }
+        }
+
+        function closePlatformOrgDetailModal() {
+            platformSelectedTenant = null;
+            document.getElementById('platform-org-detail-modal')?.classList.add('hidden');
+        }
+
+        async function handlePlatformEditOrgSubmit(e) {
+            e.preventDefault();
+            if (!isPlatformSuperadmin(currentUser) || !platformSelectedTenant) return;
+
+            const tenantId = Number(platformSelectedTenant.id);
+            const errBox = document.getElementById('plat-edit-org-error');
+            const submitBtn = document.getElementById('plat-edit-org-submit');
+            if (errBox) errBox.classList.add('hidden');
+
+            const name = (document.getElementById('plat-edit-name')?.value || '').trim();
+            const legalName = (document.getElementById('plat-edit-legal-name')?.value || '').trim();
+
+            if (name.length < 2) {
+                if (errBox) {
+                    errBox.innerText = 'Organization name must be at least 2 characters.';
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Saving...';
+            }
+
+            try {
+                const updated = await platformFetch(`/api/platform/tenants/${tenantId}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        name,
+                        legal_name: legalName
+                    })
+                });
+                const merged = Object.assign({}, platformSelectedTenant, updated);
+                const [freshDetail, freshUsers] = await Promise.all([
+                    platformFetch(`/api/platform/tenants/${tenantId}`),
+                    platformFetch(`/api/platform/tenants/${tenantId}/users`)
+                ]);
+                renderPlatformOrgDetail(freshDetail || merged, freshUsers);
+                showPlatformNotice('success', `Organization "${updated.slug}" settings updated.`);
+                await loadPlatformOrganizations();
+            } catch (err) {
+                if (err.status !== 401 && errBox) {
+                    errBox.innerText = err.message || 'Could not update organization settings.';
+                    errBox.classList.remove('hidden');
+                }
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Save Changes';
+                }
+            }
+        }
+
+        function openPlatformStatusConfirmFromDetail() {
+            if (!platformSelectedTenant || platformSelectedTenant.slug === 'platform') return;
+            openPlatformStatusConfirmModal(Number(platformSelectedTenant.id));
+        }
+
+        function openPlatformStatusConfirmModal(tenantId) {
+            if (!isPlatformSuperadmin(currentUser)) return;
+            const idNum = Number(tenantId);
+            const tenant = platformTenantsCache.find(t => Number(t.id) === idNum)
+                || (platformSelectedTenant && Number(platformSelectedTenant.id) === idNum ? platformSelectedTenant : null);
+
+            // Hard guard: never open suspend/activate confirmation for the system platform tenant
+            if (!tenant || tenant.slug === 'platform') return;
+
+            platformPendingStatusTenantId = idNum;
+            const willSuspend = Boolean(tenant.is_active);
+
+            const kickerEl = document.getElementById('plat-confirm-kicker');
+            const titleEl = document.getElementById('plat-confirm-title');
+            const orgNameEl = document.getElementById('plat-confirm-org-name');
+            const orgSlugEl = document.getElementById('plat-confirm-org-slug');
+            const msgBox = document.getElementById('plat-confirm-message-box');
+            const errBox = document.getElementById('plat-confirm-status-error');
+            const submitBtn = document.getElementById('plat-confirm-submit-btn');
+
+            if (orgNameEl) orgNameEl.innerText = tenant.name || 'Organization';
+            if (orgSlugEl) orgSlugEl.innerText = tenant.slug || '—';
+            if (errBox) {
+                errBox.innerText = '';
+                errBox.classList.add('hidden');
+            }
+
+            if (willSuspend) {
+                if (kickerEl) {
+                    kickerEl.innerText = 'High-Impact Action';
+                    kickerEl.className = 'text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200';
+                }
+                if (titleEl) titleEl.innerText = 'Suspend Organization?';
+                if (msgBox) {
+                    msgBox.className = 'p-3.5 rounded-2xl border bg-amber-50 border-amber-200 text-amber-900 text-xs leading-relaxed';
+                    msgBox.innerText = 'Suspending this organization will immediately revoke all active user sessions and block all users in this tenant from signing in until the organization is reactivated.';
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Suspend Organization';
+                    submitBtn.className = 'py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 shadow-sm transition';
+                }
+            } else {
+                if (kickerEl) {
+                    kickerEl.innerText = 'Restore Access';
+                    kickerEl.className = 'text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
+                }
+                if (titleEl) titleEl.innerText = 'Activate Organization?';
+                if (msgBox) {
+                    msgBox.className = 'p-3.5 rounded-2xl border bg-emerald-50 border-emerald-200 text-emerald-900 text-xs leading-relaxed';
+                    msgBox.innerText = 'Reactivating this organization will allow its active users to sign in and resume commercial CRM operations immediately.';
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Activate Organization';
+                    submitBtn.className = 'py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition';
+                }
+            }
+
+            document.getElementById('platform-status-confirm-modal')?.classList.remove('hidden');
+        }
+
+        function closePlatformStatusConfirmModal() {
+            platformPendingStatusTenantId = null;
+            document.getElementById('platform-status-confirm-modal')?.classList.add('hidden');
+        }
+
+        async function executePlatformStatusToggle() {
+            if (!isPlatformSuperadmin(currentUser) || !platformPendingStatusTenantId) return;
+            const idNum = Number(platformPendingStatusTenantId);
+            const tenant = platformTenantsCache.find(t => Number(t.id) === idNum)
+                || (platformSelectedTenant && Number(platformSelectedTenant.id) === idNum ? platformSelectedTenant : null);
+
+            if (!tenant || tenant.slug === 'platform') {
+                closePlatformStatusConfirmModal();
+                return;
+            }
+
+            const targetActive = !Boolean(tenant.is_active);
+            const errBox = document.getElementById('plat-confirm-status-error');
+            const submitBtn = document.getElementById('plat-confirm-submit-btn');
+            if (errBox) errBox.classList.add('hidden');
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = targetActive ? 'Activating...' : 'Suspending...';
+            }
+
+            try {
+                const updated = await platformFetch(`/api/platform/tenants/${idNum}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ is_active: targetActive })
+                });
+                closePlatformStatusConfirmModal();
+                const actionLabel = targetActive ? 'activated' : 'suspended (active sessions revoked)';
+                showPlatformNotice('success', `Organization "${updated.slug}" has been ${actionLabel}.`);
+                await loadPlatformOrganizations();
+
+                const detailModal = document.getElementById('platform-org-detail-modal');
+                if (detailModal && !detailModal.classList.contains('hidden') && platformSelectedTenant && Number(platformSelectedTenant.id) === idNum) {
+                    await openPlatformOrgDetailModal(idNum);
+                }
+            } catch (err) {
+                if (err.status !== 401 && errBox) {
+                    errBox.innerText = err.message || 'Could not update organization status.';
+                    errBox.classList.remove('hidden');
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = targetActive ? 'Activate Organization' : 'Suspend Organization';
+                }
+            }
         }
 
         function escapeHtml(str) {
@@ -7337,6 +8251,9 @@ async function loadDashboardSummary() {
             const floatingBtn = document.getElementById('floating-executive-btn');
             if (floatingBtn) {
                 floatingBtn.classList.toggle('hidden', platformMode || tabId === 'ia');
+            }
+            if (platformMode && tabId === 'platform-orgs') {
+                loadPlatformOrganizations();
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
