@@ -2,8 +2,9 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column, Integer, BigInteger, String, Text,
-    DateTime, Date, Boolean, ForeignKey, UniqueConstraint,
-    CheckConstraint, Index, event, text, inspect, LargeBinary
+    DateTime, Date, Boolean, ForeignKey, ForeignKeyConstraint,
+    PrimaryKeyConstraint, UniqueConstraint, CheckConstraint, Index,
+    event, text, inspect, LargeBinary, true, false
 )
 from sqlalchemy.orm import declarative_base, relationship, deferred
 
@@ -12,20 +13,45 @@ Base = declarative_base()
 
 
 # --- SQLALCHEMY MODELS ---
+class TenantModel(Base):
+    __tablename__ = "tenants"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(160), nullable=False)
+    slug = Column(String(80), unique=True, index=True, nullable=False)
+    legal_name = Column(String(200), nullable=True)
+    is_active = Column(Boolean, default=True, server_default=true(), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class TenantSequenceModel(Base):
+    __tablename__ = "tenant_sequences"
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False)
+    entity_type = Column(String(40), nullable=False)
+    last_value = Column(Integer, default=0, server_default="0", nullable=False)
+
+    __table_args__ = (
+        PrimaryKeyConstraint("tenant_id", "entity_type", name="pk_tenant_sequences"),
+    )
+
+
 class UserModel(Base):
     __tablename__ = "users"
     __table_args__ = (
         CheckConstraint("preferred_language IN ('en', 'es')", name="ck_users_preferred_language_valid"),
+        UniqueConstraint("tenant_id", "id", name="uq_users_tenant_id_id"),
     )
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String(120), nullable=True)
     password_hash = Column(String, nullable=False)
     role = Column(String(30), default="SALES_AGENT", nullable=False, index=True)
+    is_superadmin = Column(Boolean, default=False, server_default=false(), nullable=False, index=True)
     preferred_language = Column(String(10), default="en", server_default="en", nullable=False)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+    tenant = relationship("TenantModel")
     conversations = relationship("ConversationModel", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("SessionModel", back_populates="user", cascade="all, delete-orphan")
     password_reset_tokens = relationship("PasswordResetTokenModel", back_populates="user", cascade="all, delete-orphan")
@@ -89,13 +115,24 @@ class PasswordResetTokenModel(Base):
 class ConversationModel(Base):
     __tablename__ = "conversations"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    user_id = Column(Integer, nullable=False)
     title = Column(String, default="New Consultation")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc)
+    )
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id", name="uq_conversations_tenant_id_id"),
+        ForeignKeyConstraint(
+            ["tenant_id", "user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="CASCADE",
+            name="fk_conversations_tenant_user"
+        ),
     )
 
     user = relationship("UserModel", back_populates="conversations")
@@ -105,10 +142,20 @@ class ConversationModel(Base):
 class ChatMessageModel(Base):
     __tablename__ = "chat_messages"
     id = Column(Integer, primary_key=True, index=True)
-    conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    conversation_id = Column(Integer, index=True)
     role = Column(String)
     content = Column(Text)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "conversation_id"],
+            ["conversations.tenant_id", "conversations.id"],
+            ondelete="CASCADE",
+            name="fk_chat_messages_tenant_conversation"
+        ),
+    )
 
     conversation = relationship("ConversationModel", back_populates="messages")
 
@@ -116,6 +163,8 @@ class ChatMessageModel(Base):
 class AuditLogModel(Base):
     __tablename__ = "audit_logs"
     id = Column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, index=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=True, index=True)
+    scope = Column(String(20), nullable=False, default="TENANT", index=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True, nullable=False)
     actor_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True)
     actor_role = Column(String(30), nullable=True)
@@ -126,13 +175,18 @@ class AuditLogModel(Base):
     ip_address = Column(String(45), nullable=True)
     details_json = Column(Text, nullable=True)
 
+    __table_args__ = (
+        CheckConstraint("scope IN ('ANONYMOUS', 'TENANT', 'PLATFORM')", name="ck_audit_logs_scope_valid"),
+    )
+
     actor = relationship("UserModel", back_populates="audit_events")
 
 
 class CustomerModel(Base):
     __tablename__ = "customers"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    customer_number = Column(String(24), unique=True, index=True, nullable=False)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    customer_number = Column(String(24), index=True, nullable=False)
     entity_type = Column(String(20), default="INDIVIDUAL", nullable=False)
     status = Column(String(30), default="ACTIVE", index=True, nullable=False)
     verification_status = Column(String(30), default="PENDING_VERIFICATION", nullable=False)
@@ -147,7 +201,7 @@ class CustomerModel(Base):
     tax_id_rfc = Column(String(20), index=True, nullable=True)
     date_of_birth = Column(Date, nullable=True)
     phone_primary = Column(String(25), nullable=False)
-    phone_primary_normalized = Column(String(20), unique=True, index=True, nullable=False)
+    phone_primary_normalized = Column(String(20), index=True, nullable=False)
     phone_secondary = Column(String(25), nullable=True)
     phone_secondary_normalized = Column(String(20), nullable=True)
     email = Column(String(255), index=True, nullable=True)
@@ -156,8 +210,8 @@ class CustomerModel(Base):
     employer_or_business_name = Column(String(160), nullable=True)
     occupation_or_industry = Column(String(120), nullable=True)
     employment_address = Column(Text, nullable=True)
-    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), index=True, nullable=False)
-    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    owner_user_id = Column(Integer, index=True, nullable=False)
+    created_by_user_id = Column(Integer, nullable=False)
     customer_since = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(
@@ -167,6 +221,24 @@ class CustomerModel(Base):
         nullable=False
     )
 
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id", name="uq_customers_tenant_id_id"),
+        UniqueConstraint("tenant_id", "customer_number", name="uq_customers_tenant_customer_number"),
+        UniqueConstraint("tenant_id", "phone_primary_normalized", name="uq_customers_tenant_phone_primary"),
+        ForeignKeyConstraint(
+            ["tenant_id", "owner_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_customers_tenant_owner_user"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "created_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_customers_tenant_created_by_user"
+        ),
+    )
+
     loans = relationship("LoanModel", back_populates="customer", cascade="all, delete-orphan")
     documents = relationship("CustomerDocumentModel", back_populates="customer", cascade="all, delete-orphan")
 
@@ -174,7 +246,8 @@ class CustomerModel(Base):
 class CustomerDocumentModel(Base):
     __tablename__ = "customer_documents"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    customer_id = Column(Integer, nullable=False, index=True)
     document_type = Column(String(40), nullable=False)
     original_filename = Column(String(255), nullable=False)
     mime_type = Column(String(100), nullable=False)
@@ -182,8 +255,23 @@ class CustomerDocumentModel(Base):
     file_hash = Column(String(64), nullable=False)
     file_data = deferred(Column(LargeBinary, nullable=False))  # BYTEA (deferred: solo se carga al descargar)
     status = Column(String(30), default="ACTIVE", nullable=False)
-    uploaded_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    uploaded_by_user_id = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "customer_id"],
+            ["customers.tenant_id", "customers.id"],
+            ondelete="RESTRICT",
+            name="fk_customer_documents_tenant_customer"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "uploaded_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_customer_documents_tenant_uploaded_by"
+        ),
+    )
 
     customer = relationship("CustomerModel", back_populates="documents")
 
@@ -192,9 +280,37 @@ class LeadModel(Base):
     __tablename__ = "leads"
     __table_args__ = (
         CheckConstraint("requested_amount_cents >= 0", name="ck_leads_amount_non_negative"),
+        UniqueConstraint("tenant_id", "id", name="uq_leads_tenant_id_id"),
+        UniqueConstraint("tenant_id", "lead_number", name="uq_leads_tenant_lead_number"),
+        UniqueConstraint("tenant_id", "converted_customer_id", "id", name="uq_leads_tenant_converted_customer_id"),
+        ForeignKeyConstraint(
+            ["tenant_id", "owner_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_leads_tenant_owner_user"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "created_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_leads_tenant_created_by_user"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "converted_customer_id"],
+            ["customers.tenant_id", "customers.id"],
+            ondelete="RESTRICT",
+            name="fk_leads_tenant_converted_customer"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "converted_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_leads_tenant_converted_by_user"
+        ),
     )
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    lead_number = Column(String(24), unique=True, index=True, nullable=False)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    lead_number = Column(String(24), index=True, nullable=False)
     full_name = Column(String(180), index=True, nullable=False)
     entity_type = Column(String(20), default="INDIVIDUAL", nullable=False)
     trade_name = Column(String(160), nullable=True)
@@ -214,11 +330,11 @@ class LeadModel(Base):
     last_interaction_outcome = Column(String(40), nullable=True)
     next_follow_up_at = Column(DateTime(timezone=True), index=True, nullable=True)
     summary_notes = Column(Text, nullable=True)
-    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), index=True, nullable=False)
-    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
-    converted_customer_id = Column(Integer, ForeignKey("customers.id", ondelete="RESTRICT"), index=True, nullable=True)
+    owner_user_id = Column(Integer, index=True, nullable=False)
+    created_by_user_id = Column(Integer, nullable=False)
+    converted_customer_id = Column(Integer, index=True, nullable=True)
     converted_at = Column(DateTime(timezone=True), nullable=True)
-    converted_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    converted_by_user_id = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
@@ -231,40 +347,76 @@ class LeadModel(Base):
 class LeadStageHistoryModel(Base):
     __tablename__ = "lead_stage_history"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    lead_id = Column(Integer, ForeignKey("leads.id", ondelete="RESTRICT"), index=True, nullable=False)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    lead_id = Column(Integer, index=True, nullable=False)
     from_stage = Column(String(35), nullable=True)
     to_stage = Column(String(35), nullable=False)
-    changed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    changed_by_user_id = Column(Integer, nullable=False)
     reason_or_note = Column(Text, nullable=True)
     changed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True, nullable=False)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "lead_id"],
+            ["leads.tenant_id", "leads.id"],
+            ondelete="RESTRICT",
+            name="fk_lead_stage_history_tenant_lead"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "changed_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_lead_stage_history_tenant_changed_by"
+        ),
+    )
 
 
 class InteractionModel(Base):
     __tablename__ = "interactions"
     __table_args__ = (
         CheckConstraint("lead_id IS NOT NULL OR customer_id IS NOT NULL", name="ck_interactions_target_present"),
+        ForeignKeyConstraint(
+            ["tenant_id", "lead_id"],
+            ["leads.tenant_id", "leads.id"],
+            ondelete="RESTRICT",
+            name="fk_interactions_tenant_lead"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "customer_id"],
+            ["customers.tenant_id", "customers.id"],
+            ondelete="RESTRICT",
+            name="fk_interactions_tenant_customer"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "created_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_interactions_tenant_created_by"
+        ),
     )
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    lead_id = Column(Integer, ForeignKey("leads.id", ondelete="RESTRICT"), index=True, nullable=True)
-    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="RESTRICT"), index=True, nullable=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    lead_id = Column(Integer, index=True, nullable=True)
+    customer_id = Column(Integer, index=True, nullable=True)
     interaction_type = Column(String(30), nullable=False)
     direction = Column(String(20), default="OUTBOUND", nullable=False)
     visibility = Column(String(20), default="INTERNAL", nullable=False)
     outcome = Column(String(40), nullable=True)
     content = Column(Text, nullable=False)
     next_follow_up_at = Column(DateTime(timezone=True), nullable=True)
-    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    created_by_user_id = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True, nullable=False)
 
 
 class LoanModel(Base):
     __tablename__ = "loans"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    loan_number = Column(String(24), unique=True, index=True, nullable=False)
-    idempotency_key = Column(String(64), unique=True, nullable=False)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    loan_number = Column(String(24), index=True, nullable=False)
+    idempotency_key = Column(String(64), nullable=False)
     request_payload_hash = Column(String(64), nullable=False)
-    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="RESTRICT"), index=True, nullable=False)
-    source_lead_id = Column(Integer, ForeignKey("leads.id", ondelete="RESTRICT"), index=True, nullable=True)
+    customer_id = Column(Integer, index=True, nullable=False)
+    source_lead_id = Column(Integer, index=True, nullable=True)
     status = Column(String(25), default="DRAFT", index=True, nullable=False)
     product_name = Column(String(60), nullable=False)
     product_version = Column(String(20), default="v1.0", nullable=False)
@@ -291,18 +443,18 @@ class LoanModel(Base):
     remaining_contractual_interest_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
     remaining_contract_total_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
     amount_paid_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, nullable=False)
-    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), index=True, nullable=False)
-    created_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
-    approved_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    owner_user_id = Column(Integer, index=True, nullable=False)
+    created_by_user_id = Column(Integer, nullable=False)
+    approved_by_user_id = Column(Integer, nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)
     approval_notes = Column(Text, nullable=True)
-    activated_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    activated_by_user_id = Column(Integer, nullable=True)
     activated_at = Column(DateTime(timezone=True), nullable=True)
     disbursed_at = Column(DateTime(timezone=True), nullable=True)
     disbursement_method = Column(String(40), nullable=True)
     disbursement_reference = Column(String(120), nullable=True)
     disbursement_notes = Column(Text, nullable=True)
-    cancelled_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    cancelled_by_user_id = Column(Integer, nullable=True)
     cancelled_at = Column(DateTime(timezone=True), nullable=True)
     cancellation_reason = Column(String(255), nullable=True)
     notes = Column(Text, nullable=True)
@@ -314,14 +466,65 @@ class LoanModel(Base):
         nullable=False
     )
 
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id", name="uq_loans_tenant_id_id"),
+        UniqueConstraint("tenant_id", "customer_id", "id", name="uq_loans_tenant_customer_id"),
+        UniqueConstraint("tenant_id", "loan_number", name="uq_loans_tenant_loan_number"),
+        UniqueConstraint("tenant_id", "idempotency_key", name="uq_loans_tenant_idempotency_key"),
+        ForeignKeyConstraint(
+            ["tenant_id", "customer_id"],
+            ["customers.tenant_id", "customers.id"],
+            ondelete="RESTRICT",
+            name="fk_loans_tenant_customer"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "customer_id", "source_lead_id"],
+            ["leads.tenant_id", "leads.converted_customer_id", "leads.id"],
+            ondelete="RESTRICT",
+            name="fk_loans_tenant_customer_source_lead"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "owner_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_loans_tenant_owner_user"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "created_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_loans_tenant_created_by_user"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "approved_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_loans_tenant_approved_by_user"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "activated_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_loans_tenant_activated_by_user"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "cancelled_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_loans_tenant_cancelled_by_user"
+        ),
+    )
+
     customer = relationship("CustomerModel", back_populates="loans")
     installments = relationship("LoanInstallmentModel", back_populates="loan", cascade="all, delete-orphan", order_by="LoanInstallmentModel.installment_number")
     payments = relationship("LoanPaymentModel", back_populates="loan", order_by="LoanPaymentModel.loan_payment_seq")
 
+
 class LoanInstallmentModel(Base):
     __tablename__ = "loan_installments"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    loan_id = Column(Integer, ForeignKey("loans.id", ondelete="RESTRICT"), nullable=False, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    loan_id = Column(Integer, nullable=False, index=True)
     installment_number = Column(Integer, nullable=False)
     due_date = Column(Date, nullable=False, index=True)
     beginning_principal_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
@@ -356,14 +559,25 @@ class LoanInstallmentModel(Base):
             name="ck_inst_paid_at_coherent"
         ),
         UniqueConstraint("loan_id", "installment_number", name="uq_loan_installments_loan_num"),
+        UniqueConstraint("tenant_id", "id", name="uq_loan_installments_tenant_id_id"),
+        UniqueConstraint("tenant_id", "loan_id", "id", name="uq_loan_installments_tenant_loan_id"),
+        ForeignKeyConstraint(
+            ["tenant_id", "loan_id"],
+            ["loans.tenant_id", "loans.id"],
+            ondelete="RESTRICT",
+            name="fk_loan_installments_tenant_loan"
+        ),
     )
 
     loan = relationship("LoanModel", back_populates="installments")
     payment_allocations = relationship(
         "LoanPaymentAllocationModel",
         back_populates="installment",
-        order_by="LoanPaymentAllocationModel.id"
+        order_by="LoanPaymentAllocationModel.id",
+        overlaps="allocations,payment"
     )
+
+
 @event.listens_for(AuditLogModel, "before_update")
 def _prevent_audit_update(mapper, connection, target):
     raise RuntimeError("AuditLogModel is append-only: UPDATE is forbidden.")
@@ -372,12 +586,15 @@ def _prevent_audit_update(mapper, connection, target):
 @event.listens_for(AuditLogModel, "before_delete")
 def _prevent_audit_delete(mapper, connection, target):
     raise RuntimeError("AuditLogModel is append-only: DELETE is forbidden.")
+
+
 class LoanPaymentModel(Base):
     __tablename__ = "loan_payments"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    payment_number = Column(String(24), unique=True, index=True, nullable=False)
-    loan_id = Column(Integer, ForeignKey("loans.id", ondelete="RESTRICT"), nullable=False, index=True)
-    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    payment_number = Column(String(24), index=True, nullable=False)
+    loan_id = Column(Integer, nullable=False, index=True)
+    customer_id = Column(Integer, nullable=False, index=True)
     loan_payment_seq = Column(Integer, nullable=False)
     idempotency_key = Column(String(64), nullable=False)
     request_payload_hash = Column(String(64), nullable=False)
@@ -395,16 +612,17 @@ class LoanPaymentModel(Base):
     payment_reference = Column(String(120), nullable=True, index=True)
     paid_at = Column(DateTime(timezone=True), nullable=False, index=True)
     notes = Column(Text, nullable=True)
-    recorded_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
-    reversed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    recorded_by_user_id = Column(Integer, nullable=False)
+    reversed_by_user_id = Column(Integer, nullable=True)
     reversed_at = Column(DateTime(timezone=True), nullable=True)
     reversal_reason = Column(String(255), nullable=True)
     # Detalle del rebate por pronto pago (JSON versionado). Se escribe junto con el pago y es inmutable.
     rebate_detail_json = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
-    # NOTA: el indice unico parcial uq_loan_payments_posted_reference (referencia de pago unica entre
-    # pagos POSTED SPEI/DEPOSITO/CHEQUE) se crea en la migracion 010.
+    # NOTA: el indice unico parcial uq_loan_payments_posted_reference (referencia de pago unica por
+    # tenant entre pagos POSTED SPEI/DEPOSITO/CHEQUE) se crea en la migracion 010 y se acota a
+    # tenant_id en la migracion 012.
     __table_args__ = (
         CheckConstraint("loan_payment_seq >= 1", name="ck_loan_payments_seq_positive"),
         CheckConstraint("status IN ('POSTED', 'REVERSED')", name="ck_loan_payments_status_valid"),
@@ -439,24 +657,53 @@ class LoanPaymentModel(Base):
             "AND length(trim(reversal_reason)) >= 3)",
             name="ck_loan_payments_reversal_metadata"
         ),
-        UniqueConstraint("idempotency_key", name="uq_loan_payments_idempotency_key"),
+        UniqueConstraint("tenant_id", "id", name="uq_loan_payments_tenant_id_id"),
+        UniqueConstraint("tenant_id", "loan_id", "id", name="uq_loan_payments_tenant_loan_id"),
+        UniqueConstraint("tenant_id", "payment_number", name="uq_loan_payments_tenant_payment_number"),
+        UniqueConstraint("tenant_id", "idempotency_key", name="uq_loan_payments_tenant_idempotency_key"),
         UniqueConstraint("loan_id", "loan_payment_seq", name="uq_loan_payments_loan_seq"),
+        ForeignKeyConstraint(
+            ["tenant_id", "customer_id", "loan_id"],
+            ["loans.tenant_id", "loans.customer_id", "loans.id"],
+            ondelete="RESTRICT",
+            name="fk_loan_payments_tenant_customer_loan"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "customer_id"],
+            ["customers.tenant_id", "customers.id"],
+            ondelete="RESTRICT",
+            name="fk_loan_payments_tenant_customer"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "recorded_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_loan_payments_tenant_recorded_by"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "reversed_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_loan_payments_tenant_reversed_by"
+        ),
     )
 
     loan = relationship("LoanModel", back_populates="payments")
     allocations = relationship(
         "LoanPaymentAllocationModel",
         back_populates="payment",
-        order_by="LoanPaymentAllocationModel.installment_number"
+        order_by="LoanPaymentAllocationModel.installment_number",
+        overlaps="installment,payment_allocations"
     )
 
 
 class LoanPaymentAllocationModel(Base):
     __tablename__ = "loan_payment_allocations"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    payment_id = Column(Integer, ForeignKey("loan_payments.id", ondelete="RESTRICT"), nullable=False, index=True)
-    loan_id = Column(Integer, ForeignKey("loans.id", ondelete="RESTRICT"), nullable=False, index=True)
-    installment_id = Column(Integer, ForeignKey("loan_installments.id", ondelete="RESTRICT"), nullable=False, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    payment_id = Column(Integer, nullable=False, index=True)
+    loan_id = Column(Integer, nullable=False, index=True)
+    installment_id = Column(Integer, nullable=False, index=True)
     installment_number = Column(Integer, nullable=False)
     interest_allocated_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
     principal_allocated_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
@@ -489,10 +736,28 @@ class LoanPaymentAllocationModel(Base):
             name="ck_payment_alloc_prev_valid"
         ),
         UniqueConstraint("payment_id", "installment_id", name="uq_payment_alloc_payment_inst"),
+        ForeignKeyConstraint(
+            ["tenant_id", "loan_id", "payment_id"],
+            ["loan_payments.tenant_id", "loan_payments.loan_id", "loan_payments.id"],
+            ondelete="RESTRICT",
+            name="fk_payment_alloc_tenant_loan_payment"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "loan_id", "installment_id"],
+            ["loan_installments.tenant_id", "loan_installments.loan_id", "loan_installments.id"],
+            ondelete="RESTRICT",
+            name="fk_payment_alloc_tenant_loan_installment"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "loan_id"],
+            ["loans.tenant_id", "loans.id"],
+            ondelete="RESTRICT",
+            name="fk_payment_alloc_tenant_loan"
+        ),
     )
 
-    payment = relationship("LoanPaymentModel", back_populates="allocations")
-    installment = relationship("LoanInstallmentModel", back_populates="payment_allocations")
+    payment = relationship("LoanPaymentModel", back_populates="allocations", overlaps="installment,payment_allocations")
+    installment = relationship("LoanInstallmentModel", back_populates="payment_allocations", overlaps="allocations,payment")
 
 
 @event.listens_for(LoanPaymentAllocationModel, "before_update")
