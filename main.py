@@ -28,6 +28,8 @@ from passlib.context import CryptContext
 from db_config import is_production, get_runtime_database_url, get_engine_connect_args
 from models import (
     Base,
+    TenantModel,
+    TenantSequenceModel,
     UserModel,
     SessionModel,
     RateLimitModel,
@@ -271,7 +273,7 @@ def is_auth_security_schema_ready(db: Optional[Session] = None) -> bool:
     return False
 
 
-EXPECTED_ALEMBIC_REVISION = "011"  # al crear una nueva migracion, actualizar solo esta constante
+EXPECTED_ALEMBIC_REVISION = "012"  # al crear una nueva migracion, actualizar solo esta constante
 
 
 def verify_database_schema_compatibility(db_engine):
@@ -283,6 +285,7 @@ def verify_database_schema_compatibility(db_engine):
         inspector = inspect(db_engine)
         tables = set(inspector.get_table_names())
         base_required_tables = {
+            "tenants", "tenant_sequences",
             "users", "sessions", "conversations", "chat_messages", "audit_logs",
             "customers", "customer_documents", "leads", "lead_stage_history",
             "interactions", "loans", "loan_installments",
@@ -724,56 +727,34 @@ def normalize_phone_number(raw_phone: Optional[str], required: bool = True) -> O
     return digits
 
 
-def generate_next_customer_number(db: Session) -> str:
-    if db.bind and db.bind.dialect.name == "postgresql":
-        db.execute(text("SELECT pg_advisory_xact_lock(9002001)"))
-    last_customer = db.query(CustomerModel.id).order_by(CustomerModel.id.desc()).first()
-    next_seq = (last_customer[0] + 1) if last_customer else 1
-    while True:
-        candidate = f"CUST-{next_seq:05d}"
-        exists = db.query(CustomerModel.id).filter(CustomerModel.customer_number == candidate).first()
-        if not exists:
-            return candidate
-        next_seq += 1
+def next_tenant_sequence(db: Session, tenant_id: int, entity_type: str) -> int:
+    row = db.execute(
+        text("""
+            INSERT INTO tenant_sequences (tenant_id, entity_type, last_value)
+            VALUES (:tenant_id, :entity_type, 1)
+            ON CONFLICT (tenant_id, entity_type) DO UPDATE
+            SET last_value = tenant_sequences.last_value + 1
+            RETURNING last_value
+        """),
+        {"tenant_id": tenant_id, "entity_type": entity_type}
+    ).fetchone()
+    return int(row[0])
 
 
-def generate_next_lead_number(db: Session) -> str:
-    if db.bind and db.bind.dialect.name == "postgresql":
-        db.execute(text("SELECT pg_advisory_xact_lock(9003001)"))
-    last_lead = db.query(LeadModel.id).order_by(LeadModel.id.desc()).first()
-    next_seq = (last_lead[0] + 1) if last_lead else 1
-    while True:
-        candidate = f"LD-{next_seq:05d}"
-        exists = db.query(LeadModel.id).filter(LeadModel.lead_number == candidate).first()
-        if not exists:
-            return candidate
-        next_seq += 1
+def generate_next_customer_number(db: Session, tenant_id: int) -> str:
+    return f"CUST-{next_tenant_sequence(db, tenant_id, 'customers'):05d}"
 
 
-def generate_next_loan_number(db: Session) -> str:
-    if db.bind and db.bind.dialect.name == "postgresql":
-        db.execute(text("SELECT pg_advisory_xact_lock(9004001)"))
-    last_loan = db.query(LoanModel.id).order_by(LoanModel.id.desc()).first()
-    next_seq = (last_loan[0] + 1) if last_loan else 1
-    while True:
-        candidate = f"LN-{next_seq:05d}"
-        exists = db.query(LoanModel.id).filter(LoanModel.loan_number == candidate).first()
-        if not exists:
-            return candidate
-        next_seq += 1
+def generate_next_lead_number(db: Session, tenant_id: int) -> str:
+    return f"LD-{next_tenant_sequence(db, tenant_id, 'leads'):05d}"
 
 
-def generate_next_payment_number(db: Session) -> str:
-    if db.bind and db.bind.dialect.name == "postgresql":
-        db.execute(text("SELECT pg_advisory_xact_lock(9005001)"))
-    last_payment = db.query(LoanPaymentModel.id).order_by(LoanPaymentModel.id.desc()).first()
-    next_seq = (last_payment[0] + 1) if last_payment else 1
-    while True:
-        candidate = f"PAY-{next_seq:06d}"
-        exists = db.query(LoanPaymentModel.id).filter(LoanPaymentModel.payment_number == candidate).first()
-        if not exists:
-            return candidate
-        next_seq += 1
+def generate_next_loan_number(db: Session, tenant_id: int) -> str:
+    return f"LN-{next_tenant_sequence(db, tenant_id, 'loans'):05d}"
+
+
+def generate_next_payment_number(db: Session, tenant_id: int) -> str:
+    return f"PAY-{next_tenant_sequence(db, tenant_id, 'loan_payments'):06d}"
 
 # --- REBATE DETAIL (PURE HELPERS) BEGIN ---
 # El detalle del rebate por pronto pago vive en loan_payments.rebate_detail_json (se escribe
@@ -818,7 +799,9 @@ class LoanPaymentEngine:
     @staticmethod
     def _verify_ledger_integrity_python(loan: LoanModel, installments: List[LoanInstallmentModel], db: Session):
         posted_payments = db.query(LoanPaymentModel).filter(
-            LoanPaymentModel.loan_id == loan.id, LoanPaymentModel.status == 'POSTED'
+            LoanPaymentModel.tenant_id == loan.tenant_id,
+            LoanPaymentModel.loan_id == loan.id,
+            LoanPaymentModel.status == 'POSTED'
         ).all()
         
         posted_amt = sum(p.amount_cents for p in posted_payments)
@@ -845,8 +828,11 @@ class LoanPaymentEngine:
         if amount_cents <= 0 or amount_cents > loan.remaining_contract_total_cents:
             raise ValueError("Payment amount must be > 0 and cannot exceed the remaining contract total.")
 
-        payment_number = generate_next_payment_number(db)
-        max_seq = db.query(func.max(LoanPaymentModel.loan_payment_seq)).filter(LoanPaymentModel.loan_id == loan.id).scalar()
+        payment_number = generate_next_payment_number(db, loan.tenant_id)
+        max_seq = db.query(func.max(LoanPaymentModel.loan_payment_seq)).filter(
+            LoanPaymentModel.tenant_id == loan.tenant_id,
+            LoanPaymentModel.loan_id == loan.id
+        ).scalar()
         next_seq = (max_seq or 0) + 1
 
         prev_loan_status = loan.status
@@ -910,6 +896,7 @@ class LoanPaymentEngine:
             raise RuntimeError("Waterfall allocation mismatch: unable to allocate exact payment amount across installments.")
 
         payment = LoanPaymentModel(
+            tenant_id=loan.tenant_id,
             payment_number=payment_number,
             loan_id=loan.id,
             customer_id=loan.customer_id,
@@ -938,6 +925,7 @@ class LoanPaymentEngine:
 
         for alloc_data in pending_allocations:
             db.add(LoanPaymentAllocationModel(
+                tenant_id=loan.tenant_id,
                 payment_id=payment.id,
                 loan_id=loan.id,
                 **alloc_data
@@ -963,7 +951,10 @@ class LoanPaymentEngine:
         now_utc = datetime.now(timezone.utc)
         
         for alloc in payment.allocations:
-            inst = db.query(LoanInstallmentModel).filter(LoanInstallmentModel.id == alloc.installment_id).with_for_update().first()
+            inst = db.query(LoanInstallmentModel).filter(
+                LoanInstallmentModel.tenant_id == loan.tenant_id,
+                LoanInstallmentModel.id == alloc.installment_id
+            ).with_for_update().first()
             if not inst:
                 raise ValueError(f"Data corruption: Installment {alloc.installment_id} not found.")
                 
@@ -986,7 +977,10 @@ class LoanPaymentEngine:
 
         db.flush()
         
-        installments = db.query(LoanInstallmentModel).filter(LoanInstallmentModel.loan_id == loan.id).all()
+        installments = db.query(LoanInstallmentModel).filter(
+            LoanInstallmentModel.tenant_id == loan.tenant_id,
+            LoanInstallmentModel.loan_id == loan.id
+        ).all()
         if db.bind and db.bind.dialect.name == "sqlite":
             LoanPaymentEngine._verify_ledger_integrity_python(loan, installments, db)
 
@@ -1012,7 +1006,9 @@ def record_audit_event(
     resource_id: Optional[str] = None,
     ip_address: Optional[str] = None,
     details: Optional[dict] = None,
-    commit: bool = True
+    commit: bool = True,
+    scope: Optional[str] = None,
+    tenant_id: Optional[int] = None,
 ):
     sanitized_details = {}
     if details:
@@ -1021,7 +1017,23 @@ def record_audit_event(
                 continue
             sanitized_details[str(k)] = str(v)[:255]
 
+    if scope is None:
+        if actor is None:
+            effective_scope = "ANONYMOUS"
+            effective_tenant_id = None
+        else:
+            effective_scope = "TENANT"
+            effective_tenant_id = tenant_id if tenant_id is not None else actor.tenant_id
+    else:
+        effective_scope = scope
+        if effective_scope in ("ANONYMOUS", "PLATFORM"):
+            effective_tenant_id = None
+        else:
+            effective_tenant_id = tenant_id if tenant_id is not None else (actor.tenant_id if actor else None)
+
     entry = AuditLogModel(
+        tenant_id=effective_tenant_id,
+        scope=effective_scope,
         actor_user_id=actor.id if actor else None,
         actor_role=actor.role if actor else None,
         event_type=event_type,
@@ -1102,8 +1114,19 @@ class UserChangePasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=128)
 
 
-class BootstrapAdminRequest(BaseModel):
-    secret: str = Field(..., min_length=12)
+class PlatformTenantCreateRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=160)
+    slug: str = Field(..., min_length=2, max_length=80)
+    legal_name: Optional[str] = Field(default=None, max_length=200)
+    owner_email: EmailStr
+    owner_password: str = Field(..., min_length=8, max_length=128)
+    owner_full_name: Optional[str] = Field(default=None, max_length=120)
+
+
+class PlatformTenantUpdateRequest(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=2, max_length=160)
+    legal_name: Optional[str] = Field(default=None, max_length=200)
+    is_active: Optional[bool] = None
 
 
 class ChatRequest(BaseModel):
@@ -1326,6 +1349,27 @@ def verify_csrf(request: Request, db: Session = Depends(get_db)):
 
 
 # --- AUTHENTICATION & RBAC DEPENDENCIES ---
+PLATFORM_TENANT_SLUG = "platform"
+
+
+def resolve_tenant_owner_user_id(
+    db: Session,
+    tenant_id: int,
+    requested_owner_id: Optional[int],
+    fallback_user_id: int
+) -> int:
+    if requested_owner_id is None:
+        return fallback_user_id
+    owner = (
+        db.query(UserModel.id)
+        .filter(UserModel.id == requested_owner_id, UserModel.tenant_id == tenant_id)
+        .first()
+    )
+    if not owner:
+        raise HTTPException(status_code=404, detail="Assigned owner user not found in this organization.")
+    return requested_owner_id
+
+
 def get_current_user(
     request: Request,
     response: Response,
@@ -1363,6 +1407,18 @@ def get_current_user(
         )
         raise HTTPException(status_code=403, detail="Account has been deactivated.")
 
+    tenant = db.query(TenantModel).filter(TenantModel.id == user.tenant_id).first()
+    if not tenant or not tenant.is_active:
+        db.query(SessionModel).filter(SessionModel.user_id == user.id).delete()
+        db.commit()
+        response.delete_cookie(key="session_token", path="/")
+        response.delete_cookie(key="csrf_token", path="/")
+        record_audit_event(
+            db, "AUTH_TENANT_SUSPENDED_BLOCKED", "auth", "DENIED",
+            actor=user, resource_id=str(user.tenant_id), ip_address=get_client_ip(request), commit=True
+        )
+        raise HTTPException(status_code=403, detail="Organization account is inactive or suspended.")
+
     return user
 
 
@@ -1383,6 +1439,25 @@ def require_roles(*allowed_roles: str):
     return role_checker
 
 
+def require_superadmin(
+    request: Request,
+    user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> UserModel:
+    tenant = db.query(TenantModel).filter(TenantModel.id == user.tenant_id).first()
+    if not user.is_superadmin or not tenant or tenant.slug != PLATFORM_TENANT_SLUG:
+        record_audit_event(
+            db, "PLATFORM_ACCESS_DENIED", "platform", "DENIED",
+            actor=user, resource_id=request.url.path, ip_address=get_client_ip(request),
+            details={"is_superadmin": bool(user.is_superadmin), "tenant_slug": tenant.slug if tenant else "unknown"},
+            commit=True,
+            scope="PLATFORM",
+            tenant_id=None
+        )
+        raise HTTPException(status_code=403, detail="Access denied: platform superadmin privileges required.")
+    return user
+
+
 # --- HEALTH CHECK & SCHEMA STATUS ENDPOINTS ---
 @app.get("/api/health")
 def health_check(db: Session = Depends(get_db)):
@@ -1395,7 +1470,7 @@ def health_check(db: Session = Depends(get_db)):
 
 @app.get("/api/admin/schema-status")
 def schema_status(
-    admin: UserModel = Depends(require_roles("OWNER_ADMIN")),
+    admin: UserModel = Depends(require_superadmin),
     db: Session = Depends(get_db)
 ):
     rev = db.execute(text("SELECT version_num FROM alembic_version")).fetchone()
@@ -1406,6 +1481,209 @@ def schema_status(
         "tables_verified": sorted(tables),
         "status": "OK"
     }
+
+
+# --- PLATFORM SAAS TENANT ADMINISTRATION (SUPERADMIN ONLY) ---
+TENANT_SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+TENANT_SEQUENCE_ENTITIES = ("customers", "leads", "loans", "loan_payments")
+
+
+def serialize_tenant(t: TenantModel) -> dict:
+    return {
+        "id": t.id,
+        "name": t.name,
+        "slug": t.slug,
+        "legal_name": t.legal_name,
+        "is_active": bool(t.is_active),
+        "created_at": t.created_at.isoformat() if t.created_at else None
+    }
+
+
+@app.get("/api/platform/tenants")
+def platform_list_tenants(
+    superadmin: UserModel = Depends(require_superadmin),
+    db: Session = Depends(get_db)
+):
+    tenants = db.query(TenantModel).order_by(TenantModel.id.asc()).all()
+    return [serialize_tenant(t) for t in tenants]
+
+
+@app.post("/api/platform/tenants", dependencies=[Depends(verify_csrf)])
+def platform_create_tenant(
+    payload: PlatformTenantCreateRequest,
+    request: Request,
+    superadmin: UserModel = Depends(require_superadmin),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    name_clean = payload.name.strip()
+    slug_clean = payload.slug.strip().lower()
+    legal_name_clean = payload.legal_name.strip() if payload.legal_name and payload.legal_name.strip() else None
+    owner_email_clean = payload.owner_email.strip().lower()
+    owner_full_name_clean = (
+        payload.owner_full_name.strip() if payload.owner_full_name and payload.owner_full_name.strip() else None
+    )
+
+    if len(name_clean) < 2:
+        raise HTTPException(status_code=422, detail="Organization name must be at least 2 characters.")
+    if not TENANT_SLUG_RE.match(slug_clean):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid slug. Use lowercase alphanumeric characters and hyphens only (e.g. 'acme-credit')."
+        )
+    if len(payload.owner_password.strip()) < 8:
+        raise HTTPException(status_code=422, detail="Owner password must be at least 8 characters long.")
+
+    if db.query(TenantModel.id).filter(TenantModel.slug == slug_clean).first():
+        raise HTTPException(status_code=409, detail=f"Tenant slug '{slug_clean}' is already in use.")
+
+    if db.query(UserModel.id).filter(UserModel.email == owner_email_clean).first():
+        raise HTTPException(status_code=409, detail="Owner email is already registered.")
+
+    try:
+        new_tenant = TenantModel(
+            name=name_clean,
+            slug=slug_clean,
+            legal_name=legal_name_clean,
+            is_active=True
+        )
+        db.add(new_tenant)
+        db.flush()
+
+        for entity_type in TENANT_SEQUENCE_ENTITIES:
+            db.add(TenantSequenceModel(
+                tenant_id=new_tenant.id,
+                entity_type=entity_type,
+                last_value=0
+            ))
+
+        owner_user = UserModel(
+            tenant_id=new_tenant.id,
+            email=owner_email_clean,
+            full_name=owner_full_name_clean,
+            password_hash=pwd_context.hash(payload.owner_password),
+            role="OWNER_ADMIN",
+            is_superadmin=False,
+            is_active=True
+        )
+        db.add(owner_user)
+        db.flush()
+
+        record_audit_event(
+            db,
+            "PLATFORM_TENANT_CREATED",
+            "tenant",
+            "SUCCESS",
+            actor=superadmin,
+            resource_id=str(new_tenant.id),
+            ip_address=ip,
+            details={"slug": new_tenant.slug, "owner_user_id": owner_user.id},
+            commit=False,
+            scope="PLATFORM",
+            tenant_id=None
+        )
+        db.commit()
+        db.refresh(new_tenant)
+        db.refresh(owner_user)
+        return {
+            "tenant": serialize_tenant(new_tenant),
+            "owner_admin": {
+                "id": owner_user.id,
+                "email": owner_user.email,
+                "full_name": owner_user.full_name,
+                "role": owner_user.role,
+                "is_superadmin": bool(owner_user.is_superadmin)
+            }
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Tenant slug or owner email already exists.")
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to create platform tenant")
+        raise HTTPException(status_code=500, detail="Could not create organization.")
+
+
+@app.patch("/api/platform/tenants/{tenant_id}", dependencies=[Depends(verify_csrf)])
+def platform_update_tenant(
+    tenant_id: int,
+    payload: PlatformTenantUpdateRequest,
+    request: Request,
+    superadmin: UserModel = Depends(require_superadmin),
+    db: Session = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    try:
+        tenant = (
+            db.query(TenantModel)
+            .filter(TenantModel.id == tenant_id)
+            .with_for_update()
+            .first()
+        )
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Tenant not found.")
+
+        if payload.is_active is False and tenant.slug == PLATFORM_TENANT_SLUG:
+            raise HTTPException(status_code=400, detail="Cannot suspend the platform tenant.")
+
+        updated_fields = []
+        if payload.name is not None:
+            name_clean = payload.name.strip()
+            if len(name_clean) < 2:
+                raise HTTPException(status_code=422, detail="Organization name must be at least 2 characters.")
+            tenant.name = name_clean
+            updated_fields.append("name")
+
+        if payload.legal_name is not None:
+            tenant.legal_name = payload.legal_name.strip() or None
+            updated_fields.append("legal_name")
+
+        sessions_revoked = 0
+        if payload.is_active is not None:
+            tenant.is_active = bool(payload.is_active)
+            updated_fields.append("is_active")
+            if not tenant.is_active:
+                tenant_user_ids = [
+                    row[0] for row in db.query(UserModel.id).filter(UserModel.tenant_id == tenant.id).all()
+                ]
+                if tenant_user_ids:
+                    sessions_revoked = (
+                        db.query(SessionModel)
+                        .filter(SessionModel.user_id.in_(tenant_user_ids))
+                        .delete(synchronize_session=False)
+                    )
+
+        record_audit_event(
+            db,
+            "PLATFORM_TENANT_UPDATED",
+            "tenant",
+            "SUCCESS",
+            actor=superadmin,
+            resource_id=str(tenant.id),
+            ip_address=ip,
+            details={
+                "slug": tenant.slug,
+                "is_active": tenant.is_active,
+                "updated_fields": ",".join(updated_fields),
+                "sessions_revoked": sessions_revoked
+            },
+            commit=False,
+            scope="PLATFORM",
+            tenant_id=None
+        )
+        db.commit()
+        db.refresh(tenant)
+        return serialize_tenant(tenant)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to update platform tenant")
+        raise HTTPException(status_code=500, detail="Could not update organization.")
 
 
 # --- DECOUPLED AI SERVICE (NURA ASSISTANT) ---
@@ -1560,6 +1838,14 @@ def login(user_data: UserLogin, request: Request, response: Response, db: Sessio
         )
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    tenant = db.query(TenantModel).filter(TenantModel.id == user.tenant_id).first()
+    if not tenant or not tenant.is_active:
+        record_audit_event(
+            db, "LOGIN_BLOCKED_TENANT_INACTIVE", "auth", "DENIED",
+            actor=user, resource_id=str(user.tenant_id), ip_address=ip, commit=True
+        )
+        raise HTTPException(status_code=403, detail="Organization account is inactive or suspended.")
+
     # Clear email failure counter upon successful authentication
     reset_rate_limit_bucket(db, email_bucket, prev_email_bucket)
 
@@ -1589,6 +1875,8 @@ def login(user_data: UserLogin, request: Request, response: Response, db: Sessio
         "email": user.email,
         "full_name": user.full_name,
         "role": user.role,
+        "tenant_id": user.tenant_id,
+        "is_superadmin": bool(user.is_superadmin),
         "preferred_language": user.preferred_language if user.preferred_language in VALID_LANGUAGES else "en"
     }
 
@@ -1828,91 +2116,6 @@ def confirm_password_reset(
         raise HTTPException(status_code=500, detail="Could not complete password reset.")
 
 
-@app.post("/api/auth/bootstrap-admin", dependencies=[Depends(verify_csrf)])
-def bootstrap_admin(
-    payload: BootstrapAdminRequest,
-    request: Request,
-    current_user: UserModel = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    ip = get_client_ip(request)
-
-    if not check_rate_limit(f"bootstrap:{ip}", max_attempts=5, window_seconds=600):
-        record_audit_event(
-            db, "BOOTSTRAP_RATE_LIMITED", "admin", "DENIED",
-            actor=current_user, ip_address=ip, commit=True
-        )
-        raise HTTPException(status_code=429, detail="Too many bootstrap attempts.")
-
-    expected_email = os.getenv("BOOTSTRAP_ADMIN_EMAIL", "").strip().lower()
-    expected_secret = os.getenv("BOOTSTRAP_ADMIN_SECRET", "").strip()
-
-    if not expected_email or not expected_secret:
-        record_audit_event(
-            db, "BOOTSTRAP_NOT_CONFIGURED", "admin", "DENIED",
-            actor=current_user, ip_address=ip, commit=True
-        )
-        raise HTTPException(status_code=403, detail="Bootstrap is disabled in environment.")
-
-    if (
-        current_user.email.strip().lower() != expected_email
-        or not secrets.compare_digest(payload.secret, expected_secret)
-    ):
-        record_audit_event(
-            db, "BOOTSTRAP_INVALID_CREDENTIALS", "admin", "DENIED",
-            actor=current_user, ip_address=ip, commit=True
-        )
-        raise HTTPException(status_code=403, detail="Invalid bootstrap credentials.")
-
-    try:
-        if db.bind and db.bind.dialect.name == "postgresql":
-            db.execute(text("SELECT pg_advisory_xact_lock(9001001)"))
-
-        active_owners = (
-            db.query(UserModel.id)
-            .filter(UserModel.role == "OWNER_ADMIN", UserModel.is_active.is_(True))
-            .first()
-        )
-
-        already_bootstrapped = (
-            db.query(AuditLogModel.id)
-            .filter(AuditLogModel.event_type == "BOOTSTRAP_ADMIN_SUCCESS")
-            .first()
-        )
-
-        if active_owners is not None or already_bootstrapped is not None:
-            db.rollback()
-            record_audit_event(
-                db, "BOOTSTRAP_ALREADY_USED", "admin", "DENIED",
-                actor=current_user, ip_address=ip, commit=True
-            )
-            raise HTTPException(
-                status_code=403,
-                detail="Initial Owner Admin has already been initialized."
-            )
-
-        current_user.role = "OWNER_ADMIN"
-        current_user.is_active = True
-
-        record_audit_event(
-            db, "BOOTSTRAP_ADMIN_SUCCESS", "admin", "SUCCESS",
-            actor=current_user, resource_id=str(current_user.id),
-            ip_address=ip, details={"promoted_role": "OWNER_ADMIN"}, commit=False
-        )
-        db.commit()
-        return {
-            "message": "Account promoted to OWNER_ADMIN",
-            "email": current_user.email,
-            "role": current_user.role
-        }
-    except HTTPException:
-        raise
-    except Exception:
-        db.rollback()
-        logger.exception("Bootstrap failed with an unexpected error")
-        raise HTTPException(status_code=500, detail="Could not complete bootstrap.")
-
-
 @app.post("/api/auth/logout", dependencies=[Depends(verify_csrf)])
 def logout(
     request: Request,
@@ -1941,9 +2144,11 @@ def logout(
 def get_me(current_user: UserModel = Depends(get_current_user)):
     return {
         "id": current_user.id,
+        "tenant_id": current_user.tenant_id,
         "email": current_user.email,
         "full_name": current_user.full_name,
         "role": current_user.role,
+        "is_superadmin": bool(current_user.is_superadmin),
         "preferred_language": current_user.preferred_language if current_user.preferred_language in VALID_LANGUAGES else "en",
         "is_active": current_user.is_active,
         "supported_products": SUPPORTED_PRODUCTS
@@ -2106,10 +2311,12 @@ def register(
 
     try:
         new_user = UserModel(
+            tenant_id=admin.tenant_id,
             email=email_clean,
             full_name=user_data.full_name.strip() if user_data.full_name else None,
             password_hash=pwd_context.hash(user_data.password),
             role=user_data.role,
+            is_superadmin=False,
             is_active=True
         )
         db.add(new_user)
@@ -2140,7 +2347,12 @@ def list_team_users(
     admin: UserModel = Depends(require_roles("OWNER_ADMIN")),
     db: Session = Depends(get_db)
 ):
-    users = db.query(UserModel).order_by(UserModel.id.asc()).all()
+    users = (
+        db.query(UserModel)
+        .filter(UserModel.tenant_id == admin.tenant_id)
+        .order_by(UserModel.id.asc())
+        .all()
+    )
     return [{
         "id": u.id,
         "email": u.email,
@@ -2161,7 +2373,12 @@ def update_team_user(
 ):
     ip = get_client_ip(request)
     try:
-        target = db.query(UserModel).filter(UserModel.id == target_user_id).with_for_update().first()
+        target = (
+            db.query(UserModel)
+            .filter(UserModel.id == target_user_id, UserModel.tenant_id == admin.tenant_id)
+            .with_for_update()
+            .first()
+        )
         if not target:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -2180,7 +2397,11 @@ def update_team_user(
         if target.role == "OWNER_ADMIN" and (new_role != "OWNER_ADMIN" or not new_active):
             active_owner_rows = (
                 db.query(UserModel.id)
-                .filter(UserModel.role == "OWNER_ADMIN", UserModel.is_active.is_(True))
+                .filter(
+                    UserModel.tenant_id == admin.tenant_id,
+                    UserModel.role == "OWNER_ADMIN",
+                    UserModel.is_active.is_(True)
+                )
                 .with_for_update()
                 .all()
             )
@@ -2226,7 +2447,16 @@ def get_audit_logs(
     db: Session = Depends(get_db)
 ):
     safe_limit = min(max(1, limit), 100)
-    logs = db.query(AuditLogModel).order_by(AuditLogModel.id.desc()).limit(safe_limit).all()
+    logs = (
+        db.query(AuditLogModel)
+        .filter(
+            AuditLogModel.tenant_id == admin.tenant_id,
+            AuditLogModel.scope == "TENANT"
+        )
+        .order_by(AuditLogModel.id.desc())
+        .limit(safe_limit)
+        .all()
+    )
     return [{
         "id": l.id,
         "created_at": l.created_at,
@@ -2390,7 +2620,7 @@ def list_customers(
     ),
     db: Session = Depends(get_db)
 ):
-    query = db.query(CustomerModel)
+    query = db.query(CustomerModel).filter(CustomerModel.tenant_id == current_user.tenant_id)
 
     if status and status != "ALL":
         query = query.filter(CustomerModel.status == status)
@@ -2430,7 +2660,11 @@ def list_customers(
     if cust_ids:
         active_loans = (
             db.query(LoanModel)
-            .filter(LoanModel.customer_id.in_(cust_ids), LoanModel.status.in_(["ACTIVE", "DEFAULTED"]))
+            .filter(
+                LoanModel.tenant_id == current_user.tenant_id,
+                LoanModel.customer_id.in_(cust_ids),
+                LoanModel.status.in_(["ACTIVE", "DEFAULTED"])
+            )
             .all()
         )
         for l in active_loans:
@@ -2444,6 +2678,7 @@ def list_customers(
                 func.max(LoanPaymentModel.paid_at)
             )
             .filter(
+                LoanPaymentModel.tenant_id == current_user.tenant_id,
                 LoanPaymentModel.customer_id.in_(cust_ids),
                 LoanPaymentModel.status == "POSTED"
             )
@@ -2520,7 +2755,14 @@ def create_customer(
     email_clean = payload.email.strip().lower() if payload.email else None
     rfc_clean = payload.tax_id_rfc.strip().upper() if payload.tax_id_rfc and payload.tax_id_rfc.strip() else None
 
-    dup_phone = db.query(CustomerModel).filter(CustomerModel.phone_primary_normalized == phone_norm).first()
+    dup_phone = (
+        db.query(CustomerModel)
+        .filter(
+            CustomerModel.tenant_id == current_user.tenant_id,
+            CustomerModel.phone_primary_normalized == phone_norm
+        )
+        .first()
+    )
     if dup_phone:
         raise HTTPException(
             status_code=409,
@@ -2528,7 +2770,14 @@ def create_customer(
         )
 
     if email_clean:
-        dup_email = db.query(CustomerModel).filter(CustomerModel.email == email_clean).first()
+        dup_email = (
+            db.query(CustomerModel)
+            .filter(
+                CustomerModel.tenant_id == current_user.tenant_id,
+                CustomerModel.email == email_clean
+            )
+            .first()
+        )
         if dup_email:
             raise HTTPException(
                 status_code=409,
@@ -2536,7 +2785,14 @@ def create_customer(
             )
 
     if rfc_clean:
-        dup_rfc = db.query(CustomerModel).filter(CustomerModel.tax_id_rfc == rfc_clean).first()
+        dup_rfc = (
+            db.query(CustomerModel)
+            .filter(
+                CustomerModel.tenant_id == current_user.tenant_id,
+                CustomerModel.tax_id_rfc == rfc_clean
+            )
+            .first()
+        )
         if dup_rfc:
             raise HTTPException(
                 status_code=409,
@@ -2544,10 +2800,11 @@ def create_customer(
             )
 
     try:
-        cust_number = generate_next_customer_number(db)
-        owner_id = payload.owner_user_id if payload.owner_user_id else current_user.id
+        owner_id = resolve_tenant_owner_user_id(db, current_user.tenant_id, payload.owner_user_id, current_user.id)
+        cust_number = generate_next_customer_number(db, current_user.tenant_id)
 
         new_customer = CustomerModel(
+            tenant_id=current_user.tenant_id,
             customer_number=cust_number,
             entity_type=entity_type,
             status=status,
@@ -2606,18 +2863,26 @@ def get_customer_detail(
     ),
     db: Session = Depends(get_db)
 ):
-    customer = db.query(CustomerModel).filter(CustomerModel.id == customer_id).first()
+    customer = (
+        db.query(CustomerModel)
+        .filter(CustomerModel.id == customer_id, CustomerModel.tenant_id == current_user.tenant_id)
+        .first()
+    )
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found.")
 
     active_loans = (
         db.query(LoanModel)
-        .filter(LoanModel.customer_id == customer.id, LoanModel.status.in_(["ACTIVE", "DEFAULTED"]))
+        .filter(
+            LoanModel.tenant_id == current_user.tenant_id,
+            LoanModel.customer_id == customer.id,
+            LoanModel.status.in_(["ACTIVE", "DEFAULTED"])
+        )
         .all()
     )
     all_loans = (
         db.query(LoanModel)
-        .filter(LoanModel.customer_id == customer.id)
+        .filter(LoanModel.tenant_id == current_user.tenant_id, LoanModel.customer_id == customer.id)
         .order_by(LoanModel.id.desc())
         .all()
     )
@@ -2634,7 +2899,11 @@ def get_customer_detail(
         loan_ids = [l.id for l in active_loans]
         unpaid_insts = (
             db.query(LoanInstallmentModel)
-            .filter(LoanInstallmentModel.loan_id.in_(loan_ids), LoanInstallmentModel.remaining_amount_cents > 0)
+            .filter(
+                LoanInstallmentModel.tenant_id == current_user.tenant_id,
+                LoanInstallmentModel.loan_id.in_(loan_ids),
+                LoanInstallmentModel.remaining_amount_cents > 0
+            )
             .order_by(LoanInstallmentModel.due_date.asc())
             .all()
         )
@@ -2659,7 +2928,9 @@ def get_customer_detail(
     data["loans"] = [serialize_loan_summary(l, today_local) for l in all_loans]
 
     last_payment = db.query(func.max(LoanPaymentModel.paid_at)).filter(
-        LoanPaymentModel.customer_id == customer.id, LoanPaymentModel.status == 'POSTED'
+        LoanPaymentModel.tenant_id == current_user.tenant_id,
+        LoanPaymentModel.customer_id == customer.id,
+        LoanPaymentModel.status == 'POSTED'
     ).scalar()
     if last_payment:
         if isinstance(last_payment, str):
@@ -2685,7 +2956,12 @@ def update_customer(
 ):
     ip = get_client_ip(request)
     try:
-        customer = db.query(CustomerModel).filter(CustomerModel.id == customer_id).with_for_update().first()
+        customer = (
+            db.query(CustomerModel)
+            .filter(CustomerModel.id == customer_id, CustomerModel.tenant_id == current_user.tenant_id)
+            .with_for_update()
+            .first()
+        )
         if not customer:
             raise HTTPException(status_code=404, detail="Customer not found.")
 
@@ -2744,7 +3020,11 @@ def update_customer(
             phone_norm = normalize_phone_number(payload.phone_primary, required=True)
             dup_phone = (
                 db.query(CustomerModel)
-                .filter(CustomerModel.phone_primary_normalized == phone_norm, CustomerModel.id != customer.id)
+                .filter(
+                    CustomerModel.tenant_id == current_user.tenant_id,
+                    CustomerModel.phone_primary_normalized == phone_norm,
+                    CustomerModel.id != customer.id
+                )
                 .first()
             )
             if dup_phone:
@@ -2766,7 +3046,11 @@ def update_customer(
             if email_clean:
                 dup_email = (
                     db.query(CustomerModel)
-                    .filter(CustomerModel.email == email_clean, CustomerModel.id != customer.id)
+                    .filter(
+                        CustomerModel.tenant_id == current_user.tenant_id,
+                        CustomerModel.email == email_clean,
+                        CustomerModel.id != customer.id
+                    )
                     .first()
                 )
                 if dup_email:
@@ -2782,7 +3066,11 @@ def update_customer(
             if rfc_clean:
                 dup_rfc = (
                     db.query(CustomerModel)
-                    .filter(CustomerModel.tax_id_rfc == rfc_clean, CustomerModel.id != customer.id)
+                    .filter(
+                        CustomerModel.tenant_id == current_user.tenant_id,
+                        CustomerModel.tax_id_rfc == rfc_clean,
+                        CustomerModel.id != customer.id
+                    )
                     .first()
                 )
                 if dup_rfc:
@@ -2818,7 +3106,9 @@ def update_customer(
             updated_fields.append("employment_address")
 
         if payload.owner_user_id is not None:
-            customer.owner_user_id = payload.owner_user_id
+            customer.owner_user_id = resolve_tenant_owner_user_id(
+                db, current_user.tenant_id, payload.owner_user_id, customer.owner_user_id
+            )
             updated_fields.append("owner_user_id")
 
         customer.updated_at = datetime.now(timezone.utc)
@@ -2834,7 +3124,15 @@ def update_customer(
         )
         db.commit()
         db.refresh(customer)
-        active_loans_count = db.query(LoanModel).filter(LoanModel.customer_id == customer.id, LoanModel.status == "ACTIVE").count()
+        active_loans_count = (
+            db.query(LoanModel)
+            .filter(
+                LoanModel.tenant_id == current_user.tenant_id,
+                LoanModel.customer_id == customer.id,
+                LoanModel.status == "ACTIVE"
+            )
+            .count()
+        )
         unpaid_principal = sum(l.unpaid_principal_cents for l in customer.loans if l.status == "ACTIVE")
         return serialize_customer(customer, active_loans_count=active_loans_count, unpaid_principal_cents=unpaid_principal)
     except HTTPException:
@@ -2854,18 +3152,30 @@ def list_customer_interactions(
     ),
     db: Session = Depends(get_db)
 ):
-    customer = db.query(CustomerModel.id).filter(CustomerModel.id == customer_id).first()
+    customer = (
+        db.query(CustomerModel.id)
+        .filter(CustomerModel.id == customer_id, CustomerModel.tenant_id == current_user.tenant_id)
+        .first()
+    )
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found.")
 
     interactions = (
         db.query(InteractionModel)
-        .filter(InteractionModel.customer_id == customer_id)
+        .filter(
+            InteractionModel.tenant_id == current_user.tenant_id,
+            InteractionModel.customer_id == customer_id
+        )
         .order_by(InteractionModel.created_at.desc(), InteractionModel.id.desc())
         .all()
     )
     user_ids = {i.created_by_user_id for i in interactions}
-    users = db.query(UserModel).filter(UserModel.id.in_(user_ids)).all() if user_ids else []
+    users = (
+        db.query(UserModel)
+        .filter(UserModel.tenant_id == current_user.tenant_id, UserModel.id.in_(user_ids))
+        .all()
+        if user_ids else []
+    )
     user_map = {u.id: u for u in users}
 
     return [serialize_interaction(i, user_map) for i in interactions]
@@ -2882,7 +3192,11 @@ def create_customer_interaction(
     db: Session = Depends(get_db)
 ):
     ip = get_client_ip(request)
-    customer = db.query(CustomerModel).filter(CustomerModel.id == customer_id).first()
+    customer = (
+        db.query(CustomerModel)
+        .filter(CustomerModel.id == customer_id, CustomerModel.tenant_id == current_user.tenant_id)
+        .first()
+    )
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found.")
 
@@ -2904,6 +3218,7 @@ def create_customer_interaction(
 
     try:
         interaction = InteractionModel(
+            tenant_id=current_user.tenant_id,
             lead_id=None,
             customer_id=customer.id,
             interaction_type=itype,
@@ -3043,7 +3358,11 @@ def upload_customer_document(
     db: Session = Depends(get_db)
 ):
     ip = get_client_ip(request)
-    customer = db.query(CustomerModel).filter(CustomerModel.id == customer_id).first()
+    customer = (
+        db.query(CustomerModel)
+        .filter(CustomerModel.id == customer_id, CustomerModel.tenant_id == current_user.tenant_id)
+        .first()
+    )
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found.")
 
@@ -3072,6 +3391,7 @@ def upload_customer_document(
 
     try:
         new_doc = CustomerDocumentModel(
+            tenant_id=current_user.tenant_id,
             customer_id=customer.id,
             document_type=document_type,
             original_filename=sanitize_upload_filename(file.filename),
@@ -3106,9 +3426,35 @@ def list_customer_documents(
     current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")),
     db: Session = Depends(get_db)
 ):
-    docs = db.query(CustomerDocumentModel).filter(CustomerDocumentModel.customer_id == customer_id, CustomerDocumentModel.status == "ACTIVE").order_by(CustomerDocumentModel.id.desc()).all()
+    customer = (
+        db.query(CustomerModel.id)
+        .filter(CustomerModel.id == customer_id, CustomerModel.tenant_id == current_user.tenant_id)
+        .first()
+    )
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found.")
+
+    docs = (
+        db.query(CustomerDocumentModel)
+        .filter(
+            CustomerDocumentModel.tenant_id == current_user.tenant_id,
+            CustomerDocumentModel.customer_id == customer_id,
+            CustomerDocumentModel.status == "ACTIVE"
+        )
+        .order_by(CustomerDocumentModel.id.desc())
+        .all()
+    )
     user_ids = {d.uploaded_by_user_id for d in docs}
-    users = {u.id: u.full_name or u.email for u in db.query(UserModel).filter(UserModel.id.in_(user_ids)).all()} if user_ids else {}
+    users = (
+        {
+            u.id: u.full_name or u.email
+            for u in db.query(UserModel).filter(
+                UserModel.tenant_id == current_user.tenant_id,
+                UserModel.id.in_(user_ids)
+            ).all()
+        }
+        if user_ids else {}
+    )
 
     return [{
         "id": d.id, "document_type": d.document_type, "original_filename": d.original_filename,
@@ -3125,7 +3471,16 @@ def download_customer_document(
     current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")),
     db: Session = Depends(get_db)
 ):
-    doc = db.query(CustomerDocumentModel).filter(CustomerDocumentModel.id == doc_id, CustomerDocumentModel.customer_id == customer_id, CustomerDocumentModel.status == "ACTIVE").first()
+    doc = (
+        db.query(CustomerDocumentModel)
+        .filter(
+            CustomerDocumentModel.id == doc_id,
+            CustomerDocumentModel.customer_id == customer_id,
+            CustomerDocumentModel.tenant_id == current_user.tenant_id,
+            CustomerDocumentModel.status == "ACTIVE"
+        )
+        .first()
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found or unauthorized.")
 
@@ -3151,7 +3506,16 @@ def delete_customer_document(
     current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "CREDIT_ADVISOR")),
     db: Session = Depends(get_db)
 ):
-    doc = db.query(CustomerDocumentModel).filter(CustomerDocumentModel.id == doc_id, CustomerDocumentModel.customer_id == customer_id, CustomerDocumentModel.status == "ACTIVE").first()
+    doc = (
+        db.query(CustomerDocumentModel)
+        .filter(
+            CustomerDocumentModel.id == doc_id,
+            CustomerDocumentModel.customer_id == customer_id,
+            CustomerDocumentModel.tenant_id == current_user.tenant_id,
+            CustomerDocumentModel.status == "ACTIVE"
+        )
+        .first()
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found.")
 
@@ -3239,7 +3603,10 @@ def list_leads(
 
     open_leads_all = (
         db.query(LeadModel)
-        .filter(LeadModel.stage.notin_(["CONVERTED", "LOST"]))
+        .filter(
+            LeadModel.tenant_id == current_user.tenant_id,
+            LeadModel.stage.notin_(["CONVERTED", "LOST"])
+        )
         .all()
     )
     overdue_count = 0
@@ -3256,7 +3623,7 @@ def list_leads(
             if nfa <= upcoming_end_utc:
                 upcoming_count += 1
 
-    query = db.query(LeadModel)
+    query = db.query(LeadModel).filter(LeadModel.tenant_id == current_user.tenant_id)
 
     if stage and stage != "ALL":
         query = query.filter(LeadModel.stage == stage)
@@ -3365,6 +3732,7 @@ def create_lead(
     dup_open_phone = (
         db.query(LeadModel)
         .filter(
+            LeadModel.tenant_id == current_user.tenant_id,
             LeadModel.phone_primary_normalized == phone_norm,
             LeadModel.stage.notin_(["CONVERTED", "LOST"])
         )
@@ -3380,6 +3748,7 @@ def create_lead(
         dup_open_email = (
             db.query(LeadModel)
             .filter(
+                LeadModel.tenant_id == current_user.tenant_id,
                 LeadModel.email == email_clean,
                 LeadModel.stage.notin_(["CONVERTED", "LOST"])
             )
@@ -3392,10 +3761,11 @@ def create_lead(
             )
 
     try:
-        lead_num = generate_next_lead_number(db)
-        owner_id = payload.owner_user_id if payload.owner_user_id else current_user.id
+        owner_id = resolve_tenant_owner_user_id(db, current_user.tenant_id, payload.owner_user_id, current_user.id)
+        lead_num = generate_next_lead_number(db, current_user.tenant_id)
 
         new_lead = LeadModel(
+            tenant_id=current_user.tenant_id,
             lead_number=lead_num,
             full_name=payload.full_name.strip(),
             entity_type=entity_type,
@@ -3420,6 +3790,7 @@ def create_lead(
         db.flush()
 
         db.add(LeadStageHistoryModel(
+            tenant_id=current_user.tenant_id,
             lead_id=new_lead.id,
             from_stage=None,
             to_stage=new_lead.stage,
@@ -3429,6 +3800,7 @@ def create_lead(
 
         if new_lead.summary_notes:
             db.add(InteractionModel(
+                tenant_id=current_user.tenant_id,
                 lead_id=new_lead.id,
                 customer_id=None,
                 interaction_type="NOTE",
@@ -3472,7 +3844,11 @@ def get_lead_detail(
     ),
     db: Session = Depends(get_db)
 ):
-    lead = db.query(LeadModel).filter(LeadModel.id == lead_id).first()
+    lead = (
+        db.query(LeadModel)
+        .filter(LeadModel.id == lead_id, LeadModel.tenant_id == current_user.tenant_id)
+        .first()
+    )
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found.")
 
@@ -3481,19 +3857,30 @@ def get_lead_detail(
 
     history_rows = (
         db.query(LeadStageHistoryModel)
-        .filter(LeadStageHistoryModel.lead_id == lead.id)
+        .filter(
+            LeadStageHistoryModel.tenant_id == current_user.tenant_id,
+            LeadStageHistoryModel.lead_id == lead.id
+        )
         .order_by(LeadStageHistoryModel.changed_at.desc(), LeadStageHistoryModel.id.desc())
         .all()
     )
     interaction_rows = (
         db.query(InteractionModel)
-        .filter(InteractionModel.lead_id == lead.id)
+        .filter(
+            InteractionModel.tenant_id == current_user.tenant_id,
+            InteractionModel.lead_id == lead.id
+        )
         .order_by(InteractionModel.created_at.desc(), InteractionModel.id.desc())
         .all()
     )
 
     user_ids = {h.changed_by_user_id for h in history_rows} | {i.created_by_user_id for i in interaction_rows}
-    users = db.query(UserModel).filter(UserModel.id.in_(user_ids)).all() if user_ids else []
+    users = (
+        db.query(UserModel)
+        .filter(UserModel.tenant_id == current_user.tenant_id, UserModel.id.in_(user_ids))
+        .all()
+        if user_ids else []
+    )
     user_map = {u.id: u for u in users}
 
     data["stage_history"] = [{
@@ -3522,7 +3909,12 @@ def update_lead(
 ):
     ip = get_client_ip(request)
     try:
-        lead = db.query(LeadModel).filter(LeadModel.id == lead_id).with_for_update().first()
+        lead = (
+            db.query(LeadModel)
+            .filter(LeadModel.id == lead_id, LeadModel.tenant_id == current_user.tenant_id)
+            .with_for_update()
+            .first()
+        )
         if not lead:
             raise HTTPException(status_code=404, detail="Lead not found.")
 
@@ -3563,6 +3955,7 @@ def update_lead(
             dup_open = (
                 db.query(LeadModel)
                 .filter(
+                    LeadModel.tenant_id == current_user.tenant_id,
                     LeadModel.phone_primary_normalized == phone_norm,
                     LeadModel.id != lead.id,
                     LeadModel.stage.notin_(["CONVERTED", "LOST"])
@@ -3584,6 +3977,7 @@ def update_lead(
                 dup_email = (
                     db.query(LeadModel)
                     .filter(
+                        LeadModel.tenant_id == current_user.tenant_id,
                         LeadModel.email == email_clean,
                         LeadModel.id != lead.id,
                         LeadModel.stage.notin_(["CONVERTED", "LOST"])
@@ -3597,6 +3991,12 @@ def update_lead(
                     )
             lead.email = email_clean
             updated_fields.append("email")
+
+        if payload.owner_user_id is not None:
+            lead.owner_user_id = resolve_tenant_owner_user_id(
+                db, current_user.tenant_id, payload.owner_user_id, lead.owner_user_id
+            )
+            updated_fields.append("owner_user_id")
 
         if payload.source is not None:
             src = payload.source.strip().upper()
@@ -3671,6 +4071,7 @@ def update_lead(
                     lead.next_follow_up_at = None
                 updated_fields.append("stage")
                 db.add(LeadStageHistoryModel(
+                    tenant_id=current_user.tenant_id,
                     lead_id=lead.id,
                     from_stage=old_stage,
                     to_stage=new_stage,
@@ -3717,7 +4118,12 @@ def create_lead_interaction(
 ):
     ip = get_client_ip(request)
     try:
-        lead = db.query(LeadModel).filter(LeadModel.id == lead_id).with_for_update().first()
+        lead = (
+            db.query(LeadModel)
+            .filter(LeadModel.id == lead_id, LeadModel.tenant_id == current_user.tenant_id)
+            .with_for_update()
+            .first()
+        )
         if not lead:
             raise HTTPException(status_code=404, detail="Lead not found.")
 
@@ -3739,6 +4145,7 @@ def create_lead_interaction(
         now_utc = datetime.now(timezone.utc)
 
         interaction = InteractionModel(
+            tenant_id=current_user.tenant_id,
             lead_id=lead.id,
             customer_id=lead.converted_customer_id,
             interaction_type=itype,
@@ -3769,6 +4176,7 @@ def create_lead_interaction(
                 lead.stage = "CONTACT_ATTEMPTED"
             if lead.stage != old_st:
                 db.add(LeadStageHistoryModel(
+                    tenant_id=current_user.tenant_id,
                     lead_id=lead.id,
                     from_stage=old_st,
                     to_stage=lead.stage,
@@ -3814,7 +4222,12 @@ def convert_lead_to_customer(
 ):
     ip = get_client_ip(request)
     try:
-        lead = db.query(LeadModel).filter(LeadModel.id == lead_id).with_for_update().first()
+        lead = (
+            db.query(LeadModel)
+            .filter(LeadModel.id == lead_id, LeadModel.tenant_id == current_user.tenant_id)
+            .with_for_update()
+            .first()
+        )
         if not lead:
             raise HTTPException(status_code=404, detail="Lead not found.")
 
@@ -3857,18 +4270,27 @@ def convert_lead_to_customer(
 
         match_phone = (
             db.query(CustomerModel)
-            .filter(CustomerModel.phone_primary_normalized == lead.phone_primary_normalized)
+            .filter(
+                CustomerModel.tenant_id == current_user.tenant_id,
+                CustomerModel.phone_primary_normalized == lead.phone_primary_normalized
+            )
             .first()
         )
         match_email = (
             db.query(CustomerModel)
-            .filter(CustomerModel.email == lead.email)
+            .filter(
+                CustomerModel.tenant_id == current_user.tenant_id,
+                CustomerModel.email == lead.email
+            )
             .first()
             if lead.email else None
         )
         match_rfc = (
             db.query(CustomerModel)
-            .filter(CustomerModel.tax_id_rfc == rfc_clean)
+            .filter(
+                CustomerModel.tenant_id == current_user.tenant_id,
+                CustomerModel.tax_id_rfc == rfc_clean
+            )
             .first()
             if rfc_clean else None
         )
@@ -3913,8 +4335,9 @@ def convert_lead_to_customer(
             target_customer = existing_cust
             linked_existing = True
         else:
-            cust_number = generate_next_customer_number(db)
+            cust_number = generate_next_customer_number(db, current_user.tenant_id)
             target_customer = CustomerModel(
+                tenant_id=current_user.tenant_id,
                 customer_number=cust_number,
                 entity_type=entity_type,
                 status="ACTIVE",
@@ -3934,6 +4357,7 @@ def convert_lead_to_customer(
             db.flush()
 
         db.query(InteractionModel).filter(
+            InteractionModel.tenant_id == current_user.tenant_id,
             InteractionModel.lead_id == lead.id,
             InteractionModel.customer_id.is_(None)
         ).update({"customer_id": target_customer.id}, synchronize_session=False)
@@ -3953,6 +4377,7 @@ def convert_lead_to_customer(
             conversion_note += f" Note: {payload.notes.strip()}"
 
         db.add(LeadStageHistoryModel(
+            tenant_id=current_user.tenant_id,
             lead_id=lead.id,
             from_stage=old_stage,
             to_stage="CONVERTED",
@@ -3961,6 +4386,7 @@ def convert_lead_to_customer(
         ))
 
         db.add(InteractionModel(
+            tenant_id=current_user.tenant_id,
             lead_id=lead.id,
             customer_id=target_customer.id,
             interaction_type="NOTE",
@@ -3983,7 +4409,15 @@ def convert_lead_to_customer(
         )
         db.commit()
         db.refresh(target_customer)
-        active_loans_count = db.query(LoanModel).filter(LoanModel.customer_id == target_customer.id, LoanModel.status == "ACTIVE").count()
+        active_loans_count = (
+            db.query(LoanModel)
+            .filter(
+                LoanModel.tenant_id == current_user.tenant_id,
+                LoanModel.customer_id == target_customer.id,
+                LoanModel.status == "ACTIVE"
+            )
+            .count()
+        )
         unpaid_principal = sum(l.unpaid_principal_cents for l in target_customer.loans if l.status == "ACTIVE")
         return {
             "message": "Lead converted successfully",
@@ -4078,7 +4512,10 @@ def compute_early_payoff_breakdown(
     if not installments and db is not None:
         installments = (
             db.query(LoanInstallmentModel)
-            .filter(LoanInstallmentModel.loan_id == l.id)
+            .filter(
+                LoanInstallmentModel.tenant_id == l.tenant_id,
+                LoanInstallmentModel.loan_id == l.id
+            )
             .order_by(LoanInstallmentModel.installment_number.asc())
             .all()
         )
@@ -4122,6 +4559,8 @@ def serialize_loan_detail(l: LoanModel, today_local: date, db: Optional[Session]
         audit_row = (
             db.query(AuditLogModel)
             .filter(
+                AuditLogModel.tenant_id == l.tenant_id,
+                AuditLogModel.scope == "TENANT",
                 AuditLogModel.event_type == "LOAN_MARKED_DEFAULTED",
                 AuditLogModel.resource_id == l.loan_number
             )
@@ -4135,6 +4574,7 @@ def serialize_loan_detail(l: LoanModel, today_local: date, db: Optional[Session]
         default_int = (
             db.query(InteractionModel)
             .filter(
+                InteractionModel.tenant_id == l.tenant_id,
                 InteractionModel.customer_id == l.customer_id,
                 InteractionModel.content.like(f"%LOAN MARKED AS DEFAULTED ({l.loan_number})%")
             )
@@ -4254,7 +4694,7 @@ def list_loans(
     db: Session = Depends(get_db)
 ):
     _, _, _, today_local = get_local_day_bounds_utc()
-    query = db.query(LoanModel)
+    query = db.query(LoanModel).filter(LoanModel.tenant_id == current_user.tenant_id)
 
     if status and status != "ALL":
         query = query.filter(LoanModel.status == status)
@@ -4306,14 +4746,22 @@ def create_loan(
     if payload.assumed_interest_months < 1 or payload.assumed_interest_months > 36:
         raise HTTPException(status_code=422, detail="Assumed interest months must be between 1 and 36.")
 
-    customer = db.query(CustomerModel).filter(CustomerModel.id == payload.customer_id).first()
+    customer = (
+        db.query(CustomerModel)
+        .filter(CustomerModel.id == payload.customer_id, CustomerModel.tenant_id == current_user.tenant_id)
+        .first()
+    )
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found.")
     if customer.status != "ACTIVE":
         raise HTTPException(status_code=400, detail="Cannot originate a loan for a non-active customer.")
 
     if payload.source_lead_id is not None:
-        lead = db.query(LeadModel).filter(LeadModel.id == payload.source_lead_id).first()
+        lead = (
+            db.query(LeadModel)
+            .filter(LeadModel.id == payload.source_lead_id, LeadModel.tenant_id == current_user.tenant_id)
+            .first()
+        )
         if not lead:
             raise HTTPException(status_code=404, detail="Source lead not found.")
         if lead.stage != "CONVERTED" or lead.converted_customer_id != customer.id:
@@ -4389,7 +4837,14 @@ def create_loan(
     payload_json = json.dumps(canonical_payload, sort_keys=True)
     payload_hash = hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
 
-    existing = db.query(LoanModel).filter(LoanModel.idempotency_key == payload.idempotency_key).first()
+    existing = (
+        db.query(LoanModel)
+        .filter(
+            LoanModel.tenant_id == current_user.tenant_id,
+            LoanModel.idempotency_key == payload.idempotency_key
+        )
+        .first()
+    )
     if existing:
         if existing.request_payload_hash == payload_hash:
             _, _, _, today_local = get_local_day_bounds_utc()
@@ -4398,21 +4853,7 @@ def create_loan(
             raise HTTPException(status_code=409, detail="Idempotency key was already used with different loan parameters.")
 
     try:
-        if db.bind and db.bind.dialect.name == "postgresql":
-            db.execute(text("SELECT pg_advisory_xact_lock(9004001)"))
-
-        # Double check after lock
-        existing_locked = db.query(LoanModel).filter(LoanModel.idempotency_key == payload.idempotency_key).first()
-        if existing_locked:
-            if existing_locked.request_payload_hash == payload_hash:
-                db.rollback()
-                _, _, _, today_local = get_local_day_bounds_utc()
-                return {"idempotent_replay": True, "loan": serialize_loan_detail(existing_locked, today_local)}
-            else:
-                db.rollback()
-                raise HTTPException(status_code=409, detail="Idempotency key conflict under concurrency.")
-
-        loan_number = generate_next_loan_number(db)
+        loan_number = generate_next_loan_number(db, current_user.tenant_id)
 
         contract_rules = {
             "engine_version": "1.1.0",
@@ -4429,6 +4870,7 @@ def create_loan(
         }
 
         new_loan = LoanModel(
+            tenant_id=current_user.tenant_id,
             loan_number=loan_number,
             idempotency_key=payload.idempotency_key,
             request_payload_hash=payload_hash,
@@ -4469,6 +4911,7 @@ def create_loan(
 
         for inst in calc["schedule"]:
             db.add(LoanInstallmentModel(
+                tenant_id=current_user.tenant_id,
                 loan_id=new_loan.id,
                 installment_number=inst["installment_number"],
                 due_date=inst["due_date"],
@@ -4500,6 +4943,23 @@ def create_loan(
     except HTTPException:
         db.rollback()
         raise
+    except IntegrityError:
+        db.rollback()
+        existing_race = (
+            db.query(LoanModel)
+            .filter(
+                LoanModel.tenant_id == current_user.tenant_id,
+                LoanModel.idempotency_key == payload.idempotency_key
+            )
+            .first()
+        )
+        if existing_race:
+            if existing_race.request_payload_hash == payload_hash:
+                _, _, _, today_local = get_local_day_bounds_utc()
+                return {"idempotent_replay": True, "loan": serialize_loan_detail(existing_race, today_local)}
+            raise HTTPException(status_code=409, detail="Idempotency key conflict under concurrency.")
+        logger.exception("Integrity error creating loan draft")
+        raise HTTPException(status_code=500, detail="Could not create loan draft.")
     except Exception as e:
         db.rollback()
         logger.exception("Failed to create loan draft")
@@ -4514,7 +4974,11 @@ def get_loan_detail(
     ),
     db: Session = Depends(get_db)
 ):
-    loan = db.query(LoanModel).filter(LoanModel.id == loan_id).first()
+    loan = (
+        db.query(LoanModel)
+        .filter(LoanModel.id == loan_id, LoanModel.tenant_id == current_user.tenant_id)
+        .first()
+    )
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found.")
     _, _, _, today_local = get_local_day_bounds_utc()
@@ -4533,7 +4997,12 @@ def approve_loan(
 ):
     ip = get_client_ip(request)
     try:
-        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        loan = (
+            db.query(LoanModel)
+            .filter(LoanModel.id == loan_id, LoanModel.tenant_id == current_user.tenant_id)
+            .with_for_update()
+            .first()
+        )
         if not loan:
             raise HTTPException(status_code=404, detail="Loan not found.")
         if loan.status != "DRAFT":
@@ -4586,7 +5055,12 @@ def activate_loan(
         raise HTTPException(status_code=422, detail="Disbursement time cannot be in the future.")
 
     try:
-        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        loan = (
+            db.query(LoanModel)
+            .filter(LoanModel.id == loan_id, LoanModel.tenant_id == current_user.tenant_id)
+            .with_for_update()
+            .first()
+        )
         if not loan:
             raise HTTPException(status_code=404, detail="Loan not found.")
 
@@ -4657,7 +5131,12 @@ def cancel_loan(
         raise HTTPException(status_code=422, detail="Cancellation reason must be at least 3 characters.")
 
     try:
-        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        loan = (
+            db.query(LoanModel)
+            .filter(LoanModel.id == loan_id, LoanModel.tenant_id == current_user.tenant_id)
+            .with_for_update()
+            .first()
+        )
         if not loan:
             raise HTTPException(status_code=404, detail="Loan not found.")
         if loan.status == "ACTIVE":
@@ -4716,7 +5195,12 @@ def mark_loan_defaulted(
         raise HTTPException(status_code=422, detail="Default reason must be at least 5 characters.")
 
     try:
-        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        loan = (
+            db.query(LoanModel)
+            .filter(LoanModel.id == loan_id, LoanModel.tenant_id == current_user.tenant_id)
+            .with_for_update()
+            .first()
+        )
         if not loan:
             raise HTTPException(status_code=404, detail="Loan not found.")
         if loan.status == "DEFAULTED":
@@ -4738,6 +5222,7 @@ def mark_loan_defaulted(
         loan.updated_at = now_utc
 
         db.add(InteractionModel(
+            tenant_id=current_user.tenant_id,
             lead_id=loan.source_lead_id,
             customer_id=loan.customer_id,
             interaction_type="NOTE",
@@ -4790,7 +5275,11 @@ def create_loan_collection_log(
     db: Session = Depends(get_db)
 ):
     ip = get_client_ip(request)
-    loan = db.query(LoanModel).filter(LoanModel.id == loan_id).first()
+    loan = (
+        db.query(LoanModel)
+        .filter(LoanModel.id == loan_id, LoanModel.tenant_id == current_user.tenant_id)
+        .first()
+    )
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found.")
     if loan.status not in ("ACTIVE", "DEFAULTED"):
@@ -4815,6 +5304,7 @@ def create_loan_collection_log(
 
     try:
         interaction = InteractionModel(
+            tenant_id=current_user.tenant_id,
             lead_id=loan.source_lead_id,
             customer_id=loan.customer_id,
             interaction_type=itype,
@@ -4861,7 +5351,10 @@ def get_collections_queue(
     candidate_loans = (
         db.query(LoanModel)
         .options(joinedload(LoanModel.customer), selectinload(LoanModel.installments))
-        .filter(LoanModel.status.in_(["ACTIVE", "DEFAULTED"]))
+        .filter(
+            LoanModel.tenant_id == current_user.tenant_id,
+            LoanModel.status.in_(["ACTIVE", "DEFAULTED"])
+        )
         .order_by(LoanModel.id.desc())
         .all()
     )
@@ -4871,7 +5364,10 @@ def get_collections_queue(
     if cust_ids:
         int_rows = (
             db.query(InteractionModel)
-            .filter(InteractionModel.customer_id.in_(cust_ids))
+            .filter(
+                InteractionModel.tenant_id == current_user.tenant_id,
+                InteractionModel.customer_id.in_(cust_ids)
+            )
             .order_by(InteractionModel.created_at.desc(), InteractionModel.id.desc())
             .all()
         )
@@ -4951,11 +5447,23 @@ def list_loan_payments(
     current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")),
     db: Session = Depends(get_db)
 ):
-    loan = db.query(LoanModel).filter(LoanModel.id == loan_id).first()
+    loan = (
+        db.query(LoanModel)
+        .filter(LoanModel.id == loan_id, LoanModel.tenant_id == current_user.tenant_id)
+        .first()
+    )
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found.")
         
-    payments = db.query(LoanPaymentModel).filter(LoanPaymentModel.loan_id == loan_id).order_by(LoanPaymentModel.loan_payment_seq.desc()).all()
+    payments = (
+        db.query(LoanPaymentModel)
+        .filter(
+            LoanPaymentModel.tenant_id == current_user.tenant_id,
+            LoanPaymentModel.loan_id == loan_id
+        )
+        .order_by(LoanPaymentModel.loan_payment_seq.desc())
+        .all()
+    )
     top_posted_id = next((p.id for p in payments if p.status == 'POSTED'), None)
     
     return [serialize_loan_payment(p, include_allocations=True, is_top_reversible=(p.id == top_posted_id)) for p in payments]
@@ -4998,10 +5506,18 @@ def create_loan_payment(
 
     def _build_replay_response(existing_pay: LoanPaymentModel, target_loan: Optional[LoanModel] = None) -> dict:
         _, _, _, today_replay = get_local_day_bounds_utc()
-        loan_obj = target_loan or db.query(LoanModel).filter(LoanModel.id == existing_pay.loan_id).first()
+        loan_obj = target_loan or (
+            db.query(LoanModel)
+            .filter(LoanModel.id == existing_pay.loan_id, LoanModel.tenant_id == current_user.tenant_id)
+            .first()
+        )
         latest_posted = (
             db.query(LoanPaymentModel.id)
-            .filter(LoanPaymentModel.loan_id == existing_pay.loan_id, LoanPaymentModel.status == "POSTED")
+            .filter(
+                LoanPaymentModel.tenant_id == current_user.tenant_id,
+                LoanPaymentModel.loan_id == existing_pay.loan_id,
+                LoanPaymentModel.status == "POSTED"
+            )
             .order_by(LoanPaymentModel.loan_payment_seq.desc())
             .first()
         )
@@ -5012,19 +5528,38 @@ def create_loan_payment(
             "loan": serialize_loan_detail(loan_obj, today_replay, db=db) if loan_obj else None
         }
 
-    existing = db.query(LoanPaymentModel).filter(LoanPaymentModel.idempotency_key == payload.idempotency_key).first()
+    existing = (
+        db.query(LoanPaymentModel)
+        .filter(
+            LoanPaymentModel.tenant_id == current_user.tenant_id,
+            LoanPaymentModel.idempotency_key == payload.idempotency_key
+        )
+        .first()
+    )
     if existing:
         if existing.request_payload_hash == payload_hash:
             return _build_replay_response(existing)
         raise HTTPException(status_code=409, detail="Idempotency key collision with different payload.")
 
     try:
-        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        loan = (
+            db.query(LoanModel)
+            .filter(LoanModel.id == loan_id, LoanModel.tenant_id == current_user.tenant_id)
+            .with_for_update()
+            .first()
+        )
         if not loan:
             raise HTTPException(status_code=404, detail="Loan not found.")
 
         # Re-verificar idempotencia bajo el lock del préstamo ANTES de validar estatus, saldo o referencia duplicada
-        existing_locked = db.query(LoanPaymentModel).filter(LoanPaymentModel.idempotency_key == payload.idempotency_key).first()
+        existing_locked = (
+            db.query(LoanPaymentModel)
+            .filter(
+                LoanPaymentModel.tenant_id == current_user.tenant_id,
+                LoanPaymentModel.idempotency_key == payload.idempotency_key
+            )
+            .first()
+        )
         if existing_locked:
             if existing_locked.request_payload_hash == payload_hash:
                 replay_resp = _build_replay_response(existing_locked, target_loan=loan)
@@ -5041,6 +5576,7 @@ def create_loan_payment(
         if payload.payment_method in ("SPEI_TRANSFER", "BANK_DEPOSIT", "CHECK") and payment_ref_clean:
             ref_upper = payment_ref_clean.upper()
             dup_ref = db.query(LoanPaymentModel).filter(
+                LoanPaymentModel.tenant_id == current_user.tenant_id,
                 LoanPaymentModel.payment_method == payload.payment_method,
                 func.upper(func.trim(LoanPaymentModel.payment_reference)) == ref_upper,
                 LoanPaymentModel.status == "POSTED"
@@ -5051,7 +5587,9 @@ def create_loan_payment(
         paid_at_dt = explicit_paid_at_dt or datetime.now(timezone.utc)
 
         installments = db.query(LoanInstallmentModel).filter(
-            LoanInstallmentModel.loan_id == loan_id, LoanInstallmentModel.remaining_amount_cents > 0
+            LoanInstallmentModel.tenant_id == current_user.tenant_id,
+            LoanInstallmentModel.loan_id == loan_id,
+            LoanInstallmentModel.remaining_amount_cents > 0
         ).order_by(LoanInstallmentModel.installment_number.asc()).with_for_update().all()
 
         _, _, _, today_local = get_local_day_bounds_utc()
@@ -5143,9 +5681,9 @@ def create_loan_payment(
     except IntegrityError as e:
         db.rollback()
         orig_msg = str(getattr(e, "orig", e))
-        if "uq_loan_payments_posted_reference" in orig_msg:
+        if "uq_loan_payments_posted_reference" in orig_msg or "uq_loan_payments_posted_method_ref" in orig_msg:
             raise HTTPException(status_code=409, detail="Duplicate payment reference detected.")
-        if "uq_loan_payments_idempotency_key" in orig_msg:
+        if "uq_loan_payments_tenant_idempotency_key" in orig_msg or "uq_loan_payments_idempotency_key" in orig_msg:
             raise HTTPException(status_code=409, detail="Concurrency collision on idempotency key.")
         logger.exception("Integrity error while recording payment")
         raise HTTPException(status_code=500, detail="Payment could not be recorded.")
@@ -5166,14 +5704,21 @@ def reverse_loan_payment(
 ):
     ip = get_client_ip(request)
     try:
-        loan = db.query(LoanModel).filter(LoanModel.id == loan_id).with_for_update().first()
+        loan = (
+            db.query(LoanModel)
+            .filter(LoanModel.id == loan_id, LoanModel.tenant_id == current_user.tenant_id)
+            .with_for_update()
+            .first()
+        )
         if not loan:
             raise HTTPException(status_code=404, detail="Loan not found.")
         if loan.status == "DEFAULTED":
             raise HTTPException(status_code=409, detail="Cannot reverse payments on a DEFAULTED loan.")
 
         target_payment = db.query(LoanPaymentModel).filter(
-            LoanPaymentModel.id == payment_id, LoanPaymentModel.loan_id == loan_id
+            LoanPaymentModel.id == payment_id,
+            LoanPaymentModel.loan_id == loan_id,
+            LoanPaymentModel.tenant_id == current_user.tenant_id
         ).with_for_update().first()
         
         if not target_payment:
@@ -5182,7 +5727,9 @@ def reverse_loan_payment(
             raise HTTPException(status_code=409, detail="Payment is already reversed.")
 
         latest_payment = db.query(LoanPaymentModel.id).filter(
-            LoanPaymentModel.loan_id == loan_id, LoanPaymentModel.status == 'POSTED'
+            LoanPaymentModel.tenant_id == current_user.tenant_id,
+            LoanPaymentModel.loan_id == loan_id,
+            LoanPaymentModel.status == 'POSTED'
         ).order_by(LoanPaymentModel.loan_payment_seq.desc()).first()
         
         if not latest_payment or latest_payment[0] != payment_id:
@@ -5198,6 +5745,7 @@ def reverse_loan_payment(
             rebated_insts = (
                 db.query(LoanInstallmentModel)
                 .filter(
+                    LoanInstallmentModel.tenant_id == current_user.tenant_id,
                     LoanInstallmentModel.loan_id == loan.id,
                     LoanInstallmentModel.id.in_(list(rebated_map.keys()))
                 )
@@ -5259,9 +5807,21 @@ def get_dashboard_summary(
     db: Session = Depends(get_db)
 ):
     _, _, _, today_local = get_local_day_bounds_utc()
-    active_loans = db.query(LoanModel).filter(LoanModel.status == "ACTIVE").all()
-    paid_off_loans_count = db.query(LoanModel).filter(LoanModel.status == "PAID_OFF").count()
-    defaulted_loans_count = db.query(LoanModel).filter(LoanModel.status == "DEFAULTED").count()
+    active_loans = (
+        db.query(LoanModel)
+        .filter(LoanModel.tenant_id == current_user.tenant_id, LoanModel.status == "ACTIVE")
+        .all()
+    )
+    paid_off_loans_count = (
+        db.query(LoanModel)
+        .filter(LoanModel.tenant_id == current_user.tenant_id, LoanModel.status == "PAID_OFF")
+        .count()
+    )
+    defaulted_loans_count = (
+        db.query(LoanModel)
+        .filter(LoanModel.tenant_id == current_user.tenant_id, LoanModel.status == "DEFAULTED")
+        .count()
+    )
 
     active_portfolio_cents = sum(l.unpaid_principal_cents for l in active_loans)
     total_outstanding_principal_cents = active_portfolio_cents
@@ -5277,7 +5837,11 @@ def get_dashboard_summary(
         loan_ids = [l.id for l in active_loans]
         unpaid_insts = (
             db.query(LoanInstallmentModel)
-            .filter(LoanInstallmentModel.loan_id.in_(loan_ids), LoanInstallmentModel.remaining_amount_cents > 0)
+            .filter(
+                LoanInstallmentModel.tenant_id == current_user.tenant_id,
+                LoanInstallmentModel.loan_id.in_(loan_ids),
+                LoanInstallmentModel.remaining_amount_cents > 0
+            )
             .all()
         )
         for inst in unpaid_insts:
@@ -5289,8 +5853,15 @@ def get_dashboard_summary(
                 overdue_installments_count += 1
                 overdue_loan_ids.add(inst.loan_id)
 
-    customers_count = db.query(CustomerModel).count()
-    open_leads_count = db.query(LeadModel).filter(LeadModel.stage.notin_(["CONVERTED", "LOST"])).count()
+    customers_count = db.query(CustomerModel).filter(CustomerModel.tenant_id == current_user.tenant_id).count()
+    open_leads_count = (
+        db.query(LeadModel)
+        .filter(
+            LeadModel.tenant_id == current_user.tenant_id,
+            LeadModel.stage.notin_(["CONVERTED", "LOST"])
+        )
+        .count()
+    )
     active_loans_count = len(active_loans)
     overdue_loans_count = len(overdue_loan_ids)
     current_loans_count = max(0, active_loans_count - overdue_loans_count)
@@ -5305,6 +5876,7 @@ def get_dashboard_summary(
         func.coalesce(func.sum(LoanPaymentModel.amount_cents), 0),
         func.count(LoanPaymentModel.id)
     ).filter(
+        LoanPaymentModel.tenant_id == current_user.tenant_id,
         LoanPaymentModel.status == 'POSTED',
         LoanPaymentModel.paid_at >= monday_local.astimezone(timezone.utc),
         LoanPaymentModel.paid_at <= sunday_local.astimezone(timezone.utc)
@@ -5340,7 +5912,10 @@ def get_dashboard_summary(
 def listar_conversaciones(current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
     convs = (
         db.query(ConversationModel)
-        .filter(ConversationModel.user_id == current_user.id)
+        .filter(
+            ConversationModel.tenant_id == current_user.tenant_id,
+            ConversationModel.user_id == current_user.id
+        )
         .order_by(ConversationModel.updated_at.desc())
         .all()
     )
@@ -5349,7 +5924,11 @@ def listar_conversaciones(current_user: UserModel = Depends(get_current_user), d
 
 @app.post("/api/conversations", dependencies=[Depends(verify_csrf)])
 def crear_conversacion(payload: dict, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
-    nueva = ConversationModel(user_id=current_user.id, title=str(payload.get("title", "New Consultation"))[:60])
+    nueva = ConversationModel(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.id,
+        title=str(payload.get("title", "New Consultation"))[:60]
+    )
     db.add(nueva)
     db.commit()
     db.refresh(nueva)
@@ -5360,14 +5939,21 @@ def crear_conversacion(payload: dict, current_user: UserModel = Depends(get_curr
 def obtener_mensajes(conv_id: int, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
     conv = (
         db.query(ConversationModel)
-        .filter(ConversationModel.id == conv_id, ConversationModel.user_id == current_user.id)
+        .filter(
+            ConversationModel.id == conv_id,
+            ConversationModel.tenant_id == current_user.tenant_id,
+            ConversationModel.user_id == current_user.id
+        )
         .first()
     )
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
     msgs = (
         db.query(ChatMessageModel)
-        .filter(ChatMessageModel.conversation_id == conv_id)
+        .filter(
+            ChatMessageModel.tenant_id == current_user.tenant_id,
+            ChatMessageModel.conversation_id == conv_id
+        )
         .order_by(ChatMessageModel.created_at.asc())
         .all()
     )
@@ -5378,7 +5964,11 @@ def obtener_mensajes(conv_id: int, current_user: UserModel = Depends(get_current
 def eliminar_conversacion(conv_id: int, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
     conv = (
         db.query(ConversationModel)
-        .filter(ConversationModel.id == conv_id, ConversationModel.user_id == current_user.id)
+        .filter(
+            ConversationModel.id == conv_id,
+            ConversationModel.tenant_id == current_user.tenant_id,
+            ConversationModel.user_id == current_user.id
+        )
         .first()
     )
     if not conv:
@@ -5401,13 +5991,21 @@ def chat_ejecutivo(
         if conv_id:
             conv = (
                 db.query(ConversationModel)
-                .filter(ConversationModel.id == conv_id, ConversationModel.user_id == current_user.id)
+                .filter(
+                    ConversationModel.id == conv_id,
+                    ConversationModel.tenant_id == current_user.tenant_id,
+                    ConversationModel.user_id == current_user.id
+                )
                 .first()
             )
             if not conv:
                 raise HTTPException(status_code=403, detail="Unauthorized conversation")
         else:
-            conv = ConversationModel(user_id=current_user.id, title=req.mensaje[:30] + "...")
+            conv = ConversationModel(
+                tenant_id=current_user.tenant_id,
+                user_id=current_user.id,
+                title=req.mensaje[:30] + "..."
+            )
             db.add(conv)
             db.commit()
             db.refresh(conv)
@@ -5415,12 +6013,15 @@ def chat_ejecutivo(
 
         prior_messages = (
             db.query(ChatMessageModel)
-            .filter(ChatMessageModel.conversation_id == conv_id)
+            .filter(
+                ChatMessageModel.tenant_id == current_user.tenant_id,
+                ChatMessageModel.conversation_id == conv_id
+            )
             .order_by(ChatMessageModel.created_at.asc())
             .all()
         )
 
-        db.add(ChatMessageModel(conversation_id=conv_id, role="user", content=req.mensaje))
+        db.add(ChatMessageModel(tenant_id=current_user.tenant_id, conversation_id=conv_id, role="user", content=req.mensaje))
         db.commit()
 
         respuesta_texto = AIService.generate_reply(
@@ -5429,7 +6030,7 @@ def chat_ejecutivo(
             user_role=current_user.role
         )
 
-        db.add(ChatMessageModel(conversation_id=conv_id, role="executive", content=respuesta_texto))
+        db.add(ChatMessageModel(tenant_id=current_user.tenant_id, conversation_id=conv_id, role="executive", content=respuesta_texto))
         conv.updated_at = datetime.now(timezone.utc)
         db.commit()
 
