@@ -1,5 +1,8 @@
 import os
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 
 def is_production() -> bool:
     return (
@@ -70,3 +73,32 @@ def get_runtime_database_url() -> str:
 
 def get_engine_connect_args(url: str) -> dict:
     return {"check_same_thread": False} if is_sqlite_url(url) else {}
+
+
+_RUNTIME_DB_ATTRS = frozenset({"DATABASE_URL", "connect_args", "engine", "SessionLocal"})
+
+
+def _init_runtime_db() -> None:
+    """Lazily initializes the singleton runtime SQLAlchemy engine & SessionLocal once.
+
+    Using PEP 562 module __getattr__ keeps `db_config` as the single source of truth
+    for runtime `engine` and `SessionLocal` without breaking tools that import URL
+    helpers when only `MIGRATION_DATABASE_URL` is set (e.g. `alembic/env.py`).
+    """
+    if "engine" in globals() and "SessionLocal" in globals():
+        return
+    database_url = get_runtime_database_url()
+    connect_args = get_engine_connect_args(database_url)
+    engine = create_engine(database_url, connect_args=connect_args)
+    session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    globals()["DATABASE_URL"] = database_url
+    globals()["connect_args"] = connect_args
+    globals()["engine"] = engine
+    globals()["SessionLocal"] = session_local
+
+
+def __getattr__(name: str):
+    if name in _RUNTIME_DB_ATTRS:
+        _init_runtime_db()
+        return globals()[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

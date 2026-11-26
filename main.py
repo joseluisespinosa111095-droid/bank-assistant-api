@@ -20,12 +20,20 @@ from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Request, 
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, EmailStr, Field
 import google.generativeai as genai
-from sqlalchemy import create_engine, text, or_, inspect, func
-from sqlalchemy.orm import sessionmaker, Session, joinedload, selectinload
+from sqlalchemy import text, or_, inspect, func
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy.exc import IntegrityError
 from passlib.context import CryptContext
 
-from db_config import is_production, get_runtime_database_url, get_engine_connect_args
+from db_config import (
+    is_production,
+    get_runtime_database_url,
+    get_engine_connect_args,
+    DATABASE_URL,
+    connect_args,
+    engine,
+    SessionLocal,
+)
 from models import (
     Base,
     TenantModel,
@@ -57,10 +65,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 DUMMY_BCRYPT_HASH = pwd_context.hash("nura-constant-time-mitigation-baseline-secret")
 
 IS_PRODUCTION = is_production()
-DATABASE_URL = get_runtime_database_url()
-connect_args = get_engine_connect_args(DATABASE_URL)
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 

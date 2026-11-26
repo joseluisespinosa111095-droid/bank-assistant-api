@@ -1,0 +1,5901 @@
+{
+  "baseline_commit": "73b97ac",
+  "critical_symbols": {
+    "SessionLocal": {
+      "callable": true,
+      "exists": true,
+      "type_name": "sessionmaker"
+    },
+    "app": {
+      "callable": true,
+      "exists": true,
+      "type_name": "FastAPI"
+    },
+    "engine": {
+      "callable": false,
+      "exists": true,
+      "type_name": "Engine"
+    },
+    "generate_next_customer_number": {
+      "callable": true,
+      "exists": true,
+      "type_name": "function"
+    },
+    "get_db": {
+      "callable": true,
+      "exists": true,
+      "type_name": "function"
+    },
+    "get_local_day_bounds_utc": {
+      "callable": true,
+      "exists": true,
+      "type_name": "function"
+    },
+    "pwd_context": {
+      "callable": false,
+      "exists": true,
+      "type_name": "CryptContext"
+    },
+    "require_commercial_tenant": {
+      "callable": true,
+      "exists": true,
+      "type_name": "function"
+    },
+    "require_superadmin": {
+      "callable": true,
+      "exists": true,
+      "type_name": "function"
+    }
+  },
+  "frontend_reference": {
+    "dynamic_inline_handlers_total": 32,
+    "monkey_patch_order": [
+      "window.fetch",
+      "window.openCustomerDetail",
+      "window.loadLoanPayments",
+      "window.updateLoanLifecycleActionsUI"
+    ],
+    "static_inline_handlers_by_attr": {
+      "onchange": 21,
+      "onclick": 177,
+      "oninput": 17,
+      "onkeypress": 1,
+      "onsubmit": 22
+    },
+    "static_inline_handlers_total": 238,
+    "static_inline_invoked_functions": [
+      "Math.max",
+      "Math.min",
+      "NuraFinancialEngine.monthsToWeeks",
+      "applyLoanOriginationTermPreset",
+      "cerrarModalProximamente",
+      "cerrarSesion",
+      "changeCustomerPage",
+      "changeLeadPage",
+      "changeLoanPage",
+      "classList.add",
+      "clearLoanOriginationCustomer",
+      "clearScenarioComparisons",
+      "closeAuditLogsModal",
+      "closeCustomerFormModal",
+      "closeCustomerProfileView",
+      "closeLeadConvertModal",
+      "closeLeadDetailView",
+      "closeLeadFormModal",
+      "closeLeadInteractionModal",
+      "closeLeadStageModal",
+      "closeLoanActivateModal",
+      "closeLoanApproveModal",
+      "closeLoanCancelModal",
+      "closeLoanCollectionModal",
+      "closeLoanDefaultModal",
+      "closeLoanDetailView",
+      "closeLoanOriginationModal",
+      "closeLoanPaymentModal",
+      "closeLoanReversalModal",
+      "closePlatformCreateOrgModal",
+      "closePlatformOrgDetailModal",
+      "closePlatformStatusConfirmModal",
+      "closeProfileSection",
+      "closeTeamModal",
+      "debounceCustomerSearch",
+      "debounceLeadSearch",
+      "debounceLoanCustomerSearch",
+      "debounceLoanSearch",
+      "document.getElementById",
+      "eliminarConversacionActual",
+      "enviarMensajeChat",
+      "executePlatformStatusToggle",
+      "exportCustomersCSV",
+      "exportLoansCSV",
+      "handleAuthSubmit",
+      "handleCreateTeamMember",
+      "handleCustomerFormSubmit",
+      "handleCustomerInteractionSubmit",
+      "handleDocumentUpload",
+      "handleEarlyRebateToggle",
+      "handleKeyPress",
+      "handleLeadConvertSubmit",
+      "handleLeadFormSubmit",
+      "handleLeadInteractionSubmit",
+      "handleLeadStageSubmit",
+      "handleLoanActivateSubmit",
+      "handleLoanApproveSubmit",
+      "handleLoanCancelSubmit",
+      "handleLoanCollectionSubmit",
+      "handleLoanDefaultSubmit",
+      "handleLoanOriginationStartDateChange",
+      "handleLoanOriginationSubmit",
+      "handleLoanPaymentSubmit",
+      "handleLoanReversalSubmit",
+      "handlePasswordResetConfirm",
+      "handlePasswordResetRequest",
+      "handlePlatformAuditFilterSubmit",
+      "handlePlatformCreateOrgSubmit",
+      "handlePlatformEditOrgSubmit",
+      "handlePlatformOrgNameInput",
+      "handlePlatformOrgSlugManualInput",
+      "handleStartDateChange",
+      "hideLoanDetailSuccessBanner",
+      "hidePlatformNotice",
+      "loadCollectionsQueue",
+      "loadCustomers",
+      "loadLeads",
+      "loadPlatformAuditLogs",
+      "loadPlatformOrganizations",
+      "navigateToLoansFilter",
+      "nuevaConversacion",
+      "onLoanOriginationParamChange",
+      "onLoanPaymentParamChange",
+      "openAuditLogsModal",
+      "openCollectionsQueueFromDashboard",
+      "openCustomerFormModal",
+      "openLeadConvertModal",
+      "openLeadFormModal",
+      "openLeadInteractionModal",
+      "openLeadStageModal",
+      "openLoanActivateModal",
+      "openLoanApproveModal",
+      "openLoanCancelModal",
+      "openLoanCollectionModal",
+      "openLoanDefaultModal",
+      "openLoanOriginationModal",
+      "openLoanPaymentModal",
+      "openPlatformCreateOrgModal",
+      "openPlatformStatusConfirmFromDetail",
+      "openProfileSection",
+      "openTeamModal",
+      "parseInt",
+      "printLoanSimulation",
+      "refreshLoansOrCollectionsView",
+      "renderPlatformOrganizations",
+      "resetLoanSimulation",
+      "resetPlatformAuditFilters",
+      "runLoanSimulation",
+      "saveScenarioForComparison",
+      "searchLoanOriginationCustomers",
+      "setCallListBucketFilter",
+      "setLoansFilterUI",
+      "setPaymentQuickAmount",
+      "showAuthSubView",
+      "switchCustomerProfileTab",
+      "switchLeadsSubView",
+      "switchLoansSubView",
+      "switchPlatformDetailTab",
+      "switchTab",
+      "toggleConvertModalFields",
+      "toggleCustomerModalEntityFields",
+      "toggleLeadModalEntityFields",
+      "toggleLoanOriginationScheduleExpand",
+      "togglePlatformPasswordVisibility",
+      "togglePrivacy",
+      "toggleStageModalRequirements"
+    ]
+  },
+  "http_matrix": {
+    "auth_me_anon": 401,
+    "auth_me_commercial": 200,
+    "auth_me_superadmin": 200,
+    "commercial_customers_anon": 401,
+    "commercial_customers_commercial": 200,
+    "commercial_customers_superadmin": 403,
+    "commercial_dashboard_anon": 401,
+    "commercial_dashboard_commercial": 200,
+    "commercial_dashboard_superadmin": 403,
+    "platform_audit_anon": 401,
+    "platform_audit_commercial": 403,
+    "platform_audit_superadmin": 200,
+    "platform_tenants_anon": 401,
+    "platform_tenants_commercial": 403,
+    "platform_tenants_superadmin": 200,
+    "public_health_anon": 200
+  },
+  "openapi": {
+    "components": {
+      "schemas": {
+        "Body_upload_customer_document_api_customers__customer_id__documents_post": {
+          "properties": {
+            "document_type": {
+              "title": "Document Type",
+              "type": "string"
+            },
+            "file": {
+              "contentMediaType": "application/octet-stream",
+              "title": "File",
+              "type": "string"
+            }
+          },
+          "required": [
+            "document_type",
+            "file"
+          ],
+          "title": "Body_upload_customer_document_api_customers__customer_id__documents_post",
+          "type": "object"
+        },
+        "ChatRequest": {
+          "properties": {
+            "conversation_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Conversation Id"
+            },
+            "mensaje": {
+              "maxLength": 1500,
+              "minLength": 1,
+              "title": "Mensaje",
+              "type": "string"
+            }
+          },
+          "required": [
+            "mensaje"
+          ],
+          "title": "ChatRequest",
+          "type": "object"
+        },
+        "CustomerCreateRequest": {
+          "properties": {
+            "address_full": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Address Full"
+            },
+            "date_of_birth": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date Of Birth"
+            },
+            "email": {
+              "anyOf": [
+                {
+                  "format": "email",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Email"
+            },
+            "employer_or_business_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Employer Or Business Name"
+            },
+            "employment_address": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Employment Address"
+            },
+            "employment_status": {
+              "anyOf": [
+                {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Employment Status"
+            },
+            "entity_type": {
+              "default": "INDIVIDUAL",
+              "title": "Entity Type",
+              "type": "string"
+            },
+            "first_name": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "First Name"
+            },
+            "full_legal_name": {
+              "anyOf": [
+                {
+                  "maxLength": 180,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Full Legal Name"
+            },
+            "last_name": {
+              "anyOf": [
+                {
+                  "maxLength": 75,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last Name"
+            },
+            "legal_representative_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legal Representative Name"
+            },
+            "middle_name": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Middle Name"
+            },
+            "occupation_or_industry": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Occupation Or Industry"
+            },
+            "owner_user_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Owner User Id"
+            },
+            "phone_primary": {
+              "maxLength": 25,
+              "minLength": 10,
+              "title": "Phone Primary",
+              "type": "string"
+            },
+            "phone_secondary": {
+              "anyOf": [
+                {
+                  "maxLength": 25,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Phone Secondary"
+            },
+            "status": {
+              "default": "ACTIVE",
+              "title": "Status",
+              "type": "string"
+            },
+            "tax_id_rfc": {
+              "anyOf": [
+                {
+                  "maxLength": 20,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tax Id Rfc"
+            },
+            "trade_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trade Name"
+            },
+            "verification_status": {
+              "default": "PENDING_VERIFICATION",
+              "title": "Verification Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "phone_primary"
+          ],
+          "title": "CustomerCreateRequest",
+          "type": "object"
+        },
+        "CustomerUpdateRequest": {
+          "properties": {
+            "address_full": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Address Full"
+            },
+            "date_of_birth": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date Of Birth"
+            },
+            "email": {
+              "anyOf": [
+                {
+                  "format": "email",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Email"
+            },
+            "employer_or_business_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Employer Or Business Name"
+            },
+            "employment_address": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Employment Address"
+            },
+            "employment_status": {
+              "anyOf": [
+                {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Employment Status"
+            },
+            "entity_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            },
+            "first_name": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "First Name"
+            },
+            "full_legal_name": {
+              "anyOf": [
+                {
+                  "maxLength": 180,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Full Legal Name"
+            },
+            "last_name": {
+              "anyOf": [
+                {
+                  "maxLength": 75,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last Name"
+            },
+            "legal_representative_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legal Representative Name"
+            },
+            "middle_name": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Middle Name"
+            },
+            "occupation_or_industry": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Occupation Or Industry"
+            },
+            "owner_user_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Owner User Id"
+            },
+            "phone_primary": {
+              "anyOf": [
+                {
+                  "maxLength": 25,
+                  "minLength": 10,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Phone Primary"
+            },
+            "phone_secondary": {
+              "anyOf": [
+                {
+                  "maxLength": 25,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Phone Secondary"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            },
+            "tax_id_rfc": {
+              "anyOf": [
+                {
+                  "maxLength": 20,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tax Id Rfc"
+            },
+            "trade_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trade Name"
+            },
+            "verification_status": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verification Status"
+            }
+          },
+          "title": "CustomerUpdateRequest",
+          "type": "object"
+        },
+        "HTTPValidationError": {
+          "properties": {
+            "detail": {
+              "items": {
+                "$ref": "#/components/schemas/ValidationError"
+              },
+              "title": "Detail",
+              "type": "array"
+            }
+          },
+          "title": "HTTPValidationError",
+          "type": "object"
+        },
+        "InteractionCreateRequest": {
+          "properties": {
+            "clear_next_follow_up": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": false,
+              "title": "Clear Next Follow Up"
+            },
+            "content": {
+              "maxLength": 2500,
+              "minLength": 2,
+              "title": "Content",
+              "type": "string"
+            },
+            "direction": {
+              "default": "OUTBOUND",
+              "title": "Direction",
+              "type": "string"
+            },
+            "interaction_type": {
+              "default": "CALL",
+              "title": "Interaction Type",
+              "type": "string"
+            },
+            "next_follow_up_at": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Next Follow Up At"
+            },
+            "outcome": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outcome"
+            },
+            "visibility": {
+              "default": "INTERNAL",
+              "title": "Visibility",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content"
+          ],
+          "title": "InteractionCreateRequest",
+          "type": "object"
+        },
+        "LeadConvertRequest": {
+          "properties": {
+            "address_full": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Address Full"
+            },
+            "entity_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            },
+            "legal_representative_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legal Representative Name"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "maxLength": 500,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes"
+            },
+            "tax_id_rfc": {
+              "anyOf": [
+                {
+                  "maxLength": 20,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tax Id Rfc"
+            },
+            "trade_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trade Name"
+            }
+          },
+          "title": "LeadConvertRequest",
+          "type": "object"
+        },
+        "LeadCreateRequest": {
+          "properties": {
+            "email": {
+              "anyOf": [
+                {
+                  "format": "email",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Email"
+            },
+            "entity_type": {
+              "default": "INDIVIDUAL",
+              "title": "Entity Type",
+              "type": "string"
+            },
+            "full_name": {
+              "maxLength": 180,
+              "minLength": 3,
+              "title": "Full Name",
+              "type": "string"
+            },
+            "legal_representative_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legal Representative Name"
+            },
+            "next_follow_up_at": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Next Follow Up At"
+            },
+            "owner_user_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Owner User Id"
+            },
+            "phone_primary": {
+              "maxLength": 25,
+              "minLength": 10,
+              "title": "Phone Primary",
+              "type": "string"
+            },
+            "priority": {
+              "default": "MEDIUM",
+              "title": "Priority",
+              "type": "string"
+            },
+            "product_interest": {
+              "default": "Personal Loan",
+              "title": "Product Interest",
+              "type": "string"
+            },
+            "requested_amount_cents": {
+              "anyOf": [
+                {
+                  "minimum": 0.0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Requested Amount Cents"
+            },
+            "requested_amount_pesos": {
+              "anyOf": [
+                {
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Requested Amount Pesos"
+            },
+            "source": {
+              "default": "DIRECT_OUTREACH",
+              "title": "Source",
+              "type": "string"
+            },
+            "stage": {
+              "default": "NEW",
+              "title": "Stage",
+              "type": "string"
+            },
+            "summary_notes": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Summary Notes"
+            },
+            "tax_id_rfc": {
+              "anyOf": [
+                {
+                  "maxLength": 20,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tax Id Rfc"
+            },
+            "trade_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trade Name"
+            }
+          },
+          "required": [
+            "full_name",
+            "phone_primary"
+          ],
+          "title": "LeadCreateRequest",
+          "type": "object"
+        },
+        "LeadUpdateRequest": {
+          "properties": {
+            "clear_next_follow_up": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": false,
+              "title": "Clear Next Follow Up"
+            },
+            "email": {
+              "anyOf": [
+                {
+                  "format": "email",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Email"
+            },
+            "entity_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            },
+            "full_name": {
+              "anyOf": [
+                {
+                  "maxLength": 180,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Full Name"
+            },
+            "legal_representative_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legal Representative Name"
+            },
+            "lost_reason": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lost Reason"
+            },
+            "next_follow_up_at": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Next Follow Up At"
+            },
+            "owner_user_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Owner User Id"
+            },
+            "phone_primary": {
+              "anyOf": [
+                {
+                  "maxLength": 25,
+                  "minLength": 10,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Phone Primary"
+            },
+            "priority": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Priority"
+            },
+            "product_interest": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Interest"
+            },
+            "requested_amount_cents": {
+              "anyOf": [
+                {
+                  "minimum": 0.0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Requested Amount Cents"
+            },
+            "requested_amount_pesos": {
+              "anyOf": [
+                {
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Requested Amount Pesos"
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            },
+            "stage": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
+            },
+            "stage_change_note": {
+              "anyOf": [
+                {
+                  "maxLength": 500,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage Change Note"
+            },
+            "summary_notes": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Summary Notes"
+            },
+            "tax_id_rfc": {
+              "anyOf": [
+                {
+                  "maxLength": 20,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tax Id Rfc"
+            },
+            "trade_name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trade Name"
+            }
+          },
+          "title": "LeadUpdateRequest",
+          "type": "object"
+        },
+        "LoanActivateRequest": {
+          "properties": {
+            "confirm_disbursement": {
+              "title": "Confirm Disbursement",
+              "type": "boolean"
+            },
+            "disbursed_at": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Disbursed At"
+            },
+            "disbursement_method": {
+              "title": "Disbursement Method",
+              "type": "string"
+            },
+            "disbursement_notes": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Disbursement Notes"
+            },
+            "disbursement_reference": {
+              "maxLength": 120,
+              "minLength": 3,
+              "title": "Disbursement Reference",
+              "type": "string"
+            }
+          },
+          "required": [
+            "confirm_disbursement",
+            "disbursement_method",
+            "disbursement_reference"
+          ],
+          "title": "LoanActivateRequest",
+          "type": "object"
+        },
+        "LoanApproveRequest": {
+          "properties": {
+            "approval_notes": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Approval Notes"
+            }
+          },
+          "title": "LoanApproveRequest",
+          "type": "object"
+        },
+        "LoanCancelRequest": {
+          "properties": {
+            "cancellation_reason": {
+              "maxLength": 255,
+              "minLength": 3,
+              "title": "Cancellation Reason",
+              "type": "string"
+            }
+          },
+          "required": [
+            "cancellation_reason"
+          ],
+          "title": "LoanCancelRequest",
+          "type": "object"
+        },
+        "LoanCollectionLogRequest": {
+          "properties": {
+            "interaction_type": {
+              "default": "CALL",
+              "title": "Interaction Type",
+              "type": "string"
+            },
+            "next_follow_up_at": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Next Follow Up At"
+            },
+            "notes": {
+              "maxLength": 2000,
+              "minLength": 3,
+              "title": "Notes",
+              "type": "string"
+            },
+            "outcome": {
+              "default": "FOLLOW_UP_REQUIRED",
+              "title": "Outcome",
+              "type": "string"
+            },
+            "promised_amount_pesos": {
+              "anyOf": [
+                {
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Promised Amount Pesos"
+            }
+          },
+          "required": [
+            "notes"
+          ],
+          "title": "LoanCollectionLogRequest",
+          "type": "object"
+        },
+        "LoanCreateRequest": {
+          "properties": {
+            "assumed_interest_months": {
+              "default": 4,
+              "maximum": 36.0,
+              "minimum": 1.0,
+              "title": "Assumed Interest Months",
+              "type": "integer"
+            },
+            "customer_id": {
+              "title": "Customer Id",
+              "type": "integer"
+            },
+            "first_payment_date": {
+              "title": "First Payment Date",
+              "type": "string"
+            },
+            "idempotency_key": {
+              "maxLength": 64,
+              "minLength": 10,
+              "title": "Idempotency Key",
+              "type": "string"
+            },
+            "interest_calculation_method": {
+              "default": "FLAT_ORIGINAL_PRINCIPAL",
+              "title": "Interest Calculation Method",
+              "type": "string"
+            },
+            "monthly_interest_rate_percent": {
+              "default": 10.0,
+              "maximum": 100.0,
+              "minimum": 0.0,
+              "title": "Monthly Interest Rate Percent",
+              "type": "number"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes"
+            },
+            "principal_cents": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "maximum": 1000000000.0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Principal Cents"
+            },
+            "principal_pesos": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "maximum": 10000000.0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Principal Pesos"
+            },
+            "product_name": {
+              "default": "Personal Loan",
+              "title": "Product Name",
+              "type": "string"
+            },
+            "source_lead_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Lead Id"
+            },
+            "start_date": {
+              "title": "Start Date",
+              "type": "string"
+            },
+            "term_installments_count": {
+              "default": 16,
+              "maximum": 104.0,
+              "minimum": 1.0,
+              "title": "Term Installments Count",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "idempotency_key",
+            "customer_id",
+            "start_date",
+            "first_payment_date"
+          ],
+          "title": "LoanCreateRequest",
+          "type": "object"
+        },
+        "LoanDefaultRequest": {
+          "properties": {
+            "confirm_default": {
+              "title": "Confirm Default",
+              "type": "boolean"
+            },
+            "default_reason": {
+              "maxLength": 500,
+              "minLength": 5,
+              "title": "Default Reason",
+              "type": "string"
+            }
+          },
+          "required": [
+            "confirm_default",
+            "default_reason"
+          ],
+          "title": "LoanDefaultRequest",
+          "type": "object"
+        },
+        "LoanPaymentCreateRequest": {
+          "properties": {
+            "amount_cents": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Cents"
+            },
+            "amount_pesos": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount Pesos"
+            },
+            "apply_early_payoff_rebate": {
+              "default": false,
+              "title": "Apply Early Payoff Rebate",
+              "type": "boolean"
+            },
+            "idempotency_key": {
+              "maxLength": 64,
+              "minLength": 10,
+              "title": "Idempotency Key",
+              "type": "string"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes"
+            },
+            "paid_at": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Paid At"
+            },
+            "payment_method": {
+              "title": "Payment Method",
+              "type": "string"
+            },
+            "payment_reference": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Payment Reference"
+            }
+          },
+          "required": [
+            "idempotency_key",
+            "payment_method"
+          ],
+          "title": "LoanPaymentCreateRequest",
+          "type": "object"
+        },
+        "LoanPaymentReverseRequest": {
+          "properties": {
+            "reversal_reason": {
+              "maxLength": 255,
+              "minLength": 3,
+              "title": "Reversal Reason",
+              "type": "string"
+            }
+          },
+          "required": [
+            "reversal_reason"
+          ],
+          "title": "LoanPaymentReverseRequest",
+          "type": "object"
+        },
+        "PasswordResetConfirmRequest": {
+          "properties": {
+            "new_password": {
+              "maxLength": 128,
+              "minLength": 8,
+              "title": "New Password",
+              "type": "string"
+            },
+            "token": {
+              "maxLength": 256,
+              "minLength": 20,
+              "title": "Token",
+              "type": "string"
+            }
+          },
+          "required": [
+            "token",
+            "new_password"
+          ],
+          "title": "PasswordResetConfirmRequest",
+          "type": "object"
+        },
+        "PasswordResetRequest": {
+          "properties": {
+            "email": {
+              "format": "email",
+              "title": "Email",
+              "type": "string"
+            }
+          },
+          "required": [
+            "email"
+          ],
+          "title": "PasswordResetRequest",
+          "type": "object"
+        },
+        "PlatformTenantCreateRequest": {
+          "properties": {
+            "legal_name": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legal Name"
+            },
+            "name": {
+              "maxLength": 160,
+              "minLength": 2,
+              "title": "Name",
+              "type": "string"
+            },
+            "owner_email": {
+              "format": "email",
+              "title": "Owner Email",
+              "type": "string"
+            },
+            "owner_full_name": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Owner Full Name"
+            },
+            "owner_password": {
+              "maxLength": 128,
+              "minLength": 8,
+              "title": "Owner Password",
+              "type": "string"
+            },
+            "slug": {
+              "maxLength": 80,
+              "minLength": 2,
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "slug",
+            "owner_email",
+            "owner_password"
+          ],
+          "title": "PlatformTenantCreateRequest",
+          "type": "object"
+        },
+        "PlatformTenantUpdateRequest": {
+          "properties": {
+            "is_active": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            },
+            "legal_name": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legal Name"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "maxLength": 160,
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            }
+          },
+          "title": "PlatformTenantUpdateRequest",
+          "type": "object"
+        },
+        "UserChangePasswordRequest": {
+          "properties": {
+            "current_password": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Current Password",
+              "type": "string"
+            },
+            "new_password": {
+              "maxLength": 128,
+              "minLength": 8,
+              "title": "New Password",
+              "type": "string"
+            }
+          },
+          "required": [
+            "current_password",
+            "new_password"
+          ],
+          "title": "UserChangePasswordRequest",
+          "type": "object"
+        },
+        "UserLanguageUpdateRequest": {
+          "properties": {
+            "preferred_language": {
+              "maxLength": 10,
+              "minLength": 2,
+              "title": "Preferred Language",
+              "type": "string"
+            }
+          },
+          "required": [
+            "preferred_language"
+          ],
+          "title": "UserLanguageUpdateRequest",
+          "type": "object"
+        },
+        "UserLogin": {
+          "properties": {
+            "email": {
+              "format": "email",
+              "title": "Email",
+              "type": "string"
+            },
+            "password": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Password",
+              "type": "string"
+            }
+          },
+          "required": [
+            "email",
+            "password"
+          ],
+          "title": "UserLogin",
+          "type": "object"
+        },
+        "UserRegister": {
+          "properties": {
+            "email": {
+              "format": "email",
+              "title": "Email",
+              "type": "string"
+            },
+            "full_name": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Full Name"
+            },
+            "password": {
+              "maxLength": 128,
+              "minLength": 8,
+              "title": "Password",
+              "type": "string"
+            },
+            "role": {
+              "default": "SALES_AGENT",
+              "title": "Role",
+              "type": "string"
+            }
+          },
+          "required": [
+            "email",
+            "password"
+          ],
+          "title": "UserRegister",
+          "type": "object"
+        },
+        "UserUpdateByAdmin": {
+          "properties": {
+            "full_name": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Full Name"
+            },
+            "is_active": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            },
+            "role": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          "title": "UserUpdateByAdmin",
+          "type": "object"
+        },
+        "ValidationError": {
+          "properties": {
+            "ctx": {
+              "title": "Context",
+              "type": "object"
+            },
+            "input": {
+              "title": "Input"
+            },
+            "loc": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "title": "Location",
+              "type": "array"
+            },
+            "msg": {
+              "title": "Message",
+              "type": "string"
+            },
+            "type": {
+              "title": "Error Type",
+              "type": "string"
+            }
+          },
+          "required": [
+            "loc",
+            "msg",
+            "type"
+          ],
+          "title": "ValidationError",
+          "type": "object"
+        }
+      }
+    },
+    "info": {
+      "title": "NURA CRM | Credit & Pipeline System",
+      "version": "7.4.0"
+    },
+    "openapi": "3.1.0",
+    "paths": {
+      "/": {
+        "get": {
+          "operationId": "home__get",
+          "responses": {
+            "200": {
+              "description": "Successful Response"
+            }
+          },
+          "summary": "Home"
+        }
+      },
+      "/api/admin/audit-logs": {
+        "get": {
+          "operationId": "get_audit_logs_api_admin_audit_logs_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "limit",
+              "required": false,
+              "schema": {
+                "default": 40,
+                "title": "Limit",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Get Audit Logs"
+        }
+      },
+      "/api/admin/schema-status": {
+        "get": {
+          "operationId": "schema_status_api_admin_schema_status_get",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Schema Status"
+        }
+      },
+      "/api/admin/users": {
+        "get": {
+          "operationId": "list_team_users_api_admin_users_get",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "List Team Users"
+        }
+      },
+      "/api/admin/users/{target_user_id}": {
+        "patch": {
+          "operationId": "update_team_user_api_admin_users__target_user_id__patch",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "target_user_id",
+              "required": true,
+              "schema": {
+                "title": "Target User Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserUpdateByAdmin"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Update Team User"
+        }
+      },
+      "/api/auth/login": {
+        "post": {
+          "operationId": "login_api_auth_login_post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserLogin"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Login"
+        }
+      },
+      "/api/auth/logout": {
+        "post": {
+          "operationId": "logout_api_auth_logout_post",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Logout"
+        }
+      },
+      "/api/auth/me": {
+        "get": {
+          "operationId": "get_me_api_auth_me_get",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Get Me"
+        }
+      },
+      "/api/auth/me/language": {
+        "patch": {
+          "operationId": "update_my_language_api_auth_me_language_patch",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserLanguageUpdateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Update My Language"
+        }
+      },
+      "/api/auth/me/password": {
+        "post": {
+          "operationId": "change_my_password_api_auth_me_password_post",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserChangePasswordRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Change My Password"
+        }
+      },
+      "/api/auth/password-reset/confirm": {
+        "post": {
+          "operationId": "confirm_password_reset_api_auth_password_reset_confirm_post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordResetConfirmRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Confirm Password Reset"
+        }
+      },
+      "/api/auth/password-reset/request": {
+        "post": {
+          "operationId": "request_password_reset_api_auth_password_reset_request_post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordResetRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Request Password Reset"
+        }
+      },
+      "/api/auth/register": {
+        "post": {
+          "operationId": "register_api_auth_register_post",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRegister"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Register"
+        }
+      },
+      "/api/collections/queue": {
+        "get": {
+          "operationId": "get_collections_queue_api_collections_queue_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "bucket",
+              "required": false,
+              "schema": {
+                "default": "ALL",
+                "title": "Bucket",
+                "type": "string"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Get Collections Queue"
+        }
+      },
+      "/api/conversations": {
+        "get": {
+          "operationId": "listar_conversaciones_api_conversations_get",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Listar Conversaciones"
+        },
+        "post": {
+          "operationId": "crear_conversacion_api_conversations_post",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Payload",
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Crear Conversacion"
+        }
+      },
+      "/api/conversations/{conv_id}": {
+        "delete": {
+          "operationId": "eliminar_conversacion_api_conversations__conv_id__delete",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "conv_id",
+              "required": true,
+              "schema": {
+                "title": "Conv Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Eliminar Conversacion"
+        }
+      },
+      "/api/conversations/{conv_id}/messages": {
+        "get": {
+          "operationId": "obtener_mensajes_api_conversations__conv_id__messages_get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "conv_id",
+              "required": true,
+              "schema": {
+                "title": "Conv Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Obtener Mensajes"
+        }
+      },
+      "/api/customers": {
+        "get": {
+          "operationId": "list_customers_api_customers_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "search",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "maxLength": 120,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Search"
+              }
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Status"
+              }
+            },
+            {
+              "in": "query",
+              "name": "entity_type",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Entity Type"
+              }
+            },
+            {
+              "in": "query",
+              "name": "sort",
+              "required": false,
+              "schema": {
+                "default": "CREATED_DESC",
+                "title": "Sort",
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "required": false,
+              "schema": {
+                "default": 1,
+                "minimum": 1,
+                "title": "Page",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "page_size",
+              "required": false,
+              "schema": {
+                "default": 20,
+                "maximum": 100,
+                "minimum": 1,
+                "title": "Page Size",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "List Customers"
+        },
+        "post": {
+          "operationId": "create_customer_api_customers_post",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerCreateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Create Customer"
+        }
+      },
+      "/api/customers/{customer_id}": {
+        "get": {
+          "operationId": "get_customer_detail_api_customers__customer_id__get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "customer_id",
+              "required": true,
+              "schema": {
+                "title": "Customer Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Get Customer Detail"
+        },
+        "patch": {
+          "operationId": "update_customer_api_customers__customer_id__patch",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "customer_id",
+              "required": true,
+              "schema": {
+                "title": "Customer Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerUpdateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Update Customer"
+        }
+      },
+      "/api/customers/{customer_id}/documents": {
+        "get": {
+          "operationId": "list_customer_documents_api_customers__customer_id__documents_get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "customer_id",
+              "required": true,
+              "schema": {
+                "title": "Customer Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "List Customer Documents"
+        },
+        "post": {
+          "operationId": "upload_customer_document_api_customers__customer_id__documents_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "customer_id",
+              "required": true,
+              "schema": {
+                "title": "Customer Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "$ref": "#/components/schemas/Body_upload_customer_document_api_customers__customer_id__documents_post"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Upload Customer Document"
+        }
+      },
+      "/api/customers/{customer_id}/documents/{doc_id}": {
+        "delete": {
+          "operationId": "delete_customer_document_api_customers__customer_id__documents__doc_id__delete",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "customer_id",
+              "required": true,
+              "schema": {
+                "title": "Customer Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "path",
+              "name": "doc_id",
+              "required": true,
+              "schema": {
+                "title": "Doc Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Delete Customer Document"
+        }
+      },
+      "/api/customers/{customer_id}/documents/{doc_id}/download": {
+        "get": {
+          "operationId": "download_customer_document_api_customers__customer_id__documents__doc_id__download_get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "customer_id",
+              "required": true,
+              "schema": {
+                "title": "Customer Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "path",
+              "name": "doc_id",
+              "required": true,
+              "schema": {
+                "title": "Doc Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Download Customer Document"
+        }
+      },
+      "/api/customers/{customer_id}/interactions": {
+        "get": {
+          "operationId": "list_customer_interactions_api_customers__customer_id__interactions_get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "customer_id",
+              "required": true,
+              "schema": {
+                "title": "Customer Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "List Customer Interactions"
+        },
+        "post": {
+          "operationId": "create_customer_interaction_api_customers__customer_id__interactions_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "customer_id",
+              "required": true,
+              "schema": {
+                "title": "Customer Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionCreateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Create Customer Interaction"
+        }
+      },
+      "/api/dashboard/summary": {
+        "get": {
+          "operationId": "get_dashboard_summary_api_dashboard_summary_get",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Get Dashboard Summary"
+        }
+      },
+      "/api/health": {
+        "get": {
+          "operationId": "health_check_api_health_get",
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            }
+          },
+          "summary": "Health Check"
+        }
+      },
+      "/api/leads": {
+        "get": {
+          "operationId": "list_leads_api_leads_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "search",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "maxLength": 120,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Search"
+              }
+            },
+            {
+              "in": "query",
+              "name": "stage",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Stage"
+              }
+            },
+            {
+              "in": "query",
+              "name": "product_interest",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Product Interest"
+              }
+            },
+            {
+              "in": "query",
+              "name": "priority",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Priority"
+              }
+            },
+            {
+              "in": "query",
+              "name": "call_bucket",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Call Bucket"
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "required": false,
+              "schema": {
+                "default": 1,
+                "minimum": 1,
+                "title": "Page",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "page_size",
+              "required": false,
+              "schema": {
+                "default": 20,
+                "maximum": 100,
+                "minimum": 1,
+                "title": "Page Size",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "List Leads"
+        },
+        "post": {
+          "operationId": "create_lead_api_leads_post",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadCreateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Create Lead"
+        }
+      },
+      "/api/leads/{lead_id}": {
+        "get": {
+          "operationId": "get_lead_detail_api_leads__lead_id__get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "lead_id",
+              "required": true,
+              "schema": {
+                "title": "Lead Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Get Lead Detail"
+        },
+        "patch": {
+          "operationId": "update_lead_api_leads__lead_id__patch",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "lead_id",
+              "required": true,
+              "schema": {
+                "title": "Lead Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadUpdateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Update Lead"
+        }
+      },
+      "/api/leads/{lead_id}/convert": {
+        "post": {
+          "operationId": "convert_lead_to_customer_api_leads__lead_id__convert_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "lead_id",
+              "required": true,
+              "schema": {
+                "title": "Lead Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadConvertRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Convert Lead To Customer"
+        }
+      },
+      "/api/leads/{lead_id}/interactions": {
+        "post": {
+          "operationId": "create_lead_interaction_api_leads__lead_id__interactions_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "lead_id",
+              "required": true,
+              "schema": {
+                "title": "Lead Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionCreateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Create Lead Interaction"
+        }
+      },
+      "/api/loans": {
+        "get": {
+          "operationId": "list_loans_api_loans_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "search",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "maxLength": 120,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Search"
+              }
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Status"
+              }
+            },
+            {
+              "in": "query",
+              "name": "customer_id",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Customer Id"
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "required": false,
+              "schema": {
+                "default": 1,
+                "minimum": 1,
+                "title": "Page",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "page_size",
+              "required": false,
+              "schema": {
+                "default": 20,
+                "maximum": 100,
+                "minimum": 1,
+                "title": "Page Size",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "List Loans"
+        },
+        "post": {
+          "operationId": "create_loan_api_loans_post",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanCreateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Create Loan"
+        }
+      },
+      "/api/loans/{loan_id}": {
+        "get": {
+          "operationId": "get_loan_detail_api_loans__loan_id__get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "loan_id",
+              "required": true,
+              "schema": {
+                "title": "Loan Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Get Loan Detail"
+        }
+      },
+      "/api/loans/{loan_id}/activate": {
+        "post": {
+          "operationId": "activate_loan_api_loans__loan_id__activate_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "loan_id",
+              "required": true,
+              "schema": {
+                "title": "Loan Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanActivateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Activate Loan"
+        }
+      },
+      "/api/loans/{loan_id}/approve": {
+        "post": {
+          "operationId": "approve_loan_api_loans__loan_id__approve_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "loan_id",
+              "required": true,
+              "schema": {
+                "title": "Loan Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanApproveRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Approve Loan"
+        }
+      },
+      "/api/loans/{loan_id}/cancel": {
+        "post": {
+          "operationId": "cancel_loan_api_loans__loan_id__cancel_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "loan_id",
+              "required": true,
+              "schema": {
+                "title": "Loan Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanCancelRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Cancel Loan"
+        }
+      },
+      "/api/loans/{loan_id}/collections-log": {
+        "post": {
+          "operationId": "create_loan_collection_log_api_loans__loan_id__collections_log_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "loan_id",
+              "required": true,
+              "schema": {
+                "title": "Loan Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanCollectionLogRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Create Loan Collection Log"
+        }
+      },
+      "/api/loans/{loan_id}/default": {
+        "post": {
+          "operationId": "mark_loan_defaulted_api_loans__loan_id__default_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "loan_id",
+              "required": true,
+              "schema": {
+                "title": "Loan Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDefaultRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Mark Loan Defaulted"
+        }
+      },
+      "/api/loans/{loan_id}/payments": {
+        "get": {
+          "operationId": "list_loan_payments_api_loans__loan_id__payments_get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "loan_id",
+              "required": true,
+              "schema": {
+                "title": "Loan Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "List Loan Payments"
+        },
+        "post": {
+          "operationId": "create_loan_payment_api_loans__loan_id__payments_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "loan_id",
+              "required": true,
+              "schema": {
+                "title": "Loan Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanPaymentCreateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Create Loan Payment"
+        }
+      },
+      "/api/loans/{loan_id}/payments/{payment_id}/reverse": {
+        "post": {
+          "operationId": "reverse_loan_payment_api_loans__loan_id__payments__payment_id__reverse_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "loan_id",
+              "required": true,
+              "schema": {
+                "title": "Loan Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "path",
+              "name": "payment_id",
+              "required": true,
+              "schema": {
+                "title": "Payment Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanPaymentReverseRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Reverse Loan Payment"
+        }
+      },
+      "/api/platform/audit-logs": {
+        "get": {
+          "operationId": "platform_list_audit_logs_api_platform_audit_logs_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "event_type",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Event Type"
+              }
+            },
+            {
+              "in": "query",
+              "name": "resource_id",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Resource Id"
+              }
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "required": false,
+              "schema": {
+                "default": 50,
+                "maximum": 200,
+                "minimum": 1,
+                "title": "Limit",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Platform List Audit Logs"
+        }
+      },
+      "/api/platform/tenants": {
+        "get": {
+          "operationId": "platform_list_tenants_api_platform_tenants_get",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Platform List Tenants"
+        },
+        "post": {
+          "operationId": "platform_create_tenant_api_platform_tenants_post",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformTenantCreateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Platform Create Tenant"
+        }
+      },
+      "/api/platform/tenants/{tenant_id}": {
+        "get": {
+          "operationId": "platform_get_tenant_detail_api_platform_tenants__tenant_id__get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "tenant_id",
+              "required": true,
+              "schema": {
+                "title": "Tenant Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Platform Get Tenant Detail"
+        },
+        "patch": {
+          "operationId": "platform_update_tenant_api_platform_tenants__tenant_id__patch",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "tenant_id",
+              "required": true,
+              "schema": {
+                "title": "Tenant Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformTenantUpdateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Platform Update Tenant"
+        }
+      },
+      "/api/platform/tenants/{tenant_id}/users": {
+        "get": {
+          "operationId": "platform_list_tenant_users_api_platform_tenants__tenant_id__users_get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "tenant_id",
+              "required": true,
+              "schema": {
+                "title": "Tenant Id",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Platform List Tenant Users"
+        }
+      },
+      "/chat-ejecutivo": {
+        "post": {
+          "operationId": "chat_ejecutivo_chat_ejecutivo_post",
+          "parameters": [
+            {
+              "in": "cookie",
+              "name": "session_token",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Token"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Chat Ejecutivo"
+        }
+      }
+    }
+  },
+  "routes": [
+    {
+      "auth_dependencies": [],
+      "endpoint": "home",
+      "identity_checks": {
+        "get_db": false,
+        "require_commercial_tenant": false,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "get_audit_logs",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/admin/audit-logs"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_superadmin"
+      ],
+      "endpoint": "schema_status",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": true
+      },
+      "method": "GET",
+      "path": "/api/admin/schema-status"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "list_team_users",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/admin/users"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "update_team_user",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "PATCH",
+      "path": "/api/admin/users/{target_user_id}"
+    },
+    {
+      "auth_dependencies": [
+        "get_db"
+      ],
+      "endpoint": "login",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/auth/login"
+    },
+    {
+      "auth_dependencies": [
+        "get_db",
+        "verify_csrf"
+      ],
+      "endpoint": "logout",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db"
+      ],
+      "endpoint": "get_me",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "verify_csrf"
+      ],
+      "endpoint": "update_my_language",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": false
+      },
+      "method": "PATCH",
+      "path": "/api/auth/me/language"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "verify_csrf"
+      ],
+      "endpoint": "change_my_password",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/auth/me/password"
+    },
+    {
+      "auth_dependencies": [
+        "get_db"
+      ],
+      "endpoint": "confirm_password_reset",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/auth/password-reset/confirm"
+    },
+    {
+      "auth_dependencies": [
+        "get_db"
+      ],
+      "endpoint": "request_password_reset",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/auth/password-reset/request"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "register",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/auth/register"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "get_collections_queue",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/collections/queue"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant"
+      ],
+      "endpoint": "listar_conversaciones",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/conversations"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "verify_csrf"
+      ],
+      "endpoint": "crear_conversacion",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/conversations"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "verify_csrf"
+      ],
+      "endpoint": "eliminar_conversacion",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "DELETE",
+      "path": "/api/conversations/{conv_id}"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant"
+      ],
+      "endpoint": "obtener_mensajes",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/conversations/{conv_id}/messages"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "list_customers",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/customers"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "create_customer",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/customers"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "get_customer_detail",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/customers/{customer_id}"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "update_customer",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "PATCH",
+      "path": "/api/customers/{customer_id}"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "list_customer_documents",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/customers/{customer_id}/documents"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "upload_customer_document",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/customers/{customer_id}/documents"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "delete_customer_document",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "DELETE",
+      "path": "/api/customers/{customer_id}/documents/{doc_id}"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "download_customer_document",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/customers/{customer_id}/documents/{doc_id}/download"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "list_customer_interactions",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/customers/{customer_id}/interactions"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "create_customer_interaction",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/customers/{customer_id}/interactions"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant"
+      ],
+      "endpoint": "get_dashboard_summary",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/dashboard/summary"
+    },
+    {
+      "auth_dependencies": [
+        "get_db"
+      ],
+      "endpoint": "health_check",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/health"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "list_leads",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/leads"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "create_lead",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/leads"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "get_lead_detail",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/leads/{lead_id}"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "update_lead",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "PATCH",
+      "path": "/api/leads/{lead_id}"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "convert_lead_to_customer",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/leads/{lead_id}/convert"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "create_lead_interaction",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/leads/{lead_id}/interactions"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "list_loans",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/loans"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "create_loan",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/loans"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "get_loan_detail",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/loans/{loan_id}"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "activate_loan",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/loans/{loan_id}/activate"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "approve_loan",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/loans/{loan_id}/approve"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "cancel_loan",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/loans/{loan_id}/cancel"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "create_loan_collection_log",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/loans/{loan_id}/collections-log"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "mark_loan_defaulted",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/loans/{loan_id}/default"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker"
+      ],
+      "endpoint": "list_loan_payments",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "GET",
+      "path": "/api/loans/{loan_id}/payments"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "create_loan_payment",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/loans/{loan_id}/payments"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "role_checker",
+        "verify_csrf"
+      ],
+      "endpoint": "reverse_loan_payment",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/api/loans/{loan_id}/payments/{payment_id}/reverse"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_superadmin"
+      ],
+      "endpoint": "platform_list_audit_logs",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": true
+      },
+      "method": "GET",
+      "path": "/api/platform/audit-logs"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_superadmin"
+      ],
+      "endpoint": "platform_list_tenants",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": true
+      },
+      "method": "GET",
+      "path": "/api/platform/tenants"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_superadmin",
+        "verify_csrf"
+      ],
+      "endpoint": "platform_create_tenant",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": true
+      },
+      "method": "POST",
+      "path": "/api/platform/tenants"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_superadmin"
+      ],
+      "endpoint": "platform_get_tenant_detail",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": true
+      },
+      "method": "GET",
+      "path": "/api/platform/tenants/{tenant_id}"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_superadmin",
+        "verify_csrf"
+      ],
+      "endpoint": "platform_update_tenant",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": true
+      },
+      "method": "PATCH",
+      "path": "/api/platform/tenants/{tenant_id}"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_superadmin"
+      ],
+      "endpoint": "platform_list_tenant_users",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": false,
+        "require_superadmin": true
+      },
+      "method": "GET",
+      "path": "/api/platform/tenants/{tenant_id}/users"
+    },
+    {
+      "auth_dependencies": [
+        "get_current_user",
+        "get_db",
+        "require_commercial_tenant",
+        "verify_csrf"
+      ],
+      "endpoint": "chat_ejecutivo",
+      "identity_checks": {
+        "get_db": true,
+        "require_commercial_tenant": true,
+        "require_superadmin": false
+      },
+      "method": "POST",
+      "path": "/chat-ejecutivo"
+    }
+  ]
+}
