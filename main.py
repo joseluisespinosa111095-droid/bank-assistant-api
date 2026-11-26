@@ -56,70 +56,98 @@ from models import (
     LoanPaymentAllocationModel,
 )
 
-# --- SERVER LOGGING ---
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
-logger = logging.getLogger("nura.crm")
-
-# --- DATABASE & SECURITY CONFIG ---
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-DUMMY_BCRYPT_HASH = pwd_context.hash("nura-constant-time-mitigation-baseline-secret")
-
-IS_PRODUCTION = is_production()
-
-
-
-
-def hash_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
-
-
-# --- ROLES, PRODUCTS & CRM CATALOGS ---
-VALID_ROLES = {
-    "OWNER_ADMIN",         # Owners
-    "SALES_AGENT",         # Salespersons / Vendedores
-    "CREDIT_ADVISOR",      # Credit Analysts
-    "OPERATIONS_OFFICER"   # Collections / Operations
-}
-
-VALID_LANGUAGES = {"en", "es"}
-
-SUPPORTED_PRODUCTS = ["Personal Loan", "Business Loan"]
-
-VALID_ENTITY_TYPES = {"INDIVIDUAL", "BUSINESS"}
-VALID_CUSTOMER_STATUSES = {"ACTIVE", "INACTIVE", "PENDING_VERIFICATION"}
-VALID_VERIFICATION_STATUSES = {"NOT_PROVIDED", "PENDING_VERIFICATION", "VERIFIED"}
-
-VALID_LEAD_STAGES = {
-    "NEW", "CONTACT_ATTEMPTED", "CONTACTED", "QUALIFIED",
-    "APPLICATION_STARTED", "UNDER_REVIEW", "APPROVED",
-    "CONVERTED", "NURTURE", "LOST"
-}
-
-QUALIFIED_OR_LATER_STAGES = {
-    "QUALIFIED", "APPLICATION_STARTED", "UNDER_REVIEW", "APPROVED"
-}
-
-VALID_LEAD_SOURCES = {
-    "REFERRAL", "INBOUND_CALL", "CAMPAIGN", "DIRECT_OUTREACH",
-    "WEBSITE", "REPEAT_BORROWER", "OTHER"
-}
-
-VALID_LEAD_PRIORITIES = {"LOW", "MEDIUM", "HIGH"}
-
-VALID_INTERACTION_TYPES = {"CALL", "NOTE", "WHATSAPP", "EMAIL", "MEETING"}
-VALID_INTERACTION_DIRECTIONS = {"OUTBOUND", "INBOUND", "INTERNAL"}
-VALID_INTERACTION_VISIBILITIES = {"INTERNAL", "CUSTOMER_FACING"}
-
-VALID_CALL_OUTCOMES = {
-    "ANSWERED", "NO_ANSWER", "VOICEMAIL", "REQUESTED_CALLBACK",
-    "INTERESTED", "NOT_INTERESTED", "FOLLOW_UP_REQUIRED", "WRONG_NUMBER"
-}
-
-VALID_LOAN_STATUSES = {"DRAFT", "APPROVED", "ACTIVE", "PAID_OFF", "CANCELLED", "DEFAULTED"}
-VALID_DISBURSEMENT_METHODS = {"SPEI_TRANSFER", "BANK_DEPOSIT", "CHECK", "CASH_RECEIPT"}
-VALID_PAYMENT_STATUSES = {"POSTED", "REVERSED"}
-VALID_PAYMENT_METHODS = {"SPEI_TRANSFER", "BANK_DEPOSIT", "CHECK", "CASH_RECEIPT"}
-VALID_DOCUMENT_TYPES = {"INE_ID", "PROOF_OF_ADDRESS", "BANK_STATEMENT", "SIGNED_CONTRACT", "OTHER"}
+from core.config import (
+    ALLOWED_MIME_TYPES,
+    DUMMY_BCRYPT_HASH,
+    EXPECTED_ALEMBIC_REVISION,
+    IS_PRODUCTION,
+    MAX_FILE_SIZE_BYTES,
+    MULTIPART_OVERHEAD_BYTES,
+    PLATFORM_TENANT_SLUG,
+    QUALIFIED_OR_LATER_STAGES,
+    SUPPORTED_PRODUCTS,
+    UPLOAD_READ_CHUNK_BYTES,
+    VALID_CALL_OUTCOMES,
+    VALID_CUSTOMER_STATUSES,
+    VALID_DISBURSEMENT_METHODS,
+    VALID_DOCUMENT_TYPES,
+    VALID_ENTITY_TYPES,
+    VALID_INTERACTION_DIRECTIONS,
+    VALID_INTERACTION_TYPES,
+    VALID_INTERACTION_VISIBILITIES,
+    VALID_LANGUAGES,
+    VALID_LEAD_PRIORITIES,
+    VALID_LEAD_SOURCES,
+    VALID_LEAD_STAGES,
+    VALID_LOAN_STATUSES,
+    VALID_PAYMENT_METHODS,
+    VALID_PAYMENT_STATUSES,
+    VALID_ROLES,
+    VALID_VERIFICATION_STATUSES,
+    logger,
+    pwd_context,
+)
+from core.middleware import DocumentUploadSizeGuard
+from core.schema_guard import (
+    is_auth_security_schema_ready,
+    verify_database_schema_compatibility,
+)
+from core.security import (
+    check_rate_limit,
+    cleanup_expired_auth_security_records,
+    compute_email_hmac_buckets,
+    consume_rate_limit_atomic,
+    get_client_ip,
+    hash_token,
+    mask_email_for_audit,
+    reset_rate_limit_bucket,
+)
+from core.utils import (
+    generate_next_customer_number,
+    generate_next_lead_number,
+    generate_next_loan_number,
+    generate_next_payment_number,
+    get_crm_timezone,
+    get_local_day_bounds_utc,
+    next_tenant_sequence,
+    normalize_phone_number,
+    parse_optional_datetime_utc,
+    parse_pesos_to_cents,
+    parse_rebate_detail,
+    serialize_rebate_detail,
+)
+from schemas.auth import (
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
+    UserChangePasswordRequest,
+    UserLanguageUpdateRequest,
+    UserLogin,
+    UserRegister,
+    UserUpdateByAdmin,
+)
+from schemas.core_crm import (
+    ChatRequest,
+    CustomerCreateRequest,
+    CustomerUpdateRequest,
+    InteractionCreateRequest,
+    LeadConvertRequest,
+    LeadCreateRequest,
+    LeadUpdateRequest,
+)
+from schemas.lending import (
+    LoanActivateRequest,
+    LoanApproveRequest,
+    LoanCancelRequest,
+    LoanCollectionLogRequest,
+    LoanCreateRequest,
+    LoanDefaultRequest,
+    LoanPaymentCreateRequest,
+    LoanPaymentReverseRequest,
+)
+from schemas.platform import (
+    PlatformTenantCreateRequest,
+    PlatformTenantUpdateRequest,
+)
 
 
 # --- AUTHORITATIVE FINANCIAL ENGINE (FLAT & DECLINING BALANCE) ---
@@ -256,547 +284,6 @@ class LoanFinancialEngine:
             "maturity_date": schedule[-1]["due_date"],
             "schedule": schedule
         }
-
-
-# --- STARTUP SCHEMA GUARD ---
-_AUTH_SECURITY_SCHEMA_READY = False
-
-
-def is_auth_security_schema_ready(db: Optional[Session] = None) -> bool:
-    global _AUTH_SECURITY_SCHEMA_READY
-    if _AUTH_SECURITY_SCHEMA_READY:
-        return True
-    target_bind = db.get_bind() if db is not None else engine
-    try:
-        tables = set(inspect(target_bind).get_table_names())
-        if {"rate_limits", "password_reset_tokens"}.issubset(tables):
-            _AUTH_SECURITY_SCHEMA_READY = True
-            return True
-    except Exception:
-        pass
-    return False
-
-
-EXPECTED_ALEMBIC_REVISION = "012"  # al crear una nueva migracion, actualizar solo esta constante
-
-
-def verify_database_schema_compatibility(db_engine):
-    global _AUTH_SECURITY_SCHEMA_READY
-    if not IS_PRODUCTION and "sqlite" in str(db_engine.url):
-        is_auth_security_schema_ready()
-        return  # SQLite dev DB trusts test fixtures / alembic
-    try:
-        inspector = inspect(db_engine)
-        tables = set(inspector.get_table_names())
-        base_required_tables = {
-            "tenants", "tenant_sequences",
-            "users", "sessions", "conversations", "chat_messages", "audit_logs",
-            "customers", "customer_documents", "leads", "lead_stage_history",
-            "interactions", "loans", "loan_installments",
-            "loan_payments", "loan_payment_allocations",
-            "rate_limits", "password_reset_tokens"
-        }
-        if not base_required_tables.issubset(tables):
-            missing = base_required_tables - tables
-            raise RuntimeError(f"Database schema is missing required tables: {missing}")
-
-        with db_engine.begin() as conn:
-            res = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
-            if not res:
-                raise RuntimeError("No alembic_version record found in database.")
-            rev = res[0]
-            if rev != EXPECTED_ALEMBIC_REVISION:
-                raise RuntimeError(
-                    f"Database schema is at revision '{rev}', expected '{EXPECTED_ALEMBIC_REVISION}'. Run 'alembic upgrade head'."
-                )
-            _AUTH_SECURITY_SCHEMA_READY = True
-
-            if db_engine.dialect.name == "postgresql":
-                conn.execute(text("""
-                    DO $$
-                    DECLARE
-                        r RECORD;
-                    BEGIN
-                        FOR r IN
-                            SELECT conname, pg_get_constraintdef(oid) AS def
-                            FROM pg_constraint
-                            WHERE conrelid = 'loans'::regclass AND contype = 'c'
-                        LOOP
-                            IF r.def ILIKE '%FLAT_ORIGINAL_PRINCIPAL%'
-                               OR r.def ILIKE '%ORIGINAL_PRINCIPAL%'
-                               OR r.def ILIKE '%FLOOR_REGULAR_EXACT_FINAL%'
-                               OR r.def ILIKE '%monthly_interest_amount_cents%'
-                               OR r.def ILIKE '%regular_installment_cents%'
-                            THEN
-                                EXECUTE format('ALTER TABLE loans DROP CONSTRAINT IF EXISTS %I', r.conname);
-                            END IF;
-                        END LOOP;
-                    END $$;
-                """))
-                conn.execute(text("""
-                    CREATE OR REPLACE FUNCTION assert_loan_ledger_integrity(p_loan_id INTEGER)
-                    RETURNS VOID LANGUAGE plpgsql AS $fn$
-                    DECLARE
-                        v_loan RECORD;
-                        v_posted_amount BIGINT;
-                        v_posted_interest BIGINT;
-                        v_posted_principal BIGINT;
-                        v_inst_amt_paid BIGINT;
-                        v_inst_int_paid BIGINT;
-                        v_inst_prin_paid BIGINT;
-                        v_inst_rem_total BIGINT;
-                    BEGIN
-                        SELECT * INTO v_loan FROM loans WHERE id = p_loan_id;
-                        IF NOT FOUND OR v_loan.status NOT IN ('ACTIVE', 'PAID_OFF') THEN
-                            RETURN;
-                        END IF;
-
-                        SELECT
-                            COALESCE(SUM(amount_cents), 0),
-                            COALESCE(SUM(interest_applied_cents), 0),
-                            COALESCE(SUM(principal_applied_cents), 0)
-                        INTO v_posted_amount, v_posted_interest, v_posted_principal
-                        FROM loan_payments
-                        WHERE loan_id = p_loan_id AND status = 'POSTED';
-
-                        SELECT
-                            COALESCE(SUM(amount_paid_cents), 0),
-                            COALESCE(SUM(interest_paid_cents), 0),
-                            COALESCE(SUM(principal_paid_cents), 0),
-                            COALESCE(SUM(remaining_amount_cents), 0)
-                        INTO v_inst_amt_paid, v_inst_int_paid, v_inst_prin_paid, v_inst_rem_total
-                        FROM loan_installments
-                        WHERE loan_id = p_loan_id;
-
-                        IF v_loan.amount_paid_cents != v_posted_amount OR v_loan.amount_paid_cents != v_inst_amt_paid THEN
-                            RAISE EXCEPTION 'Ledger integrity violation on loan %: amount_paid_cents mismatch', p_loan_id;
-                        END IF;
-
-                        IF (v_loan.total_interest_cents - v_loan.remaining_contractual_interest_cents) != v_posted_interest
-                           OR (v_loan.total_interest_cents - v_loan.remaining_contractual_interest_cents) != v_inst_int_paid THEN
-                            RAISE EXCEPTION 'Ledger integrity violation on loan %: interest paid mismatch', p_loan_id;
-                        END IF;
-
-                        IF (v_loan.principal_cents - v_loan.unpaid_principal_cents) != v_posted_principal
-                           OR (v_loan.principal_cents - v_loan.unpaid_principal_cents) != v_inst_prin_paid THEN
-                            RAISE EXCEPTION 'Ledger integrity violation on loan %: principal paid mismatch', p_loan_id;
-                        END IF;
-
-                        IF v_loan.remaining_contract_total_cents != v_inst_rem_total THEN
-                            RAISE EXCEPTION 'Ledger integrity violation on loan %: remaining_contract_total_cents mismatch', p_loan_id;
-                        END IF;
-
-                        IF (v_loan.unpaid_principal_cents + v_loan.remaining_contractual_interest_cents) != v_loan.remaining_contract_total_cents THEN
-                            RAISE EXCEPTION 'Ledger integrity violation on loan %: unpaid principal + remaining interest != remaining total', p_loan_id;
-                        END IF;
-
-                        IF (v_loan.amount_paid_cents + v_loan.remaining_contract_total_cents) != v_loan.total_repayment_cents THEN
-                            RAISE EXCEPTION 'Ledger integrity violation on loan %: amount_paid + remaining_total != total_repayment', p_loan_id;
-                        END IF;
-                    END;
-                    $fn$;
-                """))
-    except Exception as e:
-        logger.error(f"Schema compatibility guard failed: {e}")
-        raise
-
-# --- RATE LIMITING, PHONE NORMALIZATION & ID HELPERS ---
-_RATE_BUCKETS = defaultdict(list)
-
-
-def get_crm_timezone():
-    tz_name = os.getenv("CRM_TIMEZONE", "America/Los_Angeles")
-    try:
-        return ZoneInfo(tz_name)
-    except Exception:
-        return timezone(timedelta(hours=-7))
-
-
-def get_local_day_bounds_utc() -> tuple[datetime, datetime, datetime, date]:
-    crm_tz = get_crm_timezone()
-    now_local = datetime.now(crm_tz)
-    today_local = now_local.date()
-    start_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_local = now_local.replace(hour=23, minute=59, second=59, microsecond=999999)
-    upcoming_end_local = end_local + timedelta(days=7)
-    return (
-        start_local.astimezone(timezone.utc),
-        end_local.astimezone(timezone.utc),
-        upcoming_end_local.astimezone(timezone.utc),
-        today_local
-    )
-
-
-def parse_optional_datetime_utc(raw_value: Optional[str]) -> Optional[datetime]:
-    if not raw_value or not str(raw_value).strip():
-        return None
-    s = str(raw_value).strip()
-    try:
-        if s.endswith("Z"):
-            s = s[:-1] + "+00:00"
-        dt = datetime.fromisoformat(s)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=get_crm_timezone())
-        return dt.astimezone(timezone.utc)
-    except Exception:
-        raise HTTPException(status_code=422, detail=f"Invalid datetime format: {raw_value}")
-
-
-def parse_pesos_to_cents(pesos_val: Optional[float], cents_val: Optional[int]) -> int:
-    if cents_val is not None:
-        if cents_val < 0:
-            raise HTTPException(status_code=422, detail="Requested amount cannot be negative.")
-        return int(cents_val)
-    if pesos_val is not None:
-        try:
-            d = Decimal(str(pesos_val))
-            if d < 0:
-                raise HTTPException(status_code=422, detail="Requested amount cannot be negative.")
-            return int((d * Decimal("100")).quantize(Decimal("1")))
-        except InvalidOperation:
-            raise HTTPException(status_code=422, detail="Invalid monetary amount.")
-    return 0
-
-
-_DEV_FALLBACK_HMAC_SECRET = secrets.token_hex(32)
-_LAST_AUTH_CLEANUP_TS = 0.0
-
-
-def _parse_valid_ip(raw_ip: Optional[str]) -> Optional[str]:
-    if not raw_ip:
-        return None
-    candidate = raw_ip.strip()
-    if not candidate or len(candidate) > 45:
-        return None
-    try:
-        ip_obj = ipaddress.ip_address(candidate)
-        return str(ip_obj)[:45]
-    except ValueError:
-        return None
-
-
-def _is_trusted_proxy_peer(peer_host: Optional[str]) -> bool:
-    parsed = _parse_valid_ip(peer_host)
-    if not parsed:
-        return False
-    trusted_env = {
-        ip.strip() for ip in os.getenv("TRUSTED_PROXY_IPS", "").split(",") if ip.strip()
-    }
-    if parsed in trusted_env:
-        return True
-    if not IS_PRODUCTION:
-        return False
-    ip_obj = ipaddress.ip_address(parsed)
-    return bool(ip_obj.is_private or ip_obj.is_loopback)
-
-
-def get_client_ip(request: Request) -> str:
-    peer_host = request.client.host if (request.client and request.client.host) else None
-    if _is_trusted_proxy_peer(peer_host):
-        # 1. Edge header overwritten by Render/Cloudflare (not spoofable by client list injection)
-        trusted_header = os.getenv("TRUSTED_CLIENT_IP_HEADER", "cf-connecting-ip").strip().lower()
-        if trusted_header:
-            edge_ip = _parse_valid_ip(request.headers.get(trusted_header))
-            if edge_ip:
-                return edge_ip
-
-        # 2. Controlled rightmost non-private hop from X-Forwarded-For
-        forwarded = request.headers.get("x-forwarded-for")
-        if forwarded:
-            hops = [
-                _parse_valid_ip(part)
-                for part in forwarded.split(",")
-                if _parse_valid_ip(part) is not None
-            ]
-            if hops:
-                try:
-                    proxy_hops = max(1, int(os.getenv("RENDER_PROXY_HOPS", "2")))
-                except ValueError:
-                    proxy_hops = 2
-                idx = max(0, len(hops) - proxy_hops)
-                return hops[idx]
-
-    direct_ip = _parse_valid_ip(peer_host)
-    if direct_ip:
-        return direct_ip
-    return "UNKNOWN_CLIENT_IP"
-
-
-def _get_hmac_secrets() -> tuple[bytes, str, Optional[bytes], Optional[str]]:
-    primary_raw = os.getenv("RATE_LIMIT_HMAC_SECRET", "").strip()
-    if IS_PRODUCTION:
-        if len(primary_raw) < 32:
-            raise RuntimeError("RATE_LIMIT_HMAC_SECRET must be set (>= 32 chars) in production.")
-    else:
-        if len(primary_raw) < 16:
-            primary_raw = _DEV_FALLBACK_HMAC_SECRET
-
-    primary_bytes = primary_raw.encode("utf-8")
-    primary_kid = hashlib.sha256(primary_bytes).hexdigest()[:8]
-
-    prev_raw = os.getenv("RATE_LIMIT_HMAC_SECRET_PREVIOUS", "").strip()
-    if prev_raw and len(prev_raw) >= 16 and prev_raw != primary_raw:
-        prev_bytes = prev_raw.encode("utf-8")
-        prev_kid = hashlib.sha256(prev_bytes).hexdigest()[:8]
-        return primary_bytes, primary_kid, prev_bytes, prev_kid
-
-    return primary_bytes, primary_kid, None, None
-
-
-def compute_email_hmac_buckets(operation_prefix: str, raw_email: str) -> tuple[str, Optional[str]]:
-    normalized = (raw_email or "").strip().lower()
-    primary_bytes, primary_kid, prev_bytes, prev_kid = _get_hmac_secrets()
-    primary_digest = hmac.new(primary_bytes, normalized.encode("utf-8"), hashlib.sha256).hexdigest()
-    primary_bucket = f"{operation_prefix}:{primary_kid}:{primary_digest}"
-
-    prev_bucket = None
-    if prev_bytes and prev_kid:
-        prev_digest = hmac.new(prev_bytes, normalized.encode("utf-8"), hashlib.sha256).hexdigest()
-        prev_bucket = f"{operation_prefix}:{prev_kid}:{prev_digest}"
-
-    return primary_bucket, prev_bucket
-
-
-def cleanup_expired_auth_security_records(db: Session, now_utc: datetime, force: bool = False) -> None:
-    global _LAST_AUTH_CLEANUP_TS
-    now_ts = time.time()
-    if not force and (now_ts - _LAST_AUTH_CLEANUP_TS) < 120.0:
-        return
-    if not is_auth_security_schema_ready(db):
-        return
-
-    _LAST_AUTH_CLEANUP_TS = now_ts
-    rl_cutoff = now_utc - timedelta(minutes=5)
-    prt_cutoff = now_utc - timedelta(hours=24)
-
-    try:
-        expired_rl_ids = [
-            row[0] for row in (
-                db.query(RateLimitModel.id)
-                .filter(RateLimitModel.window_expires_at < rl_cutoff)
-                .order_by(RateLimitModel.window_expires_at.asc())
-                .limit(100)
-                .all()
-            )
-        ]
-        if expired_rl_ids:
-            db.query(RateLimitModel).filter(RateLimitModel.id.in_(expired_rl_ids)).delete(synchronize_session=False)
-
-        expired_prt_ids = [
-            row[0] for row in (
-                db.query(PasswordResetTokenModel.id)
-                .filter(PasswordResetTokenModel.expires_at < prt_cutoff)
-                .order_by(PasswordResetTokenModel.expires_at.asc())
-                .limit(100)
-                .all()
-            )
-        ]
-        if expired_prt_ids:
-            db.query(PasswordResetTokenModel).filter(PasswordResetTokenModel.id.in_(expired_prt_ids)).delete(synchronize_session=False)
-
-        if expired_rl_ids or expired_prt_ids:
-            db.commit()
-    except Exception:
-        db.rollback()
-
-
-def consume_rate_limit_atomic(
-    db: Session,
-    bucket_key: str,
-    max_attempts: int,
-    window_seconds: int,
-    previous_bucket_key: Optional[str] = None,
-    now_utc: Optional[datetime] = None
-) -> tuple[bool, int]:
-    current_utc = now_utc or datetime.now(timezone.utc)
-
-    # Transitional fallback ONLY if database is still on revision 007
-    if not is_auth_security_schema_ready(db):
-        allowed = check_rate_limit(bucket_key, max_attempts=max_attempts, window_seconds=window_seconds)
-        return allowed, (0 if allowed else window_seconds)
-
-    cleanup_expired_auth_security_records(db, current_utc)
-    new_expires_at = current_utc + timedelta(seconds=window_seconds)
-
-    upsert_sql = text("""
-        INSERT INTO rate_limits (
-            bucket_key, attempt_count, window_started_at, window_expires_at, updated_at
-        )
-        VALUES (
-            :bucket_key, 1, :now_utc, :new_expires_at, :now_utc
-        )
-        ON CONFLICT (bucket_key) DO UPDATE SET
-            attempt_count = CASE
-                WHEN rate_limits.window_expires_at <= :now_utc THEN 1
-                ELSE rate_limits.attempt_count + 1
-            END,
-            window_started_at = CASE
-                WHEN rate_limits.window_expires_at <= :now_utc THEN :now_utc
-                ELSE rate_limits.window_started_at
-            END,
-            window_expires_at = CASE
-                WHEN rate_limits.window_expires_at <= :now_utc THEN :new_expires_at
-                ELSE rate_limits.window_expires_at
-            END,
-            updated_at = :now_utc
-        RETURNING attempt_count, window_expires_at
-    """)
-
-    row = db.execute(
-        upsert_sql,
-        {
-            "bucket_key": bucket_key[:140],
-            "now_utc": current_utc,
-            "new_expires_at": new_expires_at
-        }
-    ).fetchone()
-
-    attempt_count = int(row[0])
-    raw_expires = row[1]
-    if isinstance(raw_expires, str):
-        exp_str = raw_expires[:-1] + "+00:00" if raw_expires.endswith("Z") else raw_expires
-        expires_dt = datetime.fromisoformat(exp_str)
-    else:
-        expires_dt = raw_expires
-    if expires_dt.tzinfo is None:
-        expires_dt = expires_dt.replace(tzinfo=timezone.utc)
-
-    # Zero-gap HMAC rotation: carry over active attempts from previous key if present
-    if previous_bucket_key:
-        prev_row = (
-            db.query(RateLimitModel.attempt_count, RateLimitModel.window_expires_at)
-            .filter(
-                RateLimitModel.bucket_key == previous_bucket_key[:140],
-                RateLimitModel.window_expires_at > current_utc
-            )
-            .first()
-        )
-        if prev_row:
-            attempt_count += int(prev_row[0])
-
-    db.commit()
-
-    retry_after = max(1, int((expires_dt - current_utc).total_seconds()))
-    if attempt_count > max_attempts:
-        return False, retry_after
-    return True, 0
-
-
-def reset_rate_limit_bucket(db: Session, bucket_key: str, previous_bucket_key: Optional[str] = None) -> None:
-    if not is_auth_security_schema_ready(db):
-        _RATE_BUCKETS.pop(bucket_key, None)
-        if previous_bucket_key:
-            _RATE_BUCKETS.pop(previous_bucket_key, None)
-        return
-    keys = [bucket_key[:140]]
-    if previous_bucket_key:
-        keys.append(previous_bucket_key[:140])
-    db.query(RateLimitModel).filter(RateLimitModel.bucket_key.in_(keys)).delete(synchronize_session=False)
-    db.commit()
-
-
-def check_rate_limit(bucket_key: str, max_attempts: int = 6, window_seconds: int = 300) -> bool:
-    now = time.time()
-    _RATE_BUCKETS[bucket_key] = [t for t in _RATE_BUCKETS[bucket_key] if now - t < window_seconds]
-    if len(_RATE_BUCKETS[bucket_key]) >= max_attempts:
-        return False
-    _RATE_BUCKETS[bucket_key].append(now)
-    return True
-
-
-def mask_email_for_audit(raw_email: str) -> str:
-    clean = (raw_email or "").strip().lower()
-    if "@" not in clean:
-        return "invalid_identifier"
-    local, domain = clean.split("@", 1)
-    masked_local = (local[:2] + "***") if len(local) > 2 else "***"
-    return f"{masked_local}@{domain}"[:60]
-
-
-def normalize_phone_number(raw_phone: Optional[str], required: bool = True) -> Optional[str]:
-    if not raw_phone or not raw_phone.strip():
-        if required:
-            raise HTTPException(status_code=422, detail="Primary phone number is required.")
-        return None
-    digits = re.sub(r"\D", "", raw_phone)
-    if len(digits) == 12 and digits.startswith("52"):
-        digits = digits[2:]
-    elif len(digits) == 13 and digits.startswith("521"):
-        digits = digits[3:]
-    if len(digits) < 10 or len(digits) > 15:
-        raise HTTPException(
-            status_code=422,
-            detail="Phone number must contain between 10 and 15 digits."
-        )
-    return digits
-
-
-def next_tenant_sequence(db: Session, tenant_id: int, entity_type: str) -> int:
-    row = db.execute(
-        text("""
-            INSERT INTO tenant_sequences (tenant_id, entity_type, last_value)
-            VALUES (:tenant_id, :entity_type, 1)
-            ON CONFLICT (tenant_id, entity_type) DO UPDATE
-            SET last_value = tenant_sequences.last_value + 1
-            RETURNING last_value
-        """),
-        {"tenant_id": tenant_id, "entity_type": entity_type}
-    ).fetchone()
-    return int(row[0])
-
-
-def generate_next_customer_number(db: Session, tenant_id: int) -> str:
-    return f"CUST-{next_tenant_sequence(db, tenant_id, 'customers'):05d}"
-
-
-def generate_next_lead_number(db: Session, tenant_id: int) -> str:
-    return f"LD-{next_tenant_sequence(db, tenant_id, 'leads'):05d}"
-
-
-def generate_next_loan_number(db: Session, tenant_id: int) -> str:
-    return f"LN-{next_tenant_sequence(db, tenant_id, 'loans'):05d}"
-
-
-def generate_next_payment_number(db: Session, tenant_id: int) -> str:
-    return f"PAY-{next_tenant_sequence(db, tenant_id, 'loan_payments'):06d}"
-
-# --- REBATE DETAIL (PURE HELPERS) BEGIN ---
-# El detalle del rebate por pronto pago vive en loan_payments.rebate_detail_json (se escribe
-# en la misma transaccion que el pago). NO se lee de la bitacora de auditoria: alla cada valor
-# se convierte a texto y se trunca a 255 caracteres.
-def serialize_rebate_detail(rebated_map: dict) -> Optional[str]:
-    if not rebated_map:
-        return None
-    clean = {}
-    for inst_id, cents in rebated_map.items():
-        inst_id_int = int(inst_id)
-        cents_int = int(cents)
-        if inst_id_int <= 0 or cents_int <= 0:
-            raise ValueError("Invalid rebate detail entry.")
-        clean[str(inst_id_int)] = cents_int
-    return json.dumps({"v": 1, "rebated_installments": clean}, sort_keys=True, separators=(",", ":"))
-
-
-def parse_rebate_detail(raw: Optional[str]) -> dict:
-    # Devuelve {installment_id: centavos}. Si el dato esta corrupto lanza ValueError a proposito:
-    # es preferible abortar la reversa que dejar el prestamo a medio restaurar.
-    if not raw:
-        return {}
-    data = json.loads(raw)
-    if not isinstance(data, dict) or data.get("v") != 1:
-        raise ValueError("Unsupported rebate detail format.")
-    entries = data.get("rebated_installments")
-    if not isinstance(entries, dict) or not entries:
-        raise ValueError("Invalid rebate detail payload.")
-    out = {}
-    for inst_id, cents in entries.items():
-        inst_id_int = int(inst_id)
-        cents_int = int(cents)
-        if inst_id_int <= 0 or cents_int <= 0:
-            raise ValueError("Invalid rebate detail entry.")
-        out[inst_id_int] = cents_int
-    return out
-# --- REBATE DETAIL (PURE HELPERS) END ---
 
 
 class LoanPaymentEngine:
@@ -1081,229 +568,6 @@ def get_db():
         db.close()
 
 
-# --- PYDANTIC SCHEMAS ---
-class UserRegister(BaseModel):
-    email: EmailStr
-    password: str = Field(..., min_length=8, max_length=128)
-    full_name: Optional[str] = Field(default=None, max_length=120)
-    role: str = Field(default="SALES_AGENT")  # minimo privilegio por defecto
-
-
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str = Field(..., min_length=1, max_length=128)
-
-
-class PasswordResetRequest(BaseModel):
-    email: EmailStr
-
-
-class PasswordResetConfirmRequest(BaseModel):
-    token: str = Field(..., min_length=20, max_length=256)
-    new_password: str = Field(..., min_length=8, max_length=128)
-
-
-class UserUpdateByAdmin(BaseModel):
-    full_name: Optional[str] = Field(default=None, max_length=120)
-    role: Optional[str] = None
-    is_active: Optional[bool] = None
-
-
-class UserLanguageUpdateRequest(BaseModel):
-    preferred_language: str = Field(..., min_length=2, max_length=10)
-
-
-class UserChangePasswordRequest(BaseModel):
-    current_password: str = Field(..., min_length=1, max_length=128)
-    new_password: str = Field(..., min_length=8, max_length=128)
-
-
-class PlatformTenantCreateRequest(BaseModel):
-    name: str = Field(..., min_length=2, max_length=160)
-    slug: str = Field(..., min_length=2, max_length=80)
-    legal_name: Optional[str] = Field(default=None, max_length=200)
-    owner_email: EmailStr
-    owner_password: str = Field(..., min_length=8, max_length=128)
-    owner_full_name: Optional[str] = Field(default=None, max_length=120)
-
-
-class PlatformTenantUpdateRequest(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=2, max_length=160)
-    legal_name: Optional[str] = Field(default=None, max_length=200)
-    is_active: Optional[bool] = None
-
-
-class ChatRequest(BaseModel):
-    mensaje: str = Field(..., min_length=1, max_length=1500)
-    conversation_id: Optional[int] = None
-
-
-class CustomerCreateRequest(BaseModel):
-    entity_type: str = Field(default="INDIVIDUAL")
-    status: str = Field(default="ACTIVE")
-    verification_status: str = Field(default="PENDING_VERIFICATION")
-    # INDIVIDUAL: first_name y last_name obligatorios, middle_name opcional.  BUSINESS: full_legal_name (razon social) obligatorio.
-    first_name: Optional[str] = Field(default=None, max_length=50)
-    middle_name: Optional[str] = Field(default=None, max_length=50)
-    last_name: Optional[str] = Field(default=None, max_length=75)
-    full_legal_name: Optional[str] = Field(default=None, min_length=3, max_length=180)
-    trade_name: Optional[str] = Field(default=None, max_length=160)
-    legal_representative_name: Optional[str] = Field(default=None, max_length=160)
-    tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
-    date_of_birth: Optional[date] = None
-    phone_primary: str = Field(..., min_length=10, max_length=25)
-    phone_secondary: Optional[str] = Field(default=None, max_length=25)
-    email: Optional[EmailStr] = None
-    address_full: Optional[str] = Field(default=None, max_length=1000)
-    employment_status: Optional[str] = Field(default=None, max_length=60)
-    employer_or_business_name: Optional[str] = Field(default=None, max_length=160)
-    occupation_or_industry: Optional[str] = Field(default=None, max_length=120)
-    employment_address: Optional[str] = Field(default=None, max_length=1000)
-    owner_user_id: Optional[int] = None
-
-
-class CustomerUpdateRequest(BaseModel):
-    entity_type: Optional[str] = None
-    status: Optional[str] = None
-    verification_status: Optional[str] = None
-    first_name: Optional[str] = Field(default=None, max_length=50)
-    middle_name: Optional[str] = Field(default=None, max_length=50)
-    last_name: Optional[str] = Field(default=None, max_length=75)
-    full_legal_name: Optional[str] = Field(default=None, min_length=3, max_length=180)
-    trade_name: Optional[str] = Field(default=None, max_length=160)
-    legal_representative_name: Optional[str] = Field(default=None, max_length=160)
-    tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
-    date_of_birth: Optional[date] = None
-    phone_primary: Optional[str] = Field(default=None, min_length=10, max_length=25)
-    phone_secondary: Optional[str] = Field(default=None, max_length=25)
-    email: Optional[EmailStr] = None
-    address_full: Optional[str] = Field(default=None, max_length=1000)
-    employment_status: Optional[str] = Field(default=None, max_length=60)
-    employer_or_business_name: Optional[str] = Field(default=None, max_length=160)
-    occupation_or_industry: Optional[str] = Field(default=None, max_length=120)
-    employment_address: Optional[str] = Field(default=None, max_length=1000)
-    owner_user_id: Optional[int] = None
-
-
-class LeadCreateRequest(BaseModel):
-    full_name: str = Field(..., min_length=3, max_length=180)
-    entity_type: str = Field(default="INDIVIDUAL")
-    trade_name: Optional[str] = Field(default=None, max_length=160)
-    legal_representative_name: Optional[str] = Field(default=None, max_length=160)
-    tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
-    phone_primary: str = Field(..., min_length=10, max_length=25)
-    email: Optional[EmailStr] = None
-    source: str = Field(default="DIRECT_OUTREACH")
-    product_interest: str = Field(default="Personal Loan")
-    requested_amount_pesos: Optional[float] = Field(default=None, ge=0)
-    requested_amount_cents: Optional[int] = Field(default=None, ge=0)
-    stage: str = Field(default="NEW")
-    priority: str = Field(default="MEDIUM")
-    next_follow_up_at: Optional[str] = None
-    summary_notes: Optional[str] = Field(default=None, max_length=2000)
-    owner_user_id: Optional[int] = None
-
-
-class LeadUpdateRequest(BaseModel):
-    full_name: Optional[str] = Field(default=None, min_length=3, max_length=180)
-    entity_type: Optional[str] = None
-    trade_name: Optional[str] = Field(default=None, max_length=160)
-    legal_representative_name: Optional[str] = Field(default=None, max_length=160)
-    tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
-    phone_primary: Optional[str] = Field(default=None, min_length=10, max_length=25)
-    email: Optional[EmailStr] = None
-    source: Optional[str] = None
-    product_interest: Optional[str] = None
-    requested_amount_pesos: Optional[float] = Field(default=None, ge=0)
-    requested_amount_cents: Optional[int] = Field(default=None, ge=0)
-    stage: Optional[str] = None
-    priority: Optional[str] = None
-    lost_reason: Optional[str] = Field(default=None, max_length=160)
-    next_follow_up_at: Optional[str] = None
-    clear_next_follow_up: Optional[bool] = False
-    summary_notes: Optional[str] = Field(default=None, max_length=2000)
-    stage_change_note: Optional[str] = Field(default=None, max_length=500)
-    owner_user_id: Optional[int] = None
-
-
-class InteractionCreateRequest(BaseModel):
-    interaction_type: str = Field(default="CALL")
-    direction: str = Field(default="OUTBOUND")
-    visibility: str = Field(default="INTERNAL")
-    outcome: Optional[str] = None
-    content: str = Field(..., min_length=2, max_length=2500)
-    next_follow_up_at: Optional[str] = None
-    clear_next_follow_up: Optional[bool] = False
-
-
-class LeadConvertRequest(BaseModel):
-    entity_type: Optional[str] = None
-    legal_representative_name: Optional[str] = Field(default=None, max_length=160)
-    trade_name: Optional[str] = Field(default=None, max_length=160)
-    tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
-    address_full: Optional[str] = Field(default=None, max_length=1000)
-    notes: Optional[str] = Field(default=None, max_length=500)
-
-
-class LoanCreateRequest(BaseModel):
-    idempotency_key: str = Field(..., min_length=10, max_length=64)
-    customer_id: int
-    source_lead_id: Optional[int] = None
-    product_name: str = Field(default="Personal Loan")
-    principal_pesos: Optional[float] = Field(default=None, gt=0, le=10000000)
-    principal_cents: Optional[int] = Field(default=None, gt=0, le=1000000000)
-    monthly_interest_rate_percent: float = Field(default=10.0, ge=0, le=100.0)
-    assumed_interest_months: int = Field(default=4, ge=1, le=36)
-    term_installments_count: int = Field(default=16, ge=1, le=104)
-    start_date: str  # YYYY-MM-DD
-    first_payment_date: str  # YYYY-MM-DD
-    notes: Optional[str] = Field(default=None, max_length=1000)
-    interest_calculation_method: str = Field(default="FLAT_ORIGINAL_PRINCIPAL")
-
-
-class LoanApproveRequest(BaseModel):
-    approval_notes: Optional[str] = Field(default=None, max_length=1000)
-
-
-class LoanActivateRequest(BaseModel):
-    confirm_disbursement: bool = Field(...)
-    disbursement_method: str = Field(...)
-    disbursement_reference: str = Field(..., min_length=3, max_length=120)
-    disbursed_at: Optional[str] = None  # ISO datetime
-    disbursement_notes: Optional[str] = Field(default=None, max_length=1000)
-
-
-class LoanCancelRequest(BaseModel):
-    cancellation_reason: str = Field(..., min_length=3, max_length=255)
-
-
-class LoanPaymentCreateRequest(BaseModel):
-    idempotency_key: str = Field(..., min_length=10, max_length=64)
-    amount_pesos: Optional[float] = Field(default=None, gt=0)
-    amount_cents: Optional[int] = Field(default=None, gt=0)
-    payment_method: str = Field(...)
-    payment_reference: Optional[str] = Field(default=None, max_length=120)
-    paid_at: Optional[str] = None
-    notes: Optional[str] = Field(default=None, max_length=1000)
-    apply_early_payoff_rebate: bool = Field(default=False)
-
-class LoanPaymentReverseRequest(BaseModel):
-    reversal_reason: str = Field(..., min_length=3, max_length=255)
-
-
-class LoanDefaultRequest(BaseModel):
-    confirm_default: bool = Field(...)
-    default_reason: str = Field(..., min_length=5, max_length=500)
-
-
-class LoanCollectionLogRequest(BaseModel):
-    interaction_type: str = Field(default="CALL")
-    outcome: str = Field(default="FOLLOW_UP_REQUIRED")
-    promised_amount_pesos: Optional[float] = Field(default=None, ge=0)
-    next_follow_up_at: Optional[str] = None
-    notes: str = Field(..., min_length=3, max_length=2000)
-
-
 # --- CSRF PROTECTION WITH AUDIT ---
 def verify_csrf(request: Request, db: Session = Depends(get_db)):
     if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
@@ -1353,7 +617,6 @@ def verify_csrf(request: Request, db: Session = Depends(get_db)):
 
 
 # --- AUTHENTICATION & RBAC DEPENDENCIES ---
-PLATFORM_TENANT_SLUG = "platform"
 
 
 def resolve_tenant_owner_user_id(
@@ -3448,12 +2711,6 @@ def create_customer_interaction(
 
 
 # --- DOCUMENT UPLOAD SECURITY (PURE HELPERS) BEGIN ---
-MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
-ALLOWED_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
-UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
-MULTIPART_OVERHEAD_BYTES = 512 * 1024  # holgura para boundaries y campos del formulario
-
-
 class UploadTooLarge(Exception):
     pass
 
@@ -3498,42 +2755,6 @@ def build_content_disposition(filename: Optional[str], disposition: str = "inlin
     ascii_fallback = unicodedata.normalize("NFKD", safe_name).encode("ascii", "ignore").decode("ascii")
     ascii_fallback = ascii_fallback.replace("\\", "").replace('"', "").strip() or "document"
     return f'{disposition}; filename="{ascii_fallback}"; filename*=UTF-8\'\'{url_quote(safe_name, safe="")}'
-
-
-_DOCUMENT_UPLOAD_PATH_RE = re.compile(r"^/api/customers/\d+/documents/?$")
-
-
-class DocumentUploadSizeGuard:
-    # Middleware ASGI puro: rechaza con 413 las subidas cuyo Content-Length ya excede el limite,
-    # antes de que el servidor reciba y guarde en disco todo el cuerpo.
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, scope, receive, send):
-        if (
-            scope["type"] == "http"
-            and scope["method"] == "POST"
-            and _DOCUMENT_UPLOAD_PATH_RE.match(scope["path"])
-        ):
-            for header_name, header_value in scope.get("headers", []):
-                if header_name == b"content-length":
-                    try:
-                        declared_length = int(header_value)
-                    except ValueError:
-                        declared_length = 0
-                    if declared_length > MAX_FILE_SIZE_BYTES + MULTIPART_OVERHEAD_BYTES:
-                        body = b'{"detail":"File must be between 1 byte and 10 MB."}'
-                        await send({
-                            "type": "http.response.start", "status": 413,
-                            "headers": [
-                                (b"content-type", b"application/json"),
-                                (b"content-length", str(len(body)).encode("ascii")),
-                            ],
-                        })
-                        await send({"type": "http.response.body", "body": body})
-                        return
-                    break
-        await self.app(scope, receive, send)
 # --- DOCUMENT UPLOAD SECURITY (PURE HELPERS) END ---
 
 
