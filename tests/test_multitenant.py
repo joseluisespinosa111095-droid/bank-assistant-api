@@ -427,6 +427,9 @@ def test_02_superadmin_isolation_and_platform_rbac(mt_env):
 
         # OWNER_ADMIN receives 403 on all /api/platform/* and /api/admin/schema-status
         assert client_a.get("/api/platform/tenants").status_code == 403
+        assert client_a.get(f"/api/platform/tenants/{ids['tenant_b_id']}").status_code == 403
+        assert client_a.get(f"/api/platform/tenants/{ids['tenant_b_id']}/users").status_code == 403
+        assert client_a.get("/api/platform/audit-logs").status_code == 403
         assert (
             client_a.post(
                 "/api/platform/tenants",
@@ -461,13 +464,13 @@ def test_02_superadmin_isolation_and_platform_rbac(mt_env):
         # SUPERADMIN cannot suspend platform tenant
         assert client_s.patch(f"/api/platform/tenants/{ids['platform_id']}", headers=hdr_s, json={"is_active": False}).status_code == 400
 
-        # SUPERADMIN has ZERO bypass on normal CRM routes (sees 0 data from default-org / beta / gamma)
-        assert client_s.get("/api/customers").json()["total"] == 0
-        assert client_s.get(f"/api/customers/{cust_a_id}").status_code == 404
-        assert client_s.get("/api/leads").json()["total"] == 0
-        assert client_s.get("/api/loans").json()["total"] == 0
-        assert client_s.get("/api/dashboard/summary").json()["counts"]["customers"] == 0
-        assert [u["email"] for u in client_s.get("/api/admin/users").json()] == ["super@nura.nura.io"]
+        # SUPERADMIN is explicitly blocked (HTTP 403) on all commercial CRM routes (Entregable 3)
+        assert client_s.get("/api/customers").status_code == 403
+        assert client_s.get(f"/api/customers/{cust_a_id}").status_code == 403
+        assert client_s.get("/api/leads").status_code == 403
+        assert client_s.get("/api/loans").status_code == 403
+        assert client_s.get("/api/dashboard/summary").status_code == 403
+        assert client_s.get("/api/admin/users").status_code == 403
     finally:
         client_a.close()
         client_s.close()
