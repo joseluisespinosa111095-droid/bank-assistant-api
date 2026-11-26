@@ -179,48 +179,69 @@
                     </div>
                     <div>
                         <span class="text-base font-extrabold tracking-tight text-white block leading-none">NURA CRM</span>
-                        <span class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mt-1 block">Credit Operations</span>
+                        <span id="sidebar-brand-subtitle" class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mt-1 block truncate max-w-[160px]">Credit Operations</span>
                     </div>
                 </div>
 
                 <div class="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
-                    <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Core CRM Modules</p>
+                    <div id="sidebar-commercial-nav" class="space-y-1">
+                        <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Core CRM Modules</p>
 
-                    <button type="button" onclick="switchTab('home')" id="side-btn-home" class="side-nav-item active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-                        <span>1. Dashboard</span>
-                    </button>
+                        <button type="button" onclick="switchTab('home')" id="side-btn-home" class="side-nav-item active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                            <span>1. Dashboard</span>
+                        </button>
 
-                    <button type="button" onclick="switchTab('leads')" id="side-btn-leads" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                        <span>2. Leads & Pipeline</span>
-                    </button>
+                        <button type="button" onclick="switchTab('leads')" id="side-btn-leads" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                            <span>2. Leads & Pipeline</span>
+                        </button>
 
-                    <button type="button" onclick="switchTab('customers')" id="side-btn-customers" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                        <span>3. Customers</span>
-                    </button>
+                        <button type="button" onclick="switchTab('customers')" id="side-btn-customers" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <span>3. Customers</span>
+                        </button>
 
-                    <button type="button" onclick="switchTab('loans')" id="side-btn-loans" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-                        <span>4. Loans</span>
-                    </button>
+                        <button type="button" onclick="switchTab('loans')" id="side-btn-loans" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                            <span>4. Loans</span>
+                        </button>
 
-                    <button type="button" onclick="switchTab('simulator')" id="side-btn-simulator" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
-                        <span>5. Loan Simulator</span>
-                    </button>
+                        <button type="button" onclick="switchTab('simulator')" id="side-btn-simulator" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
+                            <span>5. Loan Simulator</span>
+                        </button>
 
-                    <button type="button" onclick="switchTab('perfil')" id="side-btn-perfil" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <span>6. Profile & Team</span>
-                    </button>
+                        <button type="button" onclick="switchTab('perfil')" id="side-btn-perfil" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <span>6. Profile & Team</span>
+                        </button>
 
-                    <div class="pt-4 mt-4 border-t border-slate-800/80">
-                        <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">AI Advisory Copilot</p>
-                        <button type="button" onclick="switchTab('ia')" id="side-btn-ia" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
-                            <svg class="w-4 h-4 shrink-0 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                            <span>NURA Assistant</span>
+                        <div class="pt-4 mt-4 border-t border-slate-800/80">
+                            <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">AI Advisory Copilot</p>
+                            <button type="button" onclick="switchTab('ia')" id="side-btn-ia" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                                <svg class="w-4 h-4 shrink-0 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                                <span>NURA Assistant</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="sidebar-platform-nav" class="hidden space-y-1">
+                        <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-indigo-400 mb-2">NURA Platform</p>
+
+                        <button type="button" onclick="switchTab('platform-orgs')" id="side-btn-platform-orgs" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9h.01"/><path d="M9 13h.01"/><path d="M9 17h.01"/></svg>
+                            <span>Organizations</span>
+                        </button>
+
+                        <button type="button" onclick="switchTab('platform-audit')" id="side-btn-platform-audit" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                            <span>Platform Audit</span>
+                        </button>
+
+                        <button type="button" onclick="switchTab('perfil')" id="side-btn-platform-account" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <span>Account</span>
                         </button>
                     </div>
                 </div>
@@ -253,7 +274,7 @@
                             </div>
                             <div class="min-w-0">
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 hidden sm:inline">NURA CRM /</span>
+                                    <span id="topbar-context-label" class="text-[10px] font-bold uppercase tracking-widest text-slate-400 hidden sm:inline">NURA CRM /</span>
                                     <h2 id="topbar-section-title" class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">Dashboard</h2>
                                     <span id="header-role-badge" class="bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">TEAM</span>
                                 </div>
@@ -262,19 +283,21 @@
                         </div>
 
                         <div class="flex items-center gap-2 shrink-0">
-                            <button type="button" id="top-btn-new-lead" onclick="openLeadFormModal('create')" class="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition shadow-sm">
-                                <span>+ New Lead</span>
-                            </button>
-                            <button type="button" id="top-btn-new-customer" onclick="openCustomerFormModal('create')" class="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs transition">
-                                <span>+ New Customer</span>
-                            </button>
-                            <button type="button" onclick="switchTab('simulator')" class="hidden md:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
-                                <span>Loan Simulator</span>
-                            </button>
-                            <button type="button" onclick="switchTab('ia')" class="py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs flex items-center gap-1.5 transition">
-                                <span class="hidden sm:inline">Nura Assistant</span>
-                                <span class="sm:hidden">Nura</span>
-                            </button>
+                            <div id="topbar-commercial-actions" class="flex items-center gap-2">
+                                <button type="button" id="top-btn-new-lead" onclick="openLeadFormModal('create')" class="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition shadow-sm">
+                                    <span>+ New Lead</span>
+                                </button>
+                                <button type="button" id="top-btn-new-customer" onclick="openCustomerFormModal('create')" class="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs transition">
+                                    <span>+ New Customer</span>
+                                </button>
+                                <button type="button" onclick="switchTab('simulator')" class="hidden md:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
+                                    <span>Loan Simulator</span>
+                                </button>
+                                <button type="button" onclick="switchTab('ia')" class="py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs flex items-center gap-1.5 transition">
+                                    <span class="hidden sm:inline">Nura Assistant</span>
+                                    <span class="sm:hidden">Nura</span>
+                                </button>
+                            </div>
                             <button type="button" onclick="cerrarSesion()" class="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition shadow-sm text-xs font-semibold px-3 flex items-center gap-1.5">
                                 <span class="hidden sm:inline">Sign Out</span>
                                 <span class="sm:hidden">Exit</span>
@@ -293,6 +316,11 @@
 
                 <!-- MAIN WORKSPACE CONTAINER -->
                 <main class="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-5 lg:pt-7 flex-1">
+                    <!-- PLATFORM CONSOLE FEEDBACK NOTICE -->
+                    <div id="platform-notice-banner" class="hidden mb-4 rounded-2xl border px-4 py-3 text-xs font-semibold flex items-center justify-between gap-3 shadow-sm no-print" role="status" aria-live="polite">
+                        <span id="platform-notice-text" class="leading-relaxed"></span>
+                        <button type="button" onclick="hidePlatformNotice()" class="shrink-0 text-current opacity-70 hover:opacity-100 font-bold px-1.5 py-0.5 rounded-lg" aria-label="Dismiss">✕</button>
+                    </div>
 
                     <!-- ========================================================= -->
                     <!-- MODULE 1: DASHBOARD (#tab-home)                           -->
@@ -1834,8 +1862,8 @@
                     <!-- ========================================================= -->
                     <section id="tab-perfil" class="tab-content space-y-5 pb-4">
                         <div>
-                            <h1 class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Profile, Team & Security Audit</h1>
-                            <p class="text-xs text-slate-500 mt-0.5">Manage your personal details, team member accounts, RBAC roles, and system audit logs</p>
+                            <h1 id="profile-section-title" class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Profile, Team & Security Audit</h1>
+                            <p id="profile-section-subtitle" class="text-xs text-slate-500 mt-0.5">Manage your personal details, team member accounts, RBAC roles, and system audit logs</p>
                         </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -1853,13 +1881,6 @@
                                     </div>
                                 </div>
 
-                                <div id="bootstrap-banner" class="hidden fintech-card p-4 bg-amber-50 border border-amber-200 space-y-2.5">
-                                    <span class="text-xs font-bold text-amber-900">Owner Admin Activation</span>
-                                    <button type="button" onclick="openBootstrapModal()" class="w-full py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition">
-                                        Activate Owner Admin
-                                    </button>
-                                </div>
-
                                 <button type="button" onclick="cerrarSesion()" class="w-full py-3.5 px-4 rounded-2xl bg-white border border-red-200/80 text-xs font-bold text-red-600 hover:bg-red-50 transition flex items-center justify-center gap-2 shadow-sm">
                                     <span>Secure Sign Out</span>
                                 </button>
@@ -1868,7 +1889,7 @@
                             <div class="lg:col-span-8 space-y-5">
                                 <div class="fintech-card bg-white overflow-hidden">
                                     <div class="bg-slate-50/80 px-5 py-3 border-b border-slate-100">
-                                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account, Team & Security Administration</span>
+                                        <span id="profile-admin-card-header" class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account, Team & Security Administration</span>
                                     </div>
                                     <div class="divide-y divide-slate-100">
                                         <button type="button" id="btn-team-management" onclick="openTeamModal()" class="hidden w-full p-4 sm:px-5 flex justify-between items-center hover:bg-slate-50 transition text-left">
@@ -1942,6 +1963,62 @@
                                     <input type="text" id="chat-input" placeholder="Message Nura..." onkeypress="handleKeyPress(event)" class="flex-1 fintech-input rounded-xl px-4 py-3 text-xs sm:text-[13px]">
                                     <button type="button" onclick="enviarMensajeChat()" id="send-chat-btn" class="btn-primary px-5 rounded-xl text-xs">Send</button>
                                 </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ========================================================= -->
+                    <!-- PLATFORM CONSOLE: ORGANIZATIONS (#tab-platform-orgs)      -->
+                    <!-- ========================================================= -->
+                    <section id="tab-platform-orgs" class="tab-content space-y-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <h1 class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Organizations</h1>
+                                <p class="text-xs text-slate-500 mt-0.5">Manage NURA SaaS tenant organizations, onboarding, and operational status</p>
+                            </div>
+                            <div id="platform-orgs-toolbar" class="flex items-center gap-2 flex-wrap">
+                                <button type="button" id="btn-platform-new-org" disabled class="btn-primary py-2.5 px-4 rounded-xl text-xs font-semibold shadow-sm opacity-60 cursor-not-allowed">
+                                    + New Organization
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="platform-orgs-content" class="fintech-card bg-white p-6">
+                            <div class="flex items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                                <div>
+                                    <h2 class="text-sm font-bold text-slate-900">Tenant Directory</h2>
+                                    <p class="text-xs text-slate-500 mt-0.5">Organization directory, onboarding workflow, and status controls will load here.</p>
+                                </div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">Platform Scope</span>
+                            </div>
+                            <div class="py-10 text-center text-xs text-slate-500">
+                                Platform Console shell ready. Organization table and lifecycle actions are scheduled for Block 3.
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ========================================================= -->
+                    <!-- PLATFORM CONSOLE: PLATFORM AUDIT (#tab-platform-audit)    -->
+                    <!-- ========================================================= -->
+                    <section id="tab-platform-audit" class="tab-content space-y-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <h1 class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Platform Audit</h1>
+                                <p class="text-xs text-slate-500 mt-0.5">Immutable platform-scope administrative and security audit trail</p>
+                            </div>
+                            <div id="platform-audit-toolbar" class="flex items-center gap-2 flex-wrap"></div>
+                        </div>
+
+                        <div id="platform-audit-content" class="fintech-card bg-white p-6">
+                            <div class="flex items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                                <div>
+                                    <h2 class="text-sm font-bold text-slate-900">Platform Security Events</h2>
+                                    <p class="text-xs text-slate-500 mt-0.5">Platform-scope events from <code>/api/platform/audit-logs</code> will load here.</p>
+                                </div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">Append-Only</span>
+                            </div>
+                            <div class="py-10 text-center text-xs text-slate-500">
+                                Platform Audit shell ready. Event filters and table are scheduled for Block 4.
                             </div>
                         </div>
                     </section>
@@ -3139,19 +3216,6 @@
             </div>
         </div>
 
-        <!-- BOOTSTRAP OWNER ADMIN MODAL -->
-        <div id="bootstrap-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
-            <div class="bg-white rounded-3xl p-6 w-full max-w-[380px] shadow-2xl space-y-4">
-                <h3 class="font-bold text-slate-900 text-sm">Activate Owner Admin</h3>
-                <input type="password" id="bootstrap-secret-input" class="w-full fintech-input rounded-xl p-3 text-xs" placeholder="Enter bootstrap secret">
-                <div id="bootstrap-error" class="hidden p-2.5 bg-red-50 text-red-700 rounded-xl text-xs"></div>
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" onclick="closeBootstrapModal()" class="py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold">Cancel</button>
-                    <button type="button" id="bootstrap-submit-btn" onclick="submitBootstrapAdmin()" class="btn-primary py-2.5 rounded-xl text-xs font-semibold">Activate</button>
-                </div>
-            </div>
-        </div>
-
         <!-- TEAM & ACCESS MANAGEMENT MODAL -->
         <div id="team-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
             <div class="bg-white rounded-3xl p-6 w-full max-w-[440px] max-h-[85vh] overflow-y-auto shadow-2xl space-y-4">
@@ -3201,7 +3265,7 @@
         </div>
 
         <!-- MOBILE & TABLET 6-MODULE BOTTOM NAVIGATION BAR (lg:hidden) -->
-        <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-1.5 grid grid-cols-6 gap-0.5 items-center z-50 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] pb-[calc(8px+env(safe-area-inset-bottom))] no-print">
+        <nav id="mobile-commercial-nav" class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-1.5 grid grid-cols-6 gap-0.5 items-center z-50 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] pb-[calc(8px+env(safe-area-inset-bottom))] no-print">
             <button type="button" onclick="switchTab('home')" id="btn-home" class="nav-item active flex flex-col items-center gap-1 py-1">
                 <span class="text-[9px] font-semibold truncate">Dashboard</span>
             </button>
@@ -3219,6 +3283,19 @@
             </button>
             <button type="button" onclick="switchTab('perfil')" id="btn-perfil" class="nav-item flex flex-col items-center gap-1 py-1">
                 <span class="text-[9px] font-semibold truncate">Profile</span>
+            </button>
+        </nav>
+
+        <!-- MOBILE & TABLET PLATFORM 3-MODULE BOTTOM NAVIGATION BAR (lg:hidden) -->
+        <nav id="mobile-platform-nav" class="hidden lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-2 grid grid-cols-3 gap-1 items-center z-50 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] pb-[calc(8px+env(safe-area-inset-bottom))] no-print">
+            <button type="button" onclick="switchTab('platform-orgs')" id="btn-platform-orgs" class="nav-item flex flex-col items-center gap-1 py-1">
+                <span class="text-[10px] font-semibold truncate">Organizations</span>
+            </button>
+            <button type="button" onclick="switchTab('platform-audit')" id="btn-platform-audit" class="nav-item flex flex-col items-center gap-1 py-1">
+                <span class="text-[10px] font-semibold truncate">Audit</span>
+            </button>
+            <button type="button" onclick="switchTab('perfil')" id="btn-platform-account" class="nav-item flex flex-col items-center gap-1 py-1">
+                <span class="text-[10px] font-semibold truncate">Account</span>
             </button>
         </nav>
     </div>
@@ -3407,6 +3484,9 @@
                     "section.simulator": "Loan Simulator",
                     "section.perfil": "Profile & Team",
                     "section.ia": "NURA Assistant",
+                    "section.platform-orgs": "Organizations",
+                    "section.platform-audit": "Platform Audit",
+                    "section.platform-account": "Account",
                     "nav.credit_ops": "Credit Operations",
                     "nav.core_modules": "Core CRM Modules",
                     "nav.side.home": "1. Dashboard",
@@ -3960,8 +4040,6 @@
                     // --- Module 6: Profile & Team (Including Language & Regional Preferences) ---
                     "profile.title": "Profile, Team & Security Audit",
                     "profile.subtitle": "Manage your personal details, team member accounts, RBAC roles, and system audit logs",
-                    "profile.bootstrap_title": "Owner Admin Activation",
-                    "profile.bootstrap_btn": "Activate Owner Admin",
                     "profile.signout_btn": "Secure Sign Out",
                     "profile.admin_header": "Account, Team & Security Administration",
                     "profile.team.title": "Team & Access Management",
@@ -4034,6 +4112,9 @@
                     "section.simulator": "Simulador de Crédito",
                     "section.perfil": "Perfil y Equipo",
                     "section.ia": "Asistente NURA",
+                    "section.platform-orgs": "Organizaciones",
+                    "section.platform-audit": "Auditoría de Plataforma",
+                    "section.platform-account": "Cuenta",
                     "nav.credit_ops": "Operaciones de Crédito",
                     "nav.core_modules": "Módulos Principales CRM",
                     "nav.side.home": "1. Panel Principal",
@@ -4587,8 +4668,6 @@
                     // --- Module 6: Profile & Team (Including Language & Regional Preferences) ---
                     "profile.title": "Perfil, Equipo y Auditoría de Seguridad",
                     "profile.subtitle": "Administra tus datos personales, cuentas del equipo, roles RBAC y bitácoras de auditoría",
-                    "profile.bootstrap_title": "Activación de Socio Administrador",
-                    "profile.bootstrap_btn": "Activar Socio Administrador",
                     "profile.signout_btn": "Cerrar Sesión de Forma Segura",
                     "profile.admin_header": "Administración de Cuenta, Equipo y Seguridad",
                     "profile.team.title": "Gestión de Equipo y Accesos",
@@ -4797,7 +4876,6 @@
                 "State the reason for reversing this payment (min. 3 characters, e.g., Returned check, Duplicate entry, Incorrect amount)...": "Indica el motivo para revertir este pago (mín. 3 caracteres, ej. Cheque devuelto, Captura duplicada, Monto incorrecto)...",
                 "e.g., Unreachable after 90 days past due, borrower refusal to pay, legal recovery initiated...": "ej. Ilocalizable tras 90 días de mora, negativa de pago, recuperación legal iniciada...",
                 "Record agreement terms, borrower justification, promise date or reminder note...": "Registra términos del convenio, justificación del acreditado, fecha promesa o nota...",
-                "Enter bootstrap secret": "Ingresa la clave secreta de activación",
                 "Full Name": "Nombre Completo",
                 "Email Address": "Correo Electrónico",
                 "Password (min. 8 characters)": "Contraseña (mín. 8 caracteres)"
@@ -5595,15 +5673,247 @@
         let leadSearchTimer = null;
         let activeCallListBucket = 'TODAY';
 
+        const PLATFORM_TABS = new Set(['platform-orgs', 'platform-audit', 'perfil']);
+        const COMMERCIAL_TABS = new Set(['home', 'leads', 'customers', 'loans', 'simulator', 'perfil', 'ia']);
+
+        function isPlatformSuperadmin(user) {
+            return Boolean(user && user.is_superadmin === true && user.tenant_slug === 'platform');
+        }
+
         const SECTION_TITLES = {
             get home() { return t('section.home'); },
             get leads() { return t('section.leads'); },
             get customers() { return t('section.customers'); },
             get loans() { return t('section.loans'); },
             get simulator() { return t('section.simulator'); },
-            get perfil() { return t('section.perfil'); },
-            get ia() { return t('section.ia'); }
+            get perfil() { return isPlatformSuperadmin(currentUser) ? t('section.platform-account') : t('section.perfil'); },
+            get ia() { return t('section.ia'); },
+            get 'platform-orgs'() { return t('section.platform-orgs'); },
+            get 'platform-audit'() { return t('section.platform-audit'); }
         };
+
+        let platformNoticeTimer = null;
+
+        function hidePlatformNotice() {
+            if (platformNoticeTimer) {
+                clearTimeout(platformNoticeTimer);
+                platformNoticeTimer = null;
+            }
+            const banner = document.getElementById('platform-notice-banner');
+            if (banner) banner.classList.add('hidden');
+        }
+
+        function showPlatformNotice(type, message) {
+            const banner = document.getElementById('platform-notice-banner');
+            const textEl = document.getElementById('platform-notice-text');
+            if (!banner || !textEl) return;
+
+            if (platformNoticeTimer) {
+                clearTimeout(platformNoticeTimer);
+                platformNoticeTimer = null;
+            }
+
+            const styles = {
+                success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+                error: 'bg-red-50 border-red-200 text-red-800',
+                info: 'bg-blue-50 border-blue-200 text-blue-800',
+                warning: 'bg-amber-50 border-amber-200 text-amber-800'
+            };
+            const tone = styles[type] || styles.info;
+
+            banner.className = `mb-4 rounded-2xl border px-4 py-3 text-xs font-semibold flex items-center justify-between gap-3 shadow-sm no-print ${tone}`;
+            textEl.innerText = String(message || '');
+            banner.classList.remove('hidden');
+
+            if (type === 'success' || type === 'info') {
+                platformNoticeTimer = setTimeout(() => hidePlatformNotice(), 6000);
+            }
+        }
+
+        async function platformFetch(url, options = {}) {
+            const method = String(options.method || 'GET').toUpperCase();
+            const isMutating = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method);
+            const headers = Object.assign({ 'Accept': 'application/json' }, options.headers || {});
+
+            let body = options.body;
+            if (isMutating) {
+                const csrfToken = getCookie('csrf_token');
+                if (csrfToken && !headers['X-CSRF-Token']) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+                if (body !== undefined && body !== null && !(body instanceof FormData)) {
+                    if (typeof body !== 'string') {
+                        body = JSON.stringify(body);
+                    }
+                    if (!headers['Content-Type']) {
+                        headers['Content-Type'] = 'application/json';
+                    }
+                }
+            }
+
+            const fetchOptions = Object.assign({}, options, {
+                method,
+                credentials: 'same-origin',
+                headers
+            });
+            if (body !== undefined) {
+                fetchOptions.body = body;
+            }
+
+            let res;
+            try {
+                res = await fetch(url, fetchOptions);
+            } catch (networkErr) {
+                const err = new Error('Network error communicating with NURA Platform.');
+                err.status = 0;
+                err.detail = networkErr?.message || 'Network error';
+                throw err;
+            }
+
+            let parsed = null;
+            if (res.status !== 204) {
+                const rawText = await res.text();
+                if (rawText) {
+                    try {
+                        parsed = JSON.parse(rawText);
+                    } catch (_) {
+                        parsed = { detail: rawText };
+                    }
+                }
+            }
+
+            if (res.status === 401) {
+                currentUser = null;
+                mostrarAuthView();
+                const err = new Error('Session expired. Please sign in again.');
+                err.status = 401;
+                err.detail = (parsed && parsed.detail) || 'Session expired';
+                throw err;
+            }
+
+            if (!res.ok) {
+                const detail = parsed ? (parsed.detail ?? parsed.message ?? parsed) : null;
+                let message = '';
+                if (typeof detail === 'string') {
+                    message = detail;
+                } else if (Array.isArray(detail)) {
+                    message = detail.map(d => (d && d.msg ? d.msg : String(d))).join('; ');
+                } else if (detail && typeof detail === 'object') {
+                    message = JSON.stringify(detail);
+                } else {
+                    const fallbackByStatus = {
+                        403: 'Access denied: platform superadmin privileges required.',
+                        404: 'Requested platform resource was not found.',
+                        409: 'Conflict: resource already exists or cannot be updated.',
+                        422: 'Validation error: please review the submitted fields.',
+                        500: 'Internal server error while processing platform request.'
+                    };
+                    message = fallbackByStatus[res.status] || `Request failed (${res.status})`;
+                }
+                const err = new Error(message);
+                err.status = res.status;
+                err.detail = detail;
+                throw err;
+            }
+
+            return parsed;
+        }
+
+        function applyShellMode(platformMode, user) {
+            hidePlatformNotice();
+
+            const sideCommercial = document.getElementById('sidebar-commercial-nav');
+            const sidePlatform = document.getElementById('sidebar-platform-nav');
+            const topbarCommercial = document.getElementById('topbar-commercial-actions');
+            const mobileCommercial = document.getElementById('mobile-commercial-nav');
+            const mobilePlatform = document.getElementById('mobile-platform-nav');
+            const floatingBtn = document.getElementById('floating-executive-btn');
+            const sideSubtitle = document.getElementById('sidebar-brand-subtitle');
+            const topbarContext = document.getElementById('topbar-context-label');
+            const headerRoleBadge = document.getElementById('header-role-badge');
+            const profileRoleBadge = document.getElementById('profile-role-badge');
+            const profileTitle = document.getElementById('profile-section-title');
+            const profileSubtitle = document.getElementById('profile-section-subtitle');
+            const profileAdminHeader = document.getElementById('profile-admin-card-header');
+            const teamBtn = document.getElementById('btn-team-management');
+            const auditBtn = document.getElementById('btn-audit-logs');
+
+            sideCommercial?.classList.toggle('hidden', platformMode);
+            sidePlatform?.classList.toggle('hidden', !platformMode);
+            topbarCommercial?.classList.toggle('hidden', platformMode);
+            mobileCommercial?.classList.toggle('hidden', platformMode);
+            mobilePlatform?.classList.toggle('hidden', !platformMode);
+            floatingBtn?.classList.toggle('hidden', platformMode);
+
+            if (platformMode) {
+                const platformName = (user && user.tenant_name) ? user.tenant_name : 'NURA Platform';
+                if (sideSubtitle) sideSubtitle.innerText = platformName;
+                if (topbarContext) topbarContext.innerText = `${platformName} /`;
+                if (headerRoleBadge) {
+                    headerRoleBadge.innerText = 'SUPERADMIN';
+                    headerRoleBadge.className = 'bg-indigo-50 text-indigo-700 border border-indigo-200 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase';
+                }
+                if (profileRoleBadge) {
+                    profileRoleBadge.innerText = 'SUPERADMIN';
+                    profileRoleBadge.className = 'bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-[10px] font-semibold px-2.5 py-1 rounded-full shrink-0';
+                }
+                if (profileTitle) profileTitle.innerText = (NuraI18n.currentLang === 'es') ? 'Cuenta y Seguridad' : 'Account & Security';
+                if (profileSubtitle) profileSubtitle.innerText = (NuraI18n.currentLang === 'es') ? 'Administra tu información personal, idioma y contraseña de acceso' : 'Manage your personal details, language preferences, and account password';
+                if (profileAdminHeader) profileAdminHeader.innerText = (NuraI18n.currentLang === 'es') ? 'Cuenta de Plataforma y Seguridad' : 'Platform Account & Security';
+                teamBtn?.classList.add('hidden');
+                auditBtn?.classList.add('hidden');
+            } else {
+                const orgName = (user && user.tenant_name) ? user.tenant_name : '';
+                if (sideSubtitle) sideSubtitle.innerText = orgName || 'Credit Operations';
+                if (topbarContext) topbarContext.innerText = orgName ? `${orgName} /` : 'NURA CRM /';
+                if (headerRoleBadge) {
+                    headerRoleBadge.innerText = user ? user.role : 'TEAM';
+                    headerRoleBadge.className = 'bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase';
+                }
+                if (profileRoleBadge) {
+                    profileRoleBadge.innerText = user ? user.role : 'Active';
+                    profileRoleBadge.className = 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10px] font-semibold px-2.5 py-1 rounded-full shrink-0';
+                }
+                if (profileTitle) profileTitle.innerText = t('profile.title');
+                if (profileSubtitle) profileSubtitle.innerText = t('profile.subtitle');
+                if (profileAdminHeader) profileAdminHeader.innerText = t('profile.admin_header');
+
+                const isOwnerAdmin = Boolean(user && user.role === 'OWNER_ADMIN');
+                teamBtn?.classList.toggle('hidden', !isOwnerAdmin);
+                auditBtn?.classList.toggle('hidden', !isOwnerAdmin);
+            }
+        }
+
+        function resetShellMode() {
+            hidePlatformNotice();
+            document.getElementById('sidebar-platform-nav')?.classList.add('hidden');
+            document.getElementById('mobile-platform-nav')?.classList.add('hidden');
+            document.getElementById('sidebar-commercial-nav')?.classList.remove('hidden');
+            document.getElementById('topbar-commercial-actions')?.classList.remove('hidden');
+            document.getElementById('mobile-commercial-nav')?.classList.remove('hidden');
+            document.getElementById('floating-executive-btn')?.classList.remove('hidden');
+            document.getElementById('btn-team-management')?.classList.add('hidden');
+            document.getElementById('btn-audit-logs')?.classList.add('hidden');
+
+            const sideSubtitle = document.getElementById('sidebar-brand-subtitle');
+            const topbarContext = document.getElementById('topbar-context-label');
+            const headerRoleBadge = document.getElementById('header-role-badge');
+            const profileRoleBadge = document.getElementById('profile-role-badge');
+            if (sideSubtitle) sideSubtitle.innerText = 'Credit Operations';
+            if (topbarContext) topbarContext.innerText = 'NURA CRM /';
+            if (headerRoleBadge) {
+                headerRoleBadge.innerText = 'TEAM';
+                headerRoleBadge.className = 'bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase';
+            }
+            if (profileRoleBadge) {
+                profileRoleBadge.innerText = 'Active';
+                profileRoleBadge.className = 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10px] font-semibold px-2.5 py-1 rounded-full shrink-0';
+            }
+
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.side-nav-item').forEach(el => el.classList.remove('active'));
+        }
 
         function escapeHtml(str) {
             return String(str ?? '')
@@ -5755,7 +6065,6 @@
 
                     document.getElementById('user-email-display').innerText = data.email;
                     document.getElementById('user-initials').innerText = initials;
-                    document.getElementById('header-role-badge').innerText = data.role;
 
                     const sideInitials = document.getElementById('sidebar-user-initials');
                     const sideName = document.getElementById('sidebar-user-name');
@@ -5767,34 +6076,29 @@
                     document.getElementById('profile-user-initials').innerText = initials;
                     document.getElementById('profile-user-name').innerText = displayName;
                     document.getElementById('profile-user-email').innerText = data.email;
-                    document.getElementById('profile-role-badge').innerText = data.role;
 
-                    const bootstrapBanner = document.getElementById('bootstrap-banner');
-                    const teamBtn = document.getElementById('btn-team-management');
-                    const auditBtn = document.getElementById('btn-audit-logs');
-
-                    if (data.role === 'OWNER_ADMIN') {
-                        bootstrapBanner.classList.add('hidden');
-                        teamBtn.classList.remove('hidden');
-                        auditBtn?.classList.remove('hidden');
-                    } else {
-                        bootstrapBanner.classList.remove('hidden');
-                        teamBtn.classList.add('hidden');
-                        auditBtn?.classList.add('hidden');
-                    }
-
-                    const canWriteOrigination = ['OWNER_ADMIN', 'SALES_AGENT', 'CREDIT_ADVISOR'].includes(data.role);
-                    document.getElementById('btn-new-customer')?.classList.toggle('hidden', !canWriteOrigination);
-                    document.getElementById('btn-edit-customer')?.classList.toggle('hidden', !canWriteOrigination);
-                    document.getElementById('btn-new-lead')?.classList.toggle('hidden', !canWriteOrigination);
-                    document.getElementById('top-btn-new-lead')?.classList.toggle('hidden', !canWriteOrigination);
-                    document.getElementById('top-btn-new-customer')?.classList.toggle('hidden', !canWriteOrigination);
-                    document.getElementById('btn-new-loan')?.classList.toggle('hidden', !canWriteOrigination);
-                    document.getElementById('btn-customer-new-loan')?.classList.toggle('hidden', !canWriteOrigination);
+                    const platformMode = isPlatformSuperadmin(data);
+                    applyShellMode(platformMode, data);
 
                     document.getElementById('auth-view').classList.add('hidden');
                     document.getElementById('app-view').classList.remove('hidden');
-                    await Promise.all([loadDashboardSummary(), loadLoans(1), cargarConversaciones(), loadCustomers(1), loadLeads(1)]);
+
+                    if (platformMode) {
+                        // SUPERADMIN Platform Console: zero commercial API calls
+                        switchTab('platform-orgs');
+                    } else {
+                        const canWriteOrigination = ['OWNER_ADMIN', 'SALES_AGENT', 'CREDIT_ADVISOR'].includes(data.role);
+                        document.getElementById('btn-new-customer')?.classList.toggle('hidden', !canWriteOrigination);
+                        document.getElementById('btn-edit-customer')?.classList.toggle('hidden', !canWriteOrigination);
+                        document.getElementById('btn-new-lead')?.classList.toggle('hidden', !canWriteOrigination);
+                        document.getElementById('top-btn-new-lead')?.classList.toggle('hidden', !canWriteOrigination);
+                        document.getElementById('top-btn-new-customer')?.classList.toggle('hidden', !canWriteOrigination);
+                        document.getElementById('btn-new-loan')?.classList.toggle('hidden', !canWriteOrigination);
+                        document.getElementById('btn-customer-new-loan')?.classList.toggle('hidden', !canWriteOrigination);
+
+                        switchTab('home');
+                        await Promise.all([loadDashboardSummary(), loadLoans(1), cargarConversaciones(), loadCustomers(1), loadLeads(1)]);
+                    }
                 } else {
                     mostrarAuthView();
                 }
@@ -5804,6 +6108,8 @@
         }
 
         function mostrarAuthView() {
+            currentUser = null;
+            resetShellMode();
             if (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang !== 'en') {
                 NuraI18n.setLanguage('en', { persist: false });
             }
@@ -6999,6 +7305,14 @@ async function loadDashboardSummary() {
            5. NAVIGATION & SUB-VIEWS
            ========================================================================= */
         function switchTab(tabId) {
+            const platformMode = isPlatformSuperadmin(currentUser);
+            if (platformMode && !PLATFORM_TABS.has(tabId)) {
+                return;
+            }
+            if (!platformMode && String(tabId).startsWith('platform-')) {
+                return;
+            }
+
             const targetTab = document.getElementById('tab-' + tabId);
             if (!targetTab) return;
 
@@ -7007,8 +7321,13 @@ async function loadDashboardSummary() {
             document.querySelectorAll('.side-nav-item').forEach(el => el.classList.remove('active'));
 
             targetTab.classList.add('active');
-            document.getElementById('btn-' + tabId)?.classList.add('active');
-            document.getElementById('side-btn-' + tabId)?.classList.add('active');
+            if (platformMode && tabId === 'perfil') {
+                document.getElementById('btn-platform-account')?.classList.add('active');
+                document.getElementById('side-btn-platform-account')?.classList.add('active');
+            } else {
+                document.getElementById('btn-' + tabId)?.classList.add('active');
+                document.getElementById('side-btn-' + tabId)?.classList.add('active');
+            }
 
             const titleEl = document.getElementById('topbar-section-title');
             if (titleEl && SECTION_TITLES[tabId]) {
@@ -7017,7 +7336,7 @@ async function loadDashboardSummary() {
 
             const floatingBtn = document.getElementById('floating-executive-btn');
             if (floatingBtn) {
-                floatingBtn.classList.toggle('hidden', tabId === 'ia');
+                floatingBtn.classList.toggle('hidden', platformMode || tabId === 'ia');
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -9496,41 +9815,6 @@ async function loadDashboardSummary() {
             const privacyLabel = document.getElementById('privacy-label');
             if (privacyLabel) {
                 privacyLabel.innerText = isPrivacyOn ? 'Show Figures' : 'Hide Figures';
-            }
-        }
-
-        function openBootstrapModal() {
-            document.getElementById('bootstrap-secret-input').value = '';
-            document.getElementById('bootstrap-error').classList.add('hidden');
-            document.getElementById('bootstrap-modal').classList.remove('hidden');
-        }
-
-        function closeBootstrapModal() {
-            document.getElementById('bootstrap-modal').classList.add('hidden');
-        }
-
-        async function submitBootstrapAdmin() {
-            const secret = document.getElementById('bootstrap-secret-input').value.trim();
-            const errBox = document.getElementById('bootstrap-error');
-            const btn = document.getElementById('bootstrap-submit-btn');
-            errBox.classList.add('hidden');
-            if (!secret) return;
-            btn.disabled = true;
-            try {
-                const res = await fetch('/api/auth/bootstrap-admin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('csrf_token') },
-                    body: JSON.stringify({ secret })
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || "Bootstrap failed");
-                closeBootstrapModal();
-                await checkAuthStatus();
-            } catch (err) {
-                errBox.innerText = err.message;
-                errBox.classList.remove('hidden');
-            } finally {
-                btn.disabled = false;
             }
         }
 
