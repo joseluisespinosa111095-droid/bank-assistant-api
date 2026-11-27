@@ -259,11 +259,36 @@ def collect_frontend_reference() -> dict:
     html_path = REPO_ROOT / "index.html"
     html_lines = html_path.read_text(encoding="utf-8").splitlines()
     script_start = next(
-        (i for i, l in enumerate(html_lines, 1) if l.strip() == "<script>"),
+        (
+            i
+            for i, l in enumerate(html_lines, 1)
+            if l.strip() == "<script>" or re.match(r'^<script\s+src="/static/js/', l.strip())
+        ),
         len(html_lines) + 1,
     )
     html_markup = "\n".join(html_lines[:script_start])
-    js_src = "\n".join(html_lines[script_start:])
+
+    # Collect JS lines in exact classic <script> execution order: external /static/js/* followed by inline <script>
+    js_lines: list[str] = []
+    in_inline_script = False
+    for line in html_lines[script_start - 1 :]:
+        stripped = line.strip()
+        ext_m = re.match(r'^<script\s+src="(/static/js/[^"?]+)(?:\?[^"]*)?"\s*>\s*</script>$', stripped)
+        if ext_m:
+            ext_path = REPO_ROOT / ext_m.group(1).lstrip("/")
+            if ext_path.exists():
+                js_lines.extend(ext_path.read_text(encoding="utf-8").splitlines())
+            continue
+        if stripped == "<script>":
+            in_inline_script = True
+            continue
+        if stripped == "</script>" and in_inline_script:
+            in_inline_script = False
+            continue
+        if in_inline_script:
+            js_lines.append(line)
+
+    js_src = "\n".join(js_lines)
 
     by_attr = {}
     for evt in ("onclick", "onchange", "onsubmit", "oninput", "onkeypress", "onkeydown", "onkeyup"):
@@ -282,9 +307,9 @@ def collect_frontend_reference() -> dict:
         re.findall(r"\bon(?:click|change|submit|input|keypress|keydown|keyup)\s*=", js_src, re.I)
     )
 
-    # Locate the 4 global monkey-patches in source order (inside inline script or external static/js)
+    # Locate the 4 global monkey-patches in exact execution order across external static/js + inline script
     patch_positions = []
-    for i, line in enumerate(html_lines, 1):
+    for i, line in enumerate(js_lines, 1):
         for target in MONKEY_PATCH_TARGETS:
             if re.search(rf"\b{re.escape(target)}\s*=", line):
                 patch_positions.append((i, target))

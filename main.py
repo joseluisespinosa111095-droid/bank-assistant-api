@@ -1,8 +1,19 @@
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 import google.generativeai as genai
+
+BASE_DIR = Path(__file__).resolve().parent
+
+
+class CacheControlStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return response
 
 # --- COMPATIBILITY RE-EXPORTS (preserves exact object identity for tests, scripts, and dependency_overrides) ---
 from db_config import (
@@ -202,3 +213,6 @@ app.include_router(leads_router.router)
 app.include_router(loans_router.router)
 app.include_router(dashboard_router.router)
 app.include_router(assistant_router.router)
+
+# --- STATIC ASSETS (cwd-independent absolute path) ---
+app.mount("/static", CacheControlStaticFiles(directory=str(BASE_DIR / "static")), name="static")

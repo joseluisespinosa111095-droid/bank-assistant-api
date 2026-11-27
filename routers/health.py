@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy import inspect, text
@@ -6,6 +8,8 @@ from sqlalchemy.orm import Session
 from dependencies.auth import require_superadmin
 from dependencies.db import get_db
 from models import UserModel
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 router = APIRouter()
 
@@ -37,4 +41,4 @@ def schema_status(
 
 @router.get("/", response_class=FileResponse)
 def home():
-    return FileResponse("index.html", headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+    return FileResponse(str(BASE_DIR / "index.html"), headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
