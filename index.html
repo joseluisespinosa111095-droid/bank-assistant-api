@@ -6,7 +6,7 @@
     <title>NURA CRM | Credit Origination, Servicing & Portfolio Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/app.css?v=20261126-e4b3">
+    <link rel="stylesheet" href="/static/css/app.css?v=20261127-e5a1">
 </head>
 <body class="min-h-screen overflow-x-hidden">
 
@@ -244,7 +244,7 @@
                                 <button type="button" id="top-btn-new-customer" onclick="openCustomerFormModal('create')" class="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs transition">
                                     <span>+ New Customer</span>
                                 </button>
-                                <button type="button" id="top-btn-simulator" onclick="switchTab('simulator')" class="lending-only-ui hidden md:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
+                                <button type="button" id="top-btn-simulator" data-responsive-display="true" onclick="switchTab('simulator')" class="lending-only-ui hidden md:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
                                     <span>Loan Simulator</span>
                                 </button>
                                 <button type="button" onclick="switchTab('ia')" class="py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs flex items-center gap-1.5 transition">
@@ -783,7 +783,7 @@
                                         <span class="flex items-center gap-1">📞 <span id="cd-qs-phone">N/A</span></span>
                                         <span class="text-slate-300 hidden sm:inline">|</span>
                                         <span class="flex items-center gap-1 font-mono">📄 <span id="cd-qs-rfc">N/A</span></span>
-                                        <span id="cd-qs-balance-sep" class="lending-only-ui text-slate-300 hidden sm:inline">|</span>
+                                        <span id="cd-qs-balance-sep" data-responsive-display="true" class="lending-only-ui text-slate-300 hidden sm:inline">|</span>
                                         <span id="cd-qs-balance-wrap" class="lending-only-ui flex items-center gap-1 text-slate-900 font-bold">Balance: <span id="cd-qs-balance" class="font-mono text-slate-400">$0.00 MXN</span></span>
                                     </div>
                                 </div>
@@ -3624,8 +3624,8 @@
     <script src="/static/js/01-financial-engine.js?v=20261126-e4b3"></script>
     <script src="/static/js/02-http-i18n.js?v=20261126-e4b3"></script>
     <script src="/static/js/03-core-auth.js?v=20261126-e5a"></script>
-    <script src="/static/js/04-platform.js?v=20261126-e5a"></script>
-    <script src="/static/js/05-dashboard-customers.js?v=20261126-e5a"></script>
+    <script src="/static/js/04-platform.js?v=20261127-e5a1"></script>
+    <script src="/static/js/05-dashboard-customers.js?v=20261127-e5a1"></script>
     <script src="/static/js/06-leads.js?v=20261126-e4b4"></script>
     <script src="/static/js/07-loans-payments.js?v=20261126-e4b4"></script>
     <script src="/static/js/08-team-assistant.js?v=20261126-e4b4"></script>

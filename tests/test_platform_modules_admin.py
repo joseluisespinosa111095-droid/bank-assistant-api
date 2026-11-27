@@ -630,3 +630,114 @@ def test_05_post_onboarding_lending_activation_sequences_config_deactivation_and
             db.close()
     finally:
         c_super.close()
+
+
+def test_06_long_lending_entity_name_audit_integrity_and_financing_enable_dep(b3_env):
+    """Regression for 5A audit findings:
+    1. A valid 200-char lending_entity_name (with accents/quotes) MUST NOT be truncated or corrupt JSON in
+       PLATFORM_TENANT_MODULES_UPDATED audit logs (both `after` and subsequent `before`).
+    2. Dependency graph enforces FINANCING -> COMMERCE on enable/onboarding when assignable.
+    """
+    from models import PlatformModuleModel
+    from services.modules import (
+        ModuleValidationError,
+        validate_module_enable,
+        validate_module_set_for_tenant,
+    )
+
+    ids = _seed_superadmin_and_default_owner(b3_env["SessionLocal"])
+    c_super, hdr_s, _ = _login_client("super@nura.nura.io", ids["password"])
+    try:
+        # Exactly 200 characters (maximum allowed by MAX_LENDING_ENTITY_NAME_LEN) including accents & quotes
+        prefix = 'Financiera "Crédito Óptimo" S.A.P.I. de C.V., SOFOM, E.N.R. — '
+        long_lender = (prefix + ("X" * 200))[:200]
+        assert len(long_lender) == 200
+
+        r_set = c_super.patch(
+            f"/api/platform/tenants/{ids['default_tenant_id']}/modules",
+            headers=hdr_s,
+            json={
+                "modules": [
+                    {
+                        "module_code": "LENDING",
+                        "is_enabled": True,
+                        "lending_entity_name": long_lender,
+                    }
+                ]
+            },
+        )
+        assert r_set.status_code == 200, r_set.text
+        assert r_set.json()["lending_entity_name"] == long_lender
+
+        # Perform a second update so `before` also carries the 200-char lender name
+        r_set2 = c_super.patch(
+            f"/api/platform/tenants/{ids['default_tenant_id']}/modules",
+            headers=hdr_s,
+            json={
+                "modules": [
+                    {
+                        "module_code": "LENDING",
+                        "is_enabled": True,
+                        "lending_entity_name": "Short Lender S.A.",
+                    }
+                ]
+            },
+        )
+        assert r_set2.status_code == 200, r_set2.text
+
+        db = b3_env["SessionLocal"]()
+        try:
+            audits = (
+                db.query(AuditLogModel)
+                .filter(
+                    AuditLogModel.event_type == "PLATFORM_TENANT_MODULES_UPDATED",
+                    AuditLogModel.resource_id == str(ids["default_tenant_id"]),
+                )
+                .order_by(AuditLogModel.id.asc())
+                .all()
+            )
+            assert len(audits) == 2
+
+            d1 = json.loads(audits[0].details_json)
+            assert json.loads(d1["before"]) == {"enabled_modules": ["CORE", "LENDING"], "lending_entity_name": None}
+            assert json.loads(d1["after"]) == {
+                "enabled_modules": ["CORE", "LENDING"],
+                "lending_entity_name": long_lender,
+            }
+
+            d2 = json.loads(audits[1].details_json)
+            assert json.loads(d2["before"]) == {
+                "enabled_modules": ["CORE", "LENDING"],
+                "lending_entity_name": long_lender,
+            }
+            assert json.loads(d2["after"]) == {
+                "enabled_modules": ["CORE", "LENDING"],
+                "lending_entity_name": "Short Lender S.A.",
+            }
+
+            # Verify FINANCING -> COMMERCE dependency enforcement on enable when assignable
+            db.query(PlatformModuleModel).filter(
+                PlatformModuleModel.code.in_(["COMMERCE", "FINANCING"])
+            ).update({"is_assignable": True}, synchronize_session=False)
+            db.flush()
+
+            with pytest.raises(ModuleValidationError) as exc_en:
+                validate_module_enable(db, ids["default_tenant_id"], "FINANCING")
+            assert exc_en.value.error_code == "MISSING_MODULE_DEPENDENCIES"
+            assert exc_en.value.details["missing_dependencies"] == ["COMMERCE"]
+
+            with pytest.raises(ModuleValidationError) as exc_set:
+                validate_module_set_for_tenant(db, ["CORE", "FINANCING"])
+            assert exc_set.value.error_code == "MISSING_MODULE_DEPENDENCIES"
+            assert exc_set.value.details["missing_dependencies"] == ["COMMERCE"]
+
+            assert validate_module_set_for_tenant(db, ["CORE", "COMMERCE", "FINANCING"]) == [
+                "COMMERCE",
+                "CORE",
+                "FINANCING",
+            ]
+        finally:
+            db.rollback()
+            db.close()
+    finally:
+        c_super.close()

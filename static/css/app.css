@@ -20,6 +20,8 @@
         @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Module entitlement visibility guard: always overrides Tailwind responsive display classes (e.g. md:flex, sm:inline) */
+        .module-hidden { display: none !important; }
 
         @media print {
             @page { size: letter portrait; margin: 14mm; }

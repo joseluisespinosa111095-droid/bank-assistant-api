@@ -308,9 +308,12 @@ async function loadDashboardSummary() {
                 if (qsRfc) qsRfc.innerText = c.tax_id_rfc || 'No RFC';
 
                 const hasLending = (typeof hasModule === 'function') && hasModule('LENDING');
-                document.getElementById('cd-qs-balance-sep')?.classList.toggle('hidden', !hasLending);
+                document.getElementById('cd-qs-balance-sep')?.classList.toggle('module-hidden', !hasLending);
+                document.getElementById('cd-qs-balance-wrap')?.classList.toggle('module-hidden', !hasLending);
                 document.getElementById('cd-qs-balance-wrap')?.classList.toggle('hidden', !hasLending);
+                document.getElementById('ctab-btn-summary')?.classList.toggle('module-hidden', !hasLending);
                 document.getElementById('ctab-btn-summary')?.classList.toggle('hidden', !hasLending);
+                document.getElementById('ctab-btn-loans')?.classList.toggle('module-hidden', !hasLending);
                 document.getElementById('ctab-btn-loans')?.classList.toggle('hidden', !hasLending);
                 if (!hasLending) {
                     document.getElementById('ctab-panel-summary')?.classList.add('hidden');
