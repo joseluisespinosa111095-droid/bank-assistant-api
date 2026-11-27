@@ -263,6 +263,9 @@ def _iter_all_api_routes(routes, prefix: str = ""):
                 yield method, full_path, route
         elif isinstance(route, Mount) and hasattr(route, "routes"):
             yield from _iter_all_api_routes(route.routes, prefix=f"{prefix}{route.path}")
+        elif hasattr(route, "original_router") and hasattr(route.original_router, "routes"):
+            sub_prefix = getattr(getattr(route, "include_context", None), "prefix", "") or ""
+            yield from _iter_all_api_routes(route.original_router.routes, prefix=f"{prefix}{sub_prefix}")
 
 
 # ---------------------------------------------------------------------------
