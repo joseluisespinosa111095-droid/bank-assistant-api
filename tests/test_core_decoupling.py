@@ -497,3 +497,235 @@ def test_03_customer_endpoints_are_core_only_and_lending_customer_summary_is_gat
     finally:
         c_def.close()
         c_core.close()
+
+
+def test_04_frontend_responsive_lending_visibility_for_core_only_and_lending():
+    """Regression for 5A audit finding D1:
+    Verify #top-btn-simulator (hidden md:flex) and #cd-qs-balance-sep (hidden sm:inline)
+    stay strictly hidden (display: none) on desktop when LENDING is NOT enabled, and remain
+    visible on desktop when LENDING IS enabled.
+    """
+    import base64
+    from functools import partial
+    from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+    import socket
+    import struct
+    import tempfile
+    import threading
+    import time
+    import urllib.request
+
+    app_css = (REPO_ROOT / "static" / "css" / "app.css").read_text(encoding="utf-8")
+    index_html = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
+    plat_js = (REPO_ROOT / "static" / "js" / "04-platform.js").read_text(encoding="utf-8")
+    dash_js = (REPO_ROOT / "static" / "js" / "05-dashboard-customers.js").read_text(encoding="utf-8")
+
+    # 1. Static structural assertions (always run even without browser)
+    assert ".module-hidden { display: none !important; }" in app_css
+    assert 'id="top-btn-simulator" data-responsive-display="true"' in index_html
+    assert 'id="cd-qs-balance-sep" data-responsive-display="true"' in index_html
+    assert "el.classList.toggle('module-hidden', !hasLending)" in plat_js
+    assert "document.getElementById('cd-qs-balance-sep')?.classList.toggle('module-hidden', !hasLending)" in dash_js
+
+    # 2. Real headless Chrome computed-style check at desktop 1280x800 (offline deterministic CSS rules)
+    chrome_bin = next(
+        (
+            cand
+            for cand in (
+                r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+                "/usr/bin/google-chrome",
+                "/usr/bin/chromium",
+                "/usr/bin/chromium-browser",
+            )
+            if os.path.exists(cand)
+        ),
+        None,
+    )
+    if not chrome_bin:
+        pytest.skip("Headless Chrome/Chromium binary not available in this environment.")
+
+    class _QuietHandler(SimpleHTTPRequestHandler):
+        def log_message(self, format, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), partial(_QuietHandler, directory=str(REPO_ROOT)))
+    http_port = server.server_address[1]
+    srv_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    srv_thread.start()
+
+    user_dir = tempfile.mkdtemp(prefix="nura_e5a_css_test_")
+    sock_tmp = socket.socket()
+    sock_tmp.bind(("127.0.0.1", 0))
+    cdp_port = sock_tmp.getsockname()[1]
+    sock_tmp.close()
+
+    proc = subprocess.Popen(
+        [
+            chrome_bin,
+            "--headless=new",
+            "--disable-gpu",
+            f"--remote-debugging-port={cdp_port}",
+            f"--user-data-dir={user_dir}",
+            "--window-size=1280,800",
+            "about:blank",
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    try:
+        ws_url = None
+        for _ in range(40):
+            try:
+                tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{cdp_port}/json", timeout=2).read().decode())
+                for t in tabs:
+                    if t.get("type") == "page":
+                        ws_url = t["webSocketDebuggerUrl"]
+                        break
+                if ws_url:
+                    break
+            except Exception:
+                time.sleep(0.15)
+        assert ws_url, "Could not connect to headless Chrome CDP."
+
+        host_port, ws_path = ws_url.replace("ws://", "").split("/", 1)
+        ws_host, ws_port = host_port.split(":")
+        ws_sock = socket.create_connection((ws_host, int(ws_port)), timeout=15)
+        key = base64.b64encode(os.urandom(16)).decode()
+        ws_sock.sendall(
+            (
+                f"GET /{ws_path} HTTP/1.1\r\nHost: {host_port}\r\nUpgrade: websocket\r\n"
+                f"Connection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n"
+            ).encode()
+        )
+        buf = b""
+        while b"\r\n\r\n" not in buf:
+            buf += ws_sock.recv(4096)
+        assert b"101" in buf.splitlines()[0]
+        rem = [buf.split(b"\r\n\r\n", 1)[1]]
+        cid = [0]
+
+        def _recv_exact(n: int) -> bytes:
+            while len(rem[0]) < n:
+                chunk = ws_sock.recv(65536)
+                if not chunk:
+                    raise EOFError("CDP socket closed")
+                rem[0] += chunk
+            out, rem[0] = rem[0][:n], rem[0][n:]
+            return out
+
+        def _cdp(method: str, params: dict | None = None) -> dict:
+            cid[0] += 1
+            data = json.dumps({"id": cid[0], "method": method, "params": params or {}}).encode("utf-8")
+            mask = os.urandom(4)
+            hdr = bytearray([0x81])
+            if len(data) < 126:
+                hdr.append(0x80 | len(data))
+            elif len(data) < 65536:
+                hdr.append(0x80 | 126)
+                hdr.extend(struct.pack("!H", len(data)))
+            else:
+                hdr.append(0x80 | 127)
+                hdr.extend(struct.pack("!Q", len(data)))
+            hdr.extend(mask)
+            ws_sock.sendall(bytes(hdr) + bytes(b ^ mask[i % 4] for i, b in enumerate(data)))
+            while True:
+                b1, b2 = _recv_exact(2)
+                opcode = b1 & 0x0F
+                length = b2 & 0x7F
+                if length == 126:
+                    length = struct.unpack("!H", _recv_exact(2))[0]
+                elif length == 127:
+                    length = struct.unpack("!Q", _recv_exact(8))[0]
+                payload = _recv_exact(length)
+                if opcode == 1:
+                    msg = json.loads(payload.decode("utf-8"))
+                    if msg.get("id") == cid[0]:
+                        return msg.get("result", {})
+
+        _cdp("Page.enable")
+        _cdp("Runtime.enable")
+        _cdp("Page.navigate", {"url": f"http://127.0.0.1:{http_port}/index.html"})
+        for _ in range(40):
+            ready = _cdp("Runtime.evaluate", {"expression": "typeof applyShellMode === 'function'", "returnByValue": True})
+            if ready.get("result", {}).get("value") is True:
+                break
+            time.sleep(0.15)
+
+        # Inject deterministic Tailwind responsive utility rules (exact Tailwind cascade: .hidden before @media md:flex / sm:inline)
+        # so the test verifies the real cascade even in offline environments without Tailwind CDN.
+        eval_expr = """
+        (() => {
+            const style = document.createElement('style');
+            style.textContent = `
+                .hidden { display: none; }
+                .flex { display: flex; }
+                .grid { display: grid; }
+                @media (min-width: 640px) { .sm\\\\:inline { display: inline; } }
+                @media (min-width: 768px) { .md\\\\:flex { display: flex; } }
+            `;
+            document.head.insertBefore(style, document.head.firstChild);
+
+            document.getElementById('auth-view')?.classList.add('hidden');
+            document.getElementById('app-view')?.classList.remove('hidden');
+            document.getElementById('tab-customers')?.classList.add('active');
+            document.getElementById('customers-master-view')?.classList.add('hidden');
+            document.getElementById('customer-detail-view')?.classList.remove('hidden');
+
+            const probe = (ids) => {
+                const res = {};
+                for (const id of ids) {
+                    const el = document.getElementById(id);
+                    const cs = getComputedStyle(el);
+                    res[id] = { display: cs.display, classes: el.className };
+                }
+                return res;
+            };
+            const targetIds = [
+                'top-btn-simulator',
+                'cd-qs-balance-sep',
+                'cd-qs-balance-wrap',
+                'side-btn-loans',
+                'side-btn-simulator',
+                'dash-btn-simulator',
+                'privacy-btn',
+                'dash-lending-kpis-grid',
+                'dash-lending-distribution-card',
+                'ctab-btn-summary',
+                'ctab-btn-loans'
+            ];
+
+            // Case 1: CORE-only tenant -> ALL lending UI must compute display: none on desktop
+            applyShellMode(false, { role: 'OWNER_ADMIN', tenant_name: 'Core Org', tenant_slug: 'core-org', enabled_modules: ['CORE'] });
+            const coreOnly = probe(targetIds);
+
+            // Case 2: CORE + LENDING tenant -> top-btn-simulator & cd-qs-balance-sep visible on desktop, keeping responsive hidden class
+            applyShellMode(false, { role: 'OWNER_ADMIN', tenant_name: 'Lend Org', tenant_slug: 'lend-org', enabled_modules: ['CORE', 'LENDING'] });
+            const coreAndLending = probe(targetIds);
+
+            return { coreOnly, coreAndLending };
+        })()
+        """
+        out = _cdp("Runtime.evaluate", {"expression": eval_expr, "returnByValue": True})["result"]["value"]
+        ws_sock.close()
+
+        for elem_id, state in out["coreOnly"].items():
+            assert state["display"] == "none", f"CORE-only leak on #{elem_id}: {state}"
+
+        assert out["coreAndLending"]["top-btn-simulator"]["display"] == "flex"
+        assert "hidden" in out["coreAndLending"]["top-btn-simulator"]["classes"].split()
+        assert "module-hidden" not in out["coreAndLending"]["top-btn-simulator"]["classes"].split()
+        assert out["coreAndLending"]["cd-qs-balance-sep"]["display"] != "none"
+        assert "hidden" in out["coreAndLending"]["cd-qs-balance-sep"]["classes"].split()
+        assert "module-hidden" not in out["coreAndLending"]["cd-qs-balance-sep"]["classes"].split()
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=3)
+        except Exception:
+            proc.kill()
+        server.shutdown()
+        server.server_close()
+        shutil.rmtree(user_dir, ignore_errors=True)

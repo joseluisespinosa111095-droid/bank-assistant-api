@@ -572,6 +572,7 @@ def platform_update_tenant_modules(
             commit=False,
             scope="PLATFORM",
             tenant_id=None,
+            max_value_len=2048,
         )
         db.commit()
         return {

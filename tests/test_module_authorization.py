@@ -432,9 +432,11 @@ def test_03_core_only_tenant_blocked_403_on_all_12_lending_endpoints_with_audit_
         finally:
             db.close()
 
-        # All 12 Lending/Collections endpoints must return 403 Forbidden for the CORE-only tenant
+        # All 14 Lending/Collections endpoints (including Bloque 4 dashboard & customer summary) must return 403 Forbidden
         lending_calls = [
             ("GET", "/api/loans", None),
+            ("GET", "/api/loans/dashboard-summary", None),
+            ("GET", f"/api/loans/customers/{core_cust_id}/summary", None),
             (
                 "POST",
                 "/api/loans",
@@ -473,7 +475,7 @@ def test_03_core_only_tenant_blocked_403_on_all_12_lending_endpoints_with_audit_
             ),
             ("POST", f"/api/loans/{loan_id}/payments/{pay_id}/reverse", {"reversal_reason": "Blocked reversal"}),
         ]
-        assert len(lending_calls) == 12
+        assert len(lending_calls) == 14
 
         for method, path, body in lending_calls:
             if method == "GET":
@@ -483,7 +485,7 @@ def test_03_core_only_tenant_blocked_403_on_all_12_lending_endpoints_with_audit_
             assert resp.status_code == 403, f"Expected 403 on {method} {path}, got {resp.status_code}: {resp.text}"
             assert "LENDING" in resp.json()["detail"]
 
-        # Verify zero mutations and 12 MODULE_ACCESS_DENIED audit records (scope="TENANT")
+        # Verify zero mutations and 14 MODULE_ACCESS_DENIED audit records (scope="TENANT")
         db = mod_env["SessionLocal"]()
         try:
             after_counts = (
@@ -503,7 +505,7 @@ def test_03_core_only_tenant_blocked_403_on_all_12_lending_endpoints_with_audit_
                 .order_by(AuditLogModel.id.asc())
                 .all()
             )
-            assert len(denied_audits) == 12
+            assert len(denied_audits) == 14
             audited_paths = []
             for entry in denied_audits:
                 assert entry.scope == "TENANT"
@@ -574,6 +576,8 @@ def test_04_immediate_active_session_revocation_and_historical_data_preservation
 
         # Immediate 403 on next request in the same active session (no relogin required)
         assert client_def.get("/api/loans").status_code == 403
+        assert client_def.get("/api/loans/dashboard-summary").status_code == 403
+        assert client_def.get(f"/api/loans/customers/{r_cust.json()['id']}/summary").status_code == 403
         assert client_def.get(f"/api/loans/{loan_id}").status_code == 403
         assert client_def.get("/api/collections/queue").status_code == 403
         # /api/auth/me dynamically reflects revocation without relogin

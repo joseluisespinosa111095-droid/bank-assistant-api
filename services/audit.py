@@ -30,13 +30,15 @@ def record_audit_event(
     commit: bool = True,
     scope: Optional[str] = None,
     tenant_id: Optional[int] = None,
+    max_value_len: int = 255,
 ):
+    value_cap = max(1, int(max_value_len))
     sanitized_details = {}
     if details:
         for k, v in details.items():
             if str(k).lower() in SENSITIVE_AUDIT_KEYS:
                 continue
-            sanitized_details[str(k)] = str(v)[:255]
+            sanitized_details[str(k)] = str(v)[:value_cap]
 
     if scope is None:
         if actor is None:

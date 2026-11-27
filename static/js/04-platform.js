@@ -192,7 +192,10 @@
 
                 // Toggle Lending-only UI across sidebar, topbar, mobile nav, dashboard, and customer profile
                 document.querySelectorAll('.lending-only-ui').forEach(el => {
-                    el.classList.toggle('hidden', !hasLending);
+                    el.classList.toggle('module-hidden', !hasLending);
+                    if (!el.hasAttribute('data-responsive-display')) {
+                        el.classList.toggle('hidden', !hasLending);
+                    }
                 });
                 if (mobileCommercial) {
                     mobileCommercial.classList.toggle('grid-cols-6', hasLending);
@@ -275,6 +278,12 @@
                 profileRoleBadge.className = 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10px] font-semibold px-2.5 py-1 rounded-full shrink-0';
             }
 
+            document.querySelectorAll('.lending-only-ui').forEach(el => {
+                el.classList.remove('module-hidden');
+                if (!el.hasAttribute('data-responsive-display')) {
+                    el.classList.remove('hidden');
+                }
+            });
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.side-nav-item').forEach(el => el.classList.remove('active'));
