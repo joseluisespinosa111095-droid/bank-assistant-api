@@ -92,12 +92,7 @@ def resolve_customer_name_for_update(final_entity_type, type_changed, current_fi
 # --- CUSTOMER NAME (PURE HELPERS) END ---
 
 
-def serialize_customer(
-    c: CustomerModel,
-    active_loans_count: int = 0,
-    unpaid_principal_cents: int = 0,
-    last_payment_date: Optional[str] = None
-) -> dict:
+def serialize_customer(c: CustomerModel) -> dict:
     return {
         "id": c.id,
         "customer_number": c.customer_number,
@@ -125,10 +120,6 @@ def serialize_customer(
         "customer_since": c.customer_since.isoformat() if c.customer_since else None,
         "created_at": c.created_at.isoformat() if c.created_at else None,
         "updated_at": c.updated_at.isoformat() if c.updated_at else None,
-        "current_outstanding_balance_cents": unpaid_principal_cents,
-        "current_outstanding_principal_cents": unpaid_principal_cents,
-        "active_loans_count": active_loans_count,
-        "last_payment_date": last_payment_date
     }
 
 

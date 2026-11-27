@@ -12,6 +12,7 @@ from core.security import get_client_ip, hash_token
 from dependencies.db import get_db
 from models import SessionModel, TenantModel, UserModel
 from services.audit import record_audit_event
+from services.modules import is_module_enabled, normalize_module_code
 
 
 # --- CSRF PROTECTION WITH AUDIT ---
@@ -198,3 +199,40 @@ def require_superadmin(
         )
         raise HTTPException(status_code=403, detail="Access denied: platform superadmin privileges required.")
     return user
+
+
+def require_module(module_code: str):
+    normalized_code = normalize_module_code(module_code)
+
+    def module_checker(
+        request: Request,
+        user: UserModel = Depends(require_commercial_tenant),
+        db: Session = Depends(get_db),
+    ) -> UserModel:
+        if not is_module_enabled(db, user.tenant_id, normalized_code):
+            record_audit_event(
+                db,
+                "MODULE_ACCESS_DENIED",
+                "module",
+                "DENIED",
+                actor=user,
+                resource_id=normalized_code,
+                ip_address=get_client_ip(request),
+                details={
+                    "module_code": normalized_code,
+                    "path": request.url.path,
+                    "method": request.method,
+                    "tenant_id": user.tenant_id,
+                    "user_id": user.id,
+                },
+                commit=True,
+                scope="TENANT",
+                tenant_id=user.tenant_id,
+            )
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access denied: module '{normalized_code}' is not enabled for this organization.",
+            )
+        return user
+
+    return module_checker

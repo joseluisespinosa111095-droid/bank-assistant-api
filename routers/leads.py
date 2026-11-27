@@ -38,7 +38,6 @@ from schemas.core_crm import (
     LeadUpdateRequest,
 )
 from services.audit import record_audit_event
-from services.customer_detail import get_customer_active_loan_summary
 from services.serializers_core import (
     compute_call_bucket,
     serialize_customer,
@@ -874,15 +873,12 @@ def convert_lead_to_customer(
         )
         db.commit()
         db.refresh(target_customer)
-        active_loans_count, unpaid_principal = get_customer_active_loan_summary(
-            db, current_user.tenant_id, target_customer
-        )
         return {
             "message": "Lead converted successfully",
             "linked_existing": linked_existing,
             "lead_id": lead.id,
             "lead_number": lead.lead_number,
-            "customer": serialize_customer(target_customer, active_loans_count=active_loans_count, unpaid_principal_cents=unpaid_principal)
+            "customer": serialize_customer(target_customer)
         }
     except HTTPException:
         db.rollback()

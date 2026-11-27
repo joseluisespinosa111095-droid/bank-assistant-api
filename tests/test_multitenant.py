@@ -46,6 +46,7 @@ from models import (
     LoanPaymentAllocationModel,
     LoanPaymentModel,
     TenantModel,
+    TenantModuleModel,
     TenantSequenceModel,
     UserModel,
 )
@@ -153,6 +154,8 @@ def _seed_base_actors(SessionLocal) -> dict:
         db.flush()
         for et in ("customers", "leads", "loans", "loan_payments"):
             db.add(TenantSequenceModel(tenant_id=tenant_b.id, entity_type=et, last_value=0))
+        for mc in ("CORE", "LENDING"):
+            db.add(TenantModuleModel(tenant_id=tenant_b.id, module_code=mc, is_enabled=True))
 
         pw_hash = main.pwd_context.hash("Password123!")
         superadmin = UserModel(
@@ -384,9 +387,12 @@ def test_01_full_tenant_isolation_between_tenants(mt_env):
         dash_b = client_b.get("/api/dashboard/summary").json()
         assert dash_b["counts"]["customers"] == 0
         assert dash_b["counts"]["open_leads"] == 0
-        assert dash_b["counts"]["active_loans"] == 0
-        assert dash_b["active_loan_portfolio_cents"] == 0
-        assert dash_b["collected_this_week_cents"] == 0
+        r_ldash_b = client_b.get("/api/loans/dashboard-summary")
+        assert r_ldash_b.status_code == 200
+        ldash_b = r_ldash_b.json()
+        assert ldash_b["counts"]["active_loans"] == 0
+        assert ldash_b["active_loan_portfolio_cents"] == 0
+        assert ldash_b["collected_this_week_cents"] == 0
 
         # Users & team admin
         users_b = client_b.get("/api/admin/users").json()
@@ -444,7 +450,7 @@ def test_02_superadmin_isolation_and_platform_rbac(mt_env):
         # SUPERADMIN can manage /api/platform/tenants* and /api/admin/schema-status
         r_schema = client_s.get("/api/admin/schema-status")
         assert r_schema.status_code == 200
-        assert r_schema.json()["alembic_version"] == "012"
+        assert r_schema.json()["alembic_version"] == main.EXPECTED_ALEMBIC_REVISION
 
         r_new = client_s.post(
             "/api/platform/tenants",

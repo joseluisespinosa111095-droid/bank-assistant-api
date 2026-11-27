@@ -18,24 +18,49 @@ from models import (
     LoanModel,
     SessionModel,
     TenantModel,
-    TenantSequenceModel,
     UserModel,
 )
-from schemas.platform import PlatformTenantCreateRequest, PlatformTenantUpdateRequest
+from schemas.platform import (
+    PlatformTenantCreateRequest,
+    PlatformTenantModulesUpdateRequest,
+    PlatformTenantUpdateRequest,
+)
 from services.audit import record_audit_event
+from services.modules import (
+    CORE_MODULE_CODE,
+    LENDING_ENTITY_NAME_KEY,
+    LENDING_MODULE_CODE,
+    ModuleServiceError,
+    ensure_tenant_sequences_for_modules,
+    get_module_dependency_graph,
+    get_tenant_modules_detail,
+    get_tenants_modules_summary_bulk,
+    list_catalog_modules_with_dependencies,
+    normalize_module_code,
+    set_tenant_module_state,
+    validate_module_config,
+    validate_module_set_for_tenant,
+)
 from services.serializers_core import serialize_tenant
 
 router = APIRouter()
 
 # --- PLATFORM SAAS TENANT ADMINISTRATION (SUPERADMIN ONLY) ---
 TENANT_SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-TENANT_SEQUENCE_ENTITIES = ("customers", "leads", "loans", "loan_payments")
+
+
+@router.get("/api/platform/modules")
+def platform_list_modules(
+    superadmin: UserModel = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+):
+    return list_catalog_modules_with_dependencies(db)
 
 
 @router.get("/api/platform/tenants")
 def platform_list_tenants(
     superadmin: UserModel = Depends(require_superadmin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     tenants = db.query(TenantModel).order_by(TenantModel.id.asc()).all()
     users_counts = {
@@ -56,12 +81,20 @@ def platform_list_tenants(
         .group_by(LoanModel.tenant_id)
         .all()
     }
+    modules_by_tenant = get_tenants_modules_summary_bulk(db)
     result = []
     for t in tenants:
         item = serialize_tenant(t)
         item["users_count"] = users_counts.get(t.id, 0)
         item["customers_count"] = customers_counts.get(t.id, 0)
         item["loans_count"] = loans_counts.get(t.id, 0)
+        if t.slug == PLATFORM_TENANT_SLUG:
+            item["enabled_modules"] = []
+            item["lending_entity_name"] = None
+        else:
+            mod_info = modules_by_tenant.get(t.id) or {"enabled_modules": [], "lending_entity_name": None}
+            item["enabled_modules"] = mod_info["enabled_modules"]
+            item["lending_entity_name"] = mod_info["lending_entity_name"]
         result.append(item)
     return result
 
@@ -70,7 +103,7 @@ def platform_list_tenants(
 def platform_get_tenant_detail(
     tenant_id: int,
     superadmin: UserModel = Depends(require_superadmin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     tenant = db.query(TenantModel).filter(TenantModel.id == tenant_id).first()
     if not tenant:
@@ -107,6 +140,7 @@ def platform_get_tenant_detail(
         or 0
     )
 
+    modules_detail = get_tenant_modules_detail(db, tenant.id, tenant_slug=tenant.slug)
     item = serialize_tenant(tenant)
     item.update({
         "users_count": int(users_count),
@@ -114,6 +148,9 @@ def platform_get_tenant_detail(
         "customers_count": int(customers_count),
         "leads_count": int(leads_count),
         "loans_count": int(loans_count),
+        "enabled_modules": modules_detail["enabled_modules"],
+        "lending_entity_name": modules_detail["lending_entity_name"],
+        "modules": modules_detail["modules"],
     })
     return item
 
@@ -122,7 +159,7 @@ def platform_get_tenant_detail(
 def platform_list_tenant_users(
     tenant_id: int,
     superadmin: UserModel = Depends(require_superadmin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     tenant_exists = db.query(TenantModel.id).filter(TenantModel.id == tenant_id).first()
     if not tenant_exists:
@@ -160,7 +197,7 @@ def platform_list_audit_logs(
     resource_id: Optional[str] = None,
     limit: int = Query(default=50, ge=1, le=200),
     superadmin: UserModel = Depends(require_superadmin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     query = db.query(AuditLogModel).filter(AuditLogModel.scope == "PLATFORM")
     if event_type is not None and event_type.strip():
@@ -196,7 +233,7 @@ def platform_create_tenant(
     payload: PlatformTenantCreateRequest,
     request: Request,
     superadmin: UserModel = Depends(require_superadmin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     ip = get_client_ip(request)
     name_clean = payload.name.strip()
@@ -223,6 +260,32 @@ def platform_create_tenant(
     if db.query(UserModel.id).filter(UserModel.email == owner_email_clean).first():
         raise HTTPException(status_code=409, detail="Owner email is already registered.")
 
+    # Always include mandatory CORE for every commercial tenant, then validate requested modules
+    requested_modules = [CORE_MODULE_CODE]
+    if payload.modules:
+        requested_modules.extend(payload.modules)
+
+    try:
+        validated_modules = validate_module_set_for_tenant(db, requested_modules, tenant_slug=slug_clean)
+    except ModuleServiceError as exc:
+        raise HTTPException(status_code=400, detail=exc.message)
+
+    raw_lending_entity = payload.lending_entity_name
+    lending_config: Optional[dict] = None
+    if raw_lending_entity is not None and raw_lending_entity.strip():
+        if LENDING_MODULE_CODE not in validated_modules:
+            raise HTTPException(
+                status_code=400,
+                detail="lending_entity_name can only be configured when the LENDING module is enabled.",
+            )
+        try:
+            lending_config = validate_module_config(
+                LENDING_MODULE_CODE,
+                {LENDING_ENTITY_NAME_KEY: raw_lending_entity},
+            )
+        except ModuleServiceError as exc:
+            raise HTTPException(status_code=400, detail=exc.message)
+
     try:
         new_tenant = TenantModel(
             name=name_clean,
@@ -233,12 +296,23 @@ def platform_create_tenant(
         db.add(new_tenant)
         db.flush()
 
-        for entity_type in TENANT_SEQUENCE_ENTITIES:
-            db.add(TenantSequenceModel(
-                tenant_id=new_tenant.id,
-                entity_type=entity_type,
-                last_value=0
-            ))
+        # Assign validated modules (CORE first so dependencies are satisfied in order)
+        ordered_modules = [CORE_MODULE_CODE] + [m for m in validated_modules if m != CORE_MODULE_CODE]
+        for mod_code in ordered_modules:
+            is_lending = mod_code == LENDING_MODULE_CODE
+            set_tenant_module_state(
+                db,
+                new_tenant.id,
+                mod_code,
+                is_enabled=True,
+                config_json=lending_config if (is_lending and lending_config is not None) else None,
+                update_config=bool(is_lending and lending_config is not None),
+                updated_by_user_id=superadmin.id,
+                tenant_slug=new_tenant.slug,
+            )
+
+        # Initialize ONLY sequences belonging to enabled modules (CORE -> customers/leads; LENDING -> loans/loan_payments)
+        ensure_tenant_sequences_for_modules(db, new_tenant.id, ordered_modules)
 
         owner_user = UserModel(
             tenant_id=new_tenant.id,
@@ -260,7 +334,11 @@ def platform_create_tenant(
             actor=superadmin,
             resource_id=str(new_tenant.id),
             ip_address=ip,
-            details={"slug": new_tenant.slug, "owner_user_id": owner_user.id},
+            details={
+                "slug": new_tenant.slug,
+                "owner_user_id": owner_user.id,
+                "enabled_modules": ",".join(validated_modules),
+            },
             commit=False,
             scope="PLATFORM",
             tenant_id=None
@@ -268,19 +346,28 @@ def platform_create_tenant(
         db.commit()
         db.refresh(new_tenant)
         db.refresh(owner_user)
+        modules_detail = get_tenant_modules_detail(db, new_tenant.id, tenant_slug=new_tenant.slug)
         return {
-            "tenant": serialize_tenant(new_tenant),
+            "tenant": {
+                **serialize_tenant(new_tenant),
+                "enabled_modules": modules_detail["enabled_modules"],
+                "lending_entity_name": modules_detail["lending_entity_name"],
+            },
             "owner_admin": {
                 "id": owner_user.id,
                 "email": owner_user.email,
                 "full_name": owner_user.full_name,
                 "role": owner_user.role,
                 "is_superadmin": bool(owner_user.is_superadmin)
-            }
+            },
+            "enabled_modules": modules_detail["enabled_modules"],
         }
     except HTTPException:
         db.rollback()
         raise
+    except ModuleServiceError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=exc.message)
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Tenant slug or owner email already exists.")
@@ -296,7 +383,7 @@ def platform_update_tenant(
     payload: PlatformTenantUpdateRequest,
     request: Request,
     superadmin: UserModel = Depends(require_superadmin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     ip = get_client_ip(request)
     try:
@@ -367,3 +454,140 @@ def platform_update_tenant(
         db.rollback()
         logger.exception("Failed to update platform tenant")
         raise HTTPException(status_code=500, detail="Could not update organization.")
+
+
+@router.patch("/api/platform/tenants/{tenant_id}/modules", dependencies=[Depends(verify_csrf)])
+def platform_update_tenant_modules(
+    tenant_id: int,
+    payload: PlatformTenantModulesUpdateRequest,
+    request: Request,
+    superadmin: UserModel = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+):
+    ip = get_client_ip(request)
+    try:
+        tenant = (
+            db.query(TenantModel)
+            .filter(TenantModel.id == tenant_id)
+            .with_for_update()
+            .first()
+        )
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Tenant not found.")
+        if tenant.slug == PLATFORM_TENANT_SLUG:
+            raise HTTPException(
+                status_code=400,
+                detail="Commercial modules cannot be modified on the platform tenant.",
+            )
+
+        before_detail = get_tenant_modules_detail(db, tenant.id, tenant_slug=tenant.slug)
+        before_snapshot = {
+            "enabled_modules": before_detail["enabled_modules"],
+            "lending_entity_name": before_detail["lending_entity_name"],
+        }
+
+        seen_codes: set[str] = set()
+        normalized_items: list[tuple[str, bool, bool, Optional[dict]]] = []
+        for item in payload.modules:
+            code = normalize_module_code(item.module_code)
+            if code in seen_codes:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Duplicate module_code in request payload: '{code}'.",
+                )
+            seen_codes.add(code)
+
+            has_cfg = "config_json" in item.model_fields_set
+            has_lender = "lending_entity_name" in item.model_fields_set
+            update_config = has_cfg or has_lender
+            effective_cfg: Optional[dict] = None
+            if update_config:
+                if has_cfg and item.config_json is not None:
+                    effective_cfg = dict(item.config_json)
+                elif has_cfg and item.config_json is None and not has_lender:
+                    effective_cfg = None
+                if has_lender:
+                    if code != LENDING_MODULE_CODE:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="lending_entity_name can only be configured on the LENDING module.",
+                        )
+                    effective_cfg = dict(effective_cfg or {})
+                    effective_cfg[LENDING_ENTITY_NAME_KEY] = item.lending_entity_name
+
+            normalized_items.append((code, bool(item.is_enabled), update_config, effective_cfg))
+
+        # Apply enables first (CORE first), then disables (dependents before dependencies)
+        requires_map, _ = get_module_dependency_graph(db)
+        enables = [it for it in normalized_items if it[1]]
+        disables = [it for it in normalized_items if not it[1]]
+
+        enables.sort(key=lambda it: (0 if it[0] == CORE_MODULE_CODE else 1, len(requires_map.get(it[0], set())), it[0]))
+        disables.sort(key=lambda it: (-len(requires_map.get(it[0], set())), it[0]))
+
+        for code, is_enabled, update_config, effective_cfg in enables:
+            set_tenant_module_state(
+                db,
+                tenant.id,
+                code,
+                is_enabled=True,
+                config_json=effective_cfg,
+                update_config=update_config,
+                updated_by_user_id=superadmin.id,
+                tenant_slug=tenant.slug,
+            )
+            ensure_tenant_sequences_for_modules(db, tenant.id, [code])
+
+        for code, is_enabled, update_config, effective_cfg in disables:
+            set_tenant_module_state(
+                db,
+                tenant.id,
+                code,
+                is_enabled=False,
+                config_json=effective_cfg,
+                update_config=update_config,
+                updated_by_user_id=superadmin.id,
+                tenant_slug=tenant.slug,
+            )
+
+        after_detail = get_tenant_modules_detail(db, tenant.id, tenant_slug=tenant.slug)
+        after_snapshot = {
+            "enabled_modules": after_detail["enabled_modules"],
+            "lending_entity_name": after_detail["lending_entity_name"],
+        }
+
+        record_audit_event(
+            db,
+            "PLATFORM_TENANT_MODULES_UPDATED",
+            "tenant",
+            "SUCCESS",
+            actor=superadmin,
+            resource_id=str(tenant.id),
+            ip_address=ip,
+            details={
+                "slug": tenant.slug,
+                "before": json.dumps(before_snapshot, sort_keys=True),
+                "after": json.dumps(after_snapshot, sort_keys=True),
+            },
+            commit=False,
+            scope="PLATFORM",
+            tenant_id=None,
+        )
+        db.commit()
+        return {
+            "tenant_id": tenant.id,
+            "tenant_slug": tenant.slug,
+            "enabled_modules": after_detail["enabled_modules"],
+            "lending_entity_name": after_detail["lending_entity_name"],
+            "modules": after_detail["modules"],
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except ModuleServiceError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=exc.message)
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to update tenant modules")
+        raise HTTPException(status_code=500, detail="Could not update organization modules.")

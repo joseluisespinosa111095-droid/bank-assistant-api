@@ -26,7 +26,7 @@ from core.utils import (
     parse_rebate_detail,
     serialize_rebate_detail,
 )
-from dependencies.auth import require_roles, verify_csrf
+from dependencies.auth import require_module, require_roles, verify_csrf
 from dependencies.db import get_db
 from models import (
     CustomerModel,
@@ -57,10 +57,11 @@ from services.serializers_lending import (
 )
 
 router = APIRouter()
+require_lending_module = require_module("LENDING")
 
 
 # --- STAGE 3 & BLOCK J: LOANS, AMORTIZATION SCHEDULES & DELINQUENCY METRICS ---
-@router.get("/api/loans")
+@router.get("/api/loans", dependencies=[Depends(require_lending_module)])
 def list_loans(
     search: Optional[str] = Query(default=None, max_length=120),
     status: Optional[str] = Query(default=None),
@@ -106,7 +107,7 @@ def list_loans(
     }
 
 
-@router.post("/api/loans", dependencies=[Depends(verify_csrf)])
+@router.post("/api/loans", dependencies=[Depends(verify_csrf), Depends(require_lending_module)])
 def create_loan(
     payload: LoanCreateRequest,
     request: Request,
@@ -345,7 +346,200 @@ def create_loan(
         raise HTTPException(status_code=500, detail=f"Could not create loan draft: {type(e).__name__}")
 
 
-@router.get("/api/loans/{loan_id}")
+@router.get("/api/loans/dashboard-summary", dependencies=[Depends(require_lending_module)])
+def get_loans_dashboard_summary(
+    current_user: UserModel = Depends(
+        require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")
+    ),
+    db: Session = Depends(get_db),
+):
+    """Lending portfolio KPIs and weekly collection summary (protected by LENDING module)."""
+    _, _, _, today_local = get_local_day_bounds_utc()
+    active_loans = (
+        db.query(LoanModel)
+        .filter(LoanModel.tenant_id == current_user.tenant_id, LoanModel.status == "ACTIVE")
+        .all()
+    )
+    paid_off_loans_count = (
+        db.query(LoanModel)
+        .filter(LoanModel.tenant_id == current_user.tenant_id, LoanModel.status == "PAID_OFF")
+        .count()
+    )
+    defaulted_loans_count = (
+        db.query(LoanModel)
+        .filter(LoanModel.tenant_id == current_user.tenant_id, LoanModel.status == "DEFAULTED")
+        .count()
+    )
+
+    active_portfolio_cents = sum(l.unpaid_principal_cents for l in active_loans)
+    total_outstanding_principal_cents = active_portfolio_cents
+    total_contract_due_cents = sum(l.remaining_contract_total_cents for l in active_loans)
+
+    due_today_cents = 0
+    overdue_amount_cents = 0
+    due_today_installments_count = 0
+    overdue_installments_count = 0
+    overdue_loan_ids = set()
+
+    if active_loans:
+        loan_ids = [l.id for l in active_loans]
+        unpaid_insts = (
+            db.query(LoanInstallmentModel)
+            .filter(
+                LoanInstallmentModel.tenant_id == current_user.tenant_id,
+                LoanInstallmentModel.loan_id.in_(loan_ids),
+                LoanInstallmentModel.remaining_amount_cents > 0,
+            )
+            .all()
+        )
+        for inst in unpaid_insts:
+            if inst.due_date == today_local:
+                due_today_cents += inst.remaining_amount_cents
+                due_today_installments_count += 1
+            elif inst.due_date < today_local:
+                overdue_amount_cents += inst.remaining_amount_cents
+                overdue_installments_count += 1
+                overdue_loan_ids.add(inst.loan_id)
+
+    active_loans_count = len(active_loans)
+    overdue_loans_count = len(overdue_loan_ids)
+    current_loans_count = max(0, active_loans_count - overdue_loans_count)
+
+    # ISO week bounds in CRM local timezone for collected payments
+    crm_tz = get_crm_timezone()
+    now_local = datetime.now(crm_tz)
+    monday_local = (now_local - timedelta(days=now_local.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    sunday_local = (monday_local + timedelta(days=6)).replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    collected_week_query = db.query(
+        func.coalesce(func.sum(LoanPaymentModel.amount_cents), 0),
+        func.count(LoanPaymentModel.id),
+    ).filter(
+        LoanPaymentModel.tenant_id == current_user.tenant_id,
+        LoanPaymentModel.status == "POSTED",
+        LoanPaymentModel.paid_at >= monday_local.astimezone(timezone.utc),
+        LoanPaymentModel.paid_at <= sunday_local.astimezone(timezone.utc),
+    ).first()
+
+    collected_week_cents = int(collected_week_query[0] or 0) if collected_week_query else 0
+    collected_week_payments_count = int(collected_week_query[1] or 0) if collected_week_query else 0
+
+    return {
+        "active_loan_portfolio_cents": active_portfolio_cents,
+        "due_today_cents": due_today_cents,
+        "overdue_amount_cents": overdue_amount_cents,
+        "total_outstanding_principal_cents": total_outstanding_principal_cents,
+        "total_amount_due_cents": total_contract_due_cents,
+        "collected_this_week_enabled": True,
+        "collected_this_week_cents": collected_week_cents,
+        "counts": {
+            "active_loans": active_loans_count,
+            "current_loans": current_loans_count,
+            "overdue_loans": overdue_loans_count,
+            "paid_off_loans": paid_off_loans_count,
+            "defaulted_loans": defaulted_loans_count,
+            "due_today_installments": due_today_installments_count,
+            "overdue_installments": overdue_installments_count,
+            "collected_week_payments": collected_week_payments_count,
+        },
+    }
+
+
+@router.get("/api/loans/customers/{customer_id}/summary", dependencies=[Depends(require_lending_module)])
+def get_customer_lending_summary(
+    customer_id: int,
+    current_user: UserModel = Depends(
+        require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")
+    ),
+    db: Session = Depends(get_db),
+):
+    """Lending credit summary and loan list for a specific customer (protected by LENDING module)."""
+    customer = (
+        db.query(CustomerModel.id)
+        .filter(CustomerModel.id == customer_id, CustomerModel.tenant_id == current_user.tenant_id)
+        .first()
+    )
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found.")
+
+    active_loans = (
+        db.query(LoanModel)
+        .filter(
+            LoanModel.tenant_id == current_user.tenant_id,
+            LoanModel.customer_id == customer_id,
+            LoanModel.status.in_(["ACTIVE", "DEFAULTED"]),
+        )
+        .all()
+    )
+    all_loans = (
+        db.query(LoanModel)
+        .options(joinedload(LoanModel.customer), selectinload(LoanModel.installments))
+        .filter(LoanModel.tenant_id == current_user.tenant_id, LoanModel.customer_id == customer_id)
+        .order_by(LoanModel.id.desc())
+        .all()
+    )
+
+    total_outstanding_principal = sum(l.unpaid_principal_cents for l in active_loans)
+    total_amount_due = sum(l.remaining_contract_total_cents for l in active_loans)
+
+    _, _, _, today_local = get_local_day_bounds_utc()
+    overdue_amt = 0
+    next_due_date = None
+    remaining_inst_count = 0
+
+    if active_loans:
+        loan_ids = [l.id for l in active_loans]
+        unpaid_insts = (
+            db.query(LoanInstallmentModel)
+            .filter(
+                LoanInstallmentModel.tenant_id == current_user.tenant_id,
+                LoanInstallmentModel.loan_id.in_(loan_ids),
+                LoanInstallmentModel.remaining_amount_cents > 0,
+            )
+            .order_by(LoanInstallmentModel.due_date.asc())
+            .all()
+        )
+        remaining_inst_count = len(unpaid_insts)
+        if unpaid_insts:
+            next_due_date = unpaid_insts[0].due_date.isoformat()
+            for inst in unpaid_insts:
+                if inst.due_date < today_local:
+                    overdue_amt += inst.remaining_amount_cents
+
+    last_payment = (
+        db.query(func.max(LoanPaymentModel.paid_at))
+        .filter(
+            LoanPaymentModel.tenant_id == current_user.tenant_id,
+            LoanPaymentModel.customer_id == customer_id,
+            LoanPaymentModel.status == "POSTED",
+        )
+        .scalar()
+    )
+    formatted_last_pay = None
+    if last_payment:
+        if isinstance(last_payment, str):
+            formatted_last_pay = last_payment[:10]
+        else:
+            dt_utc = last_payment if last_payment.tzinfo else last_payment.replace(tzinfo=timezone.utc)
+            formatted_last_pay = dt_utc.astimezone(get_crm_timezone()).strftime("%Y-%m-%d")
+
+    return {
+        "customer_id": customer_id,
+        "credit_summary": {
+            "current_outstanding_principal_cents": total_outstanding_principal,
+            "total_amount_due_cents": total_amount_due,
+            "overdue_amount_cents": overdue_amt,
+            "active_loans_count": len(active_loans),
+            "total_loans_count": len(all_loans),
+            "last_payment_date": formatted_last_pay,
+            "next_payment_due_date": next_due_date,
+            "remaining_installments": remaining_inst_count,
+        },
+        "loans": [serialize_loan_summary(l, today_local) for l in all_loans],
+    }
+
+
+@router.get("/api/loans/{loan_id}", dependencies=[Depends(require_lending_module)])
 def get_loan_detail(
     loan_id: int,
     current_user: UserModel = Depends(
@@ -364,7 +558,7 @@ def get_loan_detail(
     return serialize_loan_detail(loan, today_local, db=db)
 
 
-@router.post("/api/loans/{loan_id}/approve", dependencies=[Depends(verify_csrf)])
+@router.post("/api/loans/{loan_id}/approve", dependencies=[Depends(verify_csrf), Depends(require_lending_module)])
 def approve_loan(
     loan_id: int,
     payload: LoanApproveRequest,
@@ -413,7 +607,7 @@ def approve_loan(
         raise HTTPException(status_code=500, detail=f"Could not approve loan: {type(e).__name__}")
 
 
-@router.post("/api/loans/{loan_id}/activate", dependencies=[Depends(verify_csrf)])
+@router.post("/api/loans/{loan_id}/activate", dependencies=[Depends(verify_csrf), Depends(require_lending_module)])
 def activate_loan(
     loan_id: int,
     payload: LoanActivateRequest,
@@ -494,7 +688,7 @@ def activate_loan(
         raise HTTPException(status_code=500, detail="Could not activate loan.")
 
 
-@router.post("/api/loans/{loan_id}/cancel", dependencies=[Depends(verify_csrf)])
+@router.post("/api/loans/{loan_id}/cancel", dependencies=[Depends(verify_csrf), Depends(require_lending_module)])
 def cancel_loan(
     loan_id: int,
     payload: LoanCancelRequest,
@@ -555,7 +749,7 @@ def cancel_loan(
         raise HTTPException(status_code=500, detail=f"Could not cancel loan: {type(e).__name__}")
 
 
-@router.post("/api/loans/{loan_id}/default", dependencies=[Depends(verify_csrf)])
+@router.post("/api/loans/{loan_id}/default", dependencies=[Depends(verify_csrf), Depends(require_lending_module)])
 def mark_loan_defaulted(
     loan_id: int,
     payload: LoanDefaultRequest,
@@ -643,7 +837,7 @@ def mark_loan_defaulted(
         raise HTTPException(status_code=500, detail=f"Could not mark loan as defaulted: {type(e).__name__}")
 
 
-@router.post("/api/loans/{loan_id}/collections-log", dependencies=[Depends(verify_csrf)])
+@router.post("/api/loans/{loan_id}/collections-log", dependencies=[Depends(verify_csrf), Depends(require_lending_module)])
 def create_loan_collection_log(
     loan_id: int,
     payload: LoanCollectionLogRequest,
@@ -718,7 +912,7 @@ def create_loan_collection_log(
         raise HTTPException(status_code=500, detail=f"Could not save collection log: {type(e).__name__}")
 
 
-@router.get("/api/collections/queue")
+@router.get("/api/collections/queue", dependencies=[Depends(require_lending_module)])
 def get_collections_queue(
     bucket: str = Query(default="ALL"),
     current_user: UserModel = Depends(
@@ -820,7 +1014,7 @@ def get_collections_queue(
     }
 
 
-@router.get("/api/loans/{loan_id}/payments")
+@router.get("/api/loans/{loan_id}/payments", dependencies=[Depends(require_lending_module)])
 def list_loan_payments(
     loan_id: int,
     current_user: UserModel = Depends(require_roles("OWNER_ADMIN", "SALES_AGENT", "CREDIT_ADVISOR", "OPERATIONS_OFFICER")),
@@ -848,7 +1042,7 @@ def list_loan_payments(
     return [serialize_loan_payment(p, include_allocations=True, is_top_reversible=(p.id == top_posted_id)) for p in payments]
 
 
-@router.post("/api/loans/{loan_id}/payments", dependencies=[Depends(verify_csrf)])
+@router.post("/api/loans/{loan_id}/payments", dependencies=[Depends(verify_csrf), Depends(require_lending_module)])
 def create_loan_payment(
     loan_id: int,
     payload: LoanPaymentCreateRequest,
@@ -1072,7 +1266,7 @@ def create_loan_payment(
         raise HTTPException(status_code=500, detail="Payment could not be recorded.")
 
 
-@router.post("/api/loans/{loan_id}/payments/{payment_id}/reverse", dependencies=[Depends(verify_csrf)])
+@router.post("/api/loans/{loan_id}/payments/{payment_id}/reverse", dependencies=[Depends(verify_csrf), Depends(require_lending_module)])
 def reverse_loan_payment(
     loan_id: int,
     payment_id: int,

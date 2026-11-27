@@ -35,6 +35,7 @@ def verify_database_schema_compatibility(db_engine):
         tables = set(inspector.get_table_names())
         base_required_tables = {
             "tenants", "tenant_sequences",
+            "platform_modules", "platform_module_dependencies", "tenant_modules",
             "users", "sessions", "conversations", "chat_messages", "audit_logs",
             "customers", "customer_documents", "leads", "lead_stage_history",
             "interactions", "loans", "loan_installments",

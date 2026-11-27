@@ -139,11 +139,7 @@ from schemas.platform import (
     PlatformTenantUpdateRequest,
 )
 from services.audit import SENSITIVE_AUDIT_KEYS, record_audit_event
-from services.customer_detail import (
-    get_customer_active_loan_summary,
-    get_customer_detail_payload,
-    get_customers_loan_stats,
-)
+from services.customer_detail import get_customer_detail_payload
 from services.external import (
     AIService,
     EmailDeliveryService,

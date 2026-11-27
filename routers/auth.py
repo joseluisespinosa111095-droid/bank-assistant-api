@@ -28,6 +28,8 @@ from dependencies.auth import get_current_user, verify_csrf
 from dependencies.db import get_db
 from models import PasswordResetTokenModel, SessionModel, TenantModel, UserModel
 from schemas.auth import (
+    AuthLoginResponse,
+    AuthMeResponse,
     PasswordResetConfirmRequest,
     PasswordResetRequest,
     UserChangePasswordRequest,
@@ -36,12 +38,17 @@ from schemas.auth import (
 )
 from services.audit import record_audit_event
 from services.external import EmailDeliveryService, GENERIC_PASSWORD_RESET_MESSAGE
+from services.modules import (
+    LENDING_MODULE_CODE,
+    get_enabled_module_codes,
+    get_lending_entity_name,
+)
 
 router = APIRouter()
 
 
 # --- AUTHENTICATION & ATOMIC BOOTSTRAP ENDPOINTS ---
-@router.post("/api/auth/login")
+@router.post("/api/auth/login", response_model=AuthLoginResponse, response_model_exclude_unset=True)
 def login(user_data: UserLogin, request: Request, response: Response, db: Session = Depends(get_db)):
     ip = get_client_ip(request)
     email_clean = user_data.email.strip().lower()
@@ -133,7 +140,13 @@ def login(user_data: UserLogin, request: Request, response: Response, db: Sessio
         db, "LOGIN_SUCCESS", "auth", "SUCCESS",
         actor=user, resource_id=str(user.id), ip_address=ip, commit=True
     )
-    return {
+    enabled_modules = get_enabled_module_codes(
+        db,
+        user.tenant_id,
+        is_superadmin=bool(user.is_superadmin),
+        tenant_slug=tenant.slug,
+    )
+    login_payload = {
         "message": "Login successful",
         "email": user.email,
         "full_name": user.full_name,
@@ -142,8 +155,17 @@ def login(user_data: UserLogin, request: Request, response: Response, db: Sessio
         "tenant_slug": tenant.slug,
         "tenant_name": tenant.name,
         "is_superadmin": bool(user.is_superadmin),
-        "preferred_language": user.preferred_language if user.preferred_language in VALID_LANGUAGES else "en"
+        "preferred_language": user.preferred_language if user.preferred_language in VALID_LANGUAGES else "en",
+        "enabled_modules": enabled_modules,
     }
+    if LENDING_MODULE_CODE in enabled_modules:
+        login_payload["lending_entity_name"] = get_lending_entity_name(
+            db,
+            user.tenant_id,
+            is_superadmin=bool(user.is_superadmin),
+            tenant_slug=tenant.slug,
+        )
+    return AuthLoginResponse(**login_payload)
 
 
 @router.post("/api/auth/password-reset/request")
@@ -405,16 +427,23 @@ def logout(
     return {"message": "Logged out"}
 
 
-@router.get("/api/auth/me")
+@router.get("/api/auth/me", response_model=AuthMeResponse, response_model_exclude_unset=True)
 def get_me(
     current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     tenant = db.query(TenantModel).filter(TenantModel.id == current_user.tenant_id).first()
-    return {
+    tenant_slug = tenant.slug if tenant else None
+    enabled_modules = get_enabled_module_codes(
+        db,
+        current_user.tenant_id,
+        is_superadmin=bool(current_user.is_superadmin),
+        tenant_slug=tenant_slug,
+    )
+    me_payload = {
         "id": current_user.id,
         "tenant_id": current_user.tenant_id,
-        "tenant_slug": tenant.slug if tenant else None,
+        "tenant_slug": tenant_slug,
         "tenant_name": tenant.name if tenant else None,
         "email": current_user.email,
         "full_name": current_user.full_name,
@@ -422,8 +451,17 @@ def get_me(
         "is_superadmin": bool(current_user.is_superadmin),
         "preferred_language": current_user.preferred_language if current_user.preferred_language in VALID_LANGUAGES else "en",
         "is_active": current_user.is_active,
-        "supported_products": SUPPORTED_PRODUCTS
+        "supported_products": SUPPORTED_PRODUCTS,
+        "enabled_modules": enabled_modules,
     }
+    if LENDING_MODULE_CODE in enabled_modules:
+        me_payload["lending_entity_name"] = get_lending_entity_name(
+            db,
+            current_user.tenant_id,
+            is_superadmin=bool(current_user.is_superadmin),
+            tenant_slug=tenant_slug,
+        )
+    return AuthMeResponse(**me_payload)
 
 
 @router.patch("/api/auth/me/language", dependencies=[Depends(verify_csrf)])
