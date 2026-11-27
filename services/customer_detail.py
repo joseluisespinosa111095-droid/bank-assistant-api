@@ -104,3 +104,72 @@ def get_customer_detail_payload(db: Session, tenant_id: int, customer_id: int) -
         data["credit_summary"]["last_payment_date"] = formatted_last_pay
 
     return data
+
+
+def get_customers_loan_stats(
+    db: Session,
+    tenant_id: int,
+    customer_ids: list[int]
+) -> tuple[dict, dict]:
+    """Pre-fetches active/defaulted loan balances and latest posted payment date for a page of customers."""
+    loan_stats: dict = {}
+    last_payments_map: dict = {}
+    if not customer_ids:
+        return loan_stats, last_payments_map
+
+    active_loans = (
+        db.query(LoanModel)
+        .filter(
+            LoanModel.tenant_id == tenant_id,
+            LoanModel.customer_id.in_(customer_ids),
+            LoanModel.status.in_(["ACTIVE", "DEFAULTED"])
+        )
+        .all()
+    )
+    for l in active_loans:
+        st = loan_stats.setdefault(l.customer_id, {"count": 0, "principal": 0})
+        st["count"] += 1
+        st["principal"] += l.unpaid_principal_cents
+
+    payment_rows = (
+        db.query(
+            LoanPaymentModel.customer_id,
+            func.max(LoanPaymentModel.paid_at)
+        )
+        .filter(
+            LoanPaymentModel.tenant_id == tenant_id,
+            LoanPaymentModel.customer_id.in_(customer_ids),
+            LoanPaymentModel.status == "POSTED"
+        )
+        .group_by(LoanPaymentModel.customer_id)
+        .all()
+    )
+    crm_tz = get_crm_timezone()
+    for cid, max_paid_at in payment_rows:
+        if max_paid_at:
+            if isinstance(max_paid_at, str):
+                last_payments_map[cid] = max_paid_at[:10]
+            else:
+                dt_utc = max_paid_at if max_paid_at.tzinfo else max_paid_at.replace(tzinfo=timezone.utc)
+                last_payments_map[cid] = dt_utc.astimezone(crm_tz).strftime("%Y-%m-%d")
+
+    return loan_stats, last_payments_map
+
+
+def get_customer_active_loan_summary(
+    db: Session,
+    tenant_id: int,
+    customer: CustomerModel
+) -> tuple[int, int]:
+    """Returns (active_loans_count, unpaid_principal_cents) for a single customer."""
+    active_loans_count = (
+        db.query(LoanModel)
+        .filter(
+            LoanModel.tenant_id == tenant_id,
+            LoanModel.customer_id == customer.id,
+            LoanModel.status == "ACTIVE"
+        )
+        .count()
+    )
+    unpaid_principal = sum(l.unpaid_principal_cents for l in customer.loans if l.status == "ACTIVE")
+    return active_loans_count, unpaid_principal
