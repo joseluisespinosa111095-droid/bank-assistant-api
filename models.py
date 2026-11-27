@@ -2,10 +2,11 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column, Integer, BigInteger, String, Text,
-    DateTime, Date, Boolean, ForeignKey, ForeignKeyConstraint,
+    DateTime, Date, Boolean, JSON, ForeignKey, ForeignKeyConstraint,
     PrimaryKeyConstraint, UniqueConstraint, CheckConstraint, Index,
     event, text, inspect, LargeBinary, true, false
 )
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import declarative_base, relationship, deferred
 
 
@@ -804,3 +805,109 @@ def _enforce_payment_reversal_only_update(mapper, connection, target):
         or len((target.reversal_reason or "").strip()) < 3
     ):
         raise ValueError("Payment reversal requires reversed_by_user_id, reversed_at, and a valid reversal_reason.")
+
+
+# --- MULTI-MODULE CATALOG & TENANT ENTITLEMENTS (ENTREGABLE 5A) ---
+class PlatformModuleModel(Base):
+    __tablename__ = "platform_modules"
+    code = Column(String(40), primary_key=True)
+    name = Column(String(120), nullable=False)
+    description = Column(Text, nullable=True)
+    is_core_mandatory = Column(Boolean, default=False, server_default=false(), nullable=False)
+    is_assignable = Column(Boolean, default=False, server_default=false(), nullable=False)
+    is_active = Column(Boolean, default=True, server_default=true(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        PrimaryKeyConstraint("code", name="pk_platform_modules"),
+        CheckConstraint("length(trim(code)) >= 2", name="ck_platform_modules_code_non_empty"),
+    )
+
+
+class PlatformModuleDependencyModel(Base):
+    __tablename__ = "platform_module_dependencies"
+    module_code = Column(String(40), nullable=False)
+    required_module_code = Column(String(40), nullable=False)
+
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "module_code",
+            "required_module_code",
+            name="pk_platform_module_dependencies",
+        ),
+        ForeignKeyConstraint(
+            ["module_code"],
+            ["platform_modules.code"],
+            ondelete="RESTRICT",
+            name="fk_pmod_dep_module_code",
+        ),
+        ForeignKeyConstraint(
+            ["required_module_code"],
+            ["platform_modules.code"],
+            ondelete="RESTRICT",
+            name="fk_pmod_dep_required_code",
+        ),
+        CheckConstraint(
+            "module_code <> required_module_code",
+            name="ck_platform_module_dependencies_no_self_dep",
+        ),
+    )
+
+
+class TenantModuleModel(Base):
+    __tablename__ = "tenant_modules"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    module_code = Column(String(40), nullable=False, index=True)
+    is_enabled = Column(Boolean, default=True, server_default=true(), nullable=False, index=True)
+    config_json = Column(
+        JSON().with_variant(postgresql.JSONB(astext_type=Text()), "postgresql"),
+        nullable=True,
+    )
+    enabled_at = Column(DateTime(timezone=True), nullable=True)
+    disabled_at = Column(DateTime(timezone=True), nullable=True)
+    updated_by_user_id = Column(Integer, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "module_code", name="uq_tenant_modules_tenant_module"),
+        ForeignKeyConstraint(
+            ["tenant_id"],
+            ["tenants.id"],
+            ondelete="RESTRICT",
+            name="fk_tenant_modules_tenant_id",
+        ),
+        ForeignKeyConstraint(
+            ["module_code"],
+            ["platform_modules.code"],
+            ondelete="RESTRICT",
+            name="fk_tenant_modules_module_code",
+        ),
+        ForeignKeyConstraint(
+            ["updated_by_user_id"],
+            ["users.id"],
+            ondelete="RESTRICT",
+            name="fk_tenant_modules_updated_by_user_id",
+        ),
+    )
+
+    tenant = relationship("TenantModel")
+    module = relationship("PlatformModuleModel")
+    updated_by = relationship("UserModel")

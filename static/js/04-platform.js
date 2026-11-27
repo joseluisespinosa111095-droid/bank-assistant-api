@@ -170,7 +170,9 @@
                 auditBtn?.classList.add('hidden');
             } else {
                 const orgName = (user && user.tenant_name) ? user.tenant_name : '';
-                if (sideSubtitle) sideSubtitle.innerText = orgName || 'Credit Operations';
+                const hasLending = (typeof hasModule === 'function') ? hasModule('LENDING', user) : false;
+
+                if (sideSubtitle) sideSubtitle.innerText = orgName || (hasLending ? 'Credit Operations' : 'CRM Workspace');
                 if (topbarContext) topbarContext.innerText = orgName ? `${orgName} /` : 'NURA CRM /';
                 if (headerRoleBadge) {
                     headerRoleBadge.innerText = user ? user.role : 'TEAM';
@@ -187,6 +189,33 @@
                 const isOwnerAdmin = Boolean(user && user.role === 'OWNER_ADMIN');
                 teamBtn?.classList.toggle('hidden', !isOwnerAdmin);
                 auditBtn?.classList.toggle('hidden', !isOwnerAdmin);
+
+                // Toggle Lending-only UI across sidebar, topbar, mobile nav, dashboard, and customer profile
+                document.querySelectorAll('.lending-only-ui').forEach(el => {
+                    el.classList.toggle('hidden', !hasLending);
+                });
+                if (mobileCommercial) {
+                    mobileCommercial.classList.toggle('grid-cols-6', hasLending);
+                    mobileCommercial.classList.toggle('grid-cols-4', !hasLending);
+                }
+                const coreFunnelCard = document.getElementById('dash-core-funnel-card');
+                if (coreFunnelCard) {
+                    coreFunnelCard.classList.toggle('lg:col-span-5', hasLending);
+                    coreFunnelCard.classList.toggle('lg:col-span-12', !hasLending);
+                }
+                const dashTitle = document.getElementById('dash-main-title');
+                const dashSubtitle = document.getElementById('dash-main-subtitle');
+                const isEs = (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang === 'es');
+                if (dashTitle) {
+                    dashTitle.innerText = hasLending
+                        ? (isEs ? 'Panel Ejecutivo de Crédito' : 'Executive Credit Dashboard')
+                        : (isEs ? 'Panel Ejecutivo CRM' : 'Executive CRM Dashboard');
+                }
+                if (dashSubtitle) {
+                    dashSubtitle.innerText = hasLending
+                        ? (isEs ? 'Indicadores contables de cartera en tiempo real, cobranza y embudo de originación' : 'Real-time portfolio accounting indicators, collections tracking, and origination pipeline')
+                        : (isEs ? 'Resumen en tiempo real de prospectos, clientes, lista de llamadas y actividad reciente' : 'Real-time leads pipeline, customers directory, call list queue, and recent CRM activity');
+                }
             }
         }
 
@@ -194,6 +223,7 @@
         const PLATFORM_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
         let platformTenantsCache = [];
         let platformAuditLogsCache = [];
+        let platformModulesCatalogCache = [];
         let platformSelectedTenant = null;
         let platformPendingStatusTenantId = null;
         let platformSlugManuallyEdited = false;
@@ -202,6 +232,7 @@
             hidePlatformNotice();
             platformTenantsCache = [];
             platformAuditLogsCache = [];
+            platformModulesCatalogCache = [];
             platformSelectedTenant = null;
             platformPendingStatusTenantId = null;
             platformSlugManuallyEdited = false;
@@ -341,11 +372,22 @@
                     ? `<p class="text-[11px] text-slate-500 truncate max-w-[240px]">${escapeHtml(item.legal_name)}</p>`
                     : '';
 
+                const enabledMods = Array.isArray(item.enabled_modules) ? item.enabled_modules : [];
+                const modBadgesHtml = (!isPlatformTenant && enabledMods.length > 0)
+                    ? `<div class="flex items-center gap-1 flex-wrap mt-1">${enabledMods.map(code => {
+                        const cls = code === 'LENDING'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : 'bg-slate-100 text-slate-600 border-slate-200';
+                        return `<span class="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}">${escapeHtml(code)}</span>`;
+                    }).join('')}</div>`
+                    : '';
+
                 return `
                     <tr class="hover:bg-slate-50/80 transition">
                         <td class="py-3.5 px-4">
                             <p class="font-bold text-slate-900">${escapeHtml(item.name)}</p>
                             ${legalLine}
+                            ${modBadgesHtml}
                         </td>
                         <td class="py-3.5 px-4">
                             <div class="flex items-center gap-1.5 flex-wrap">
@@ -449,7 +491,103 @@
             platformSlugManuallyEdited = slugInput.value.trim().length > 0;
         }
 
-        function openPlatformCreateOrgModal() {
+        async function loadPlatformModulesCatalog(force = false) {
+            if (!isPlatformSuperadmin(currentUser)) return [];
+            if (!force && Array.isArray(platformModulesCatalogCache) && platformModulesCatalogCache.length > 0) {
+                return platformModulesCatalogCache;
+            }
+            const data = await platformFetch('/api/platform/modules');
+            platformModulesCatalogCache = Array.isArray(data) ? data : [];
+            return platformModulesCatalogCache;
+        }
+
+        function sortPlatformModulesCatalog(catalog) {
+            const order = { CORE: 0, LENDING: 1, BROKER: 2, COMMERCE: 3, FINANCING: 4 };
+            return [...(Array.isArray(catalog) ? catalog : [])].sort((a, b) => {
+                const oa = order[a.code] ?? 99;
+                const ob = order[b.code] ?? 99;
+                return oa !== ob ? oa - ob : String(a.code || '').localeCompare(String(b.code || ''));
+            });
+        }
+
+        function renderPlatformModuleCheckboxes(containerId, prefix, enabledSet, onToggleFnName) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const sorted = sortPlatformModulesCatalog(platformModulesCatalogCache);
+            if (sorted.length === 0) {
+                container.innerHTML = '<p class="text-[11px] text-slate-400">No modules available in catalog.</p>';
+                return;
+            }
+
+            container.innerHTML = sorted.map(mod => {
+                const code = String(mod.code || '').toUpperCase();
+                const isMandatory = Boolean(mod.is_core_mandatory);
+                const isAssignable = Boolean(mod.is_assignable) && Boolean(mod.is_active);
+                const isChecked = isMandatory || enabledSet.has(code);
+                const isDisabled = isMandatory || !isAssignable;
+                const deps = Array.isArray(mod.dependencies) && mod.dependencies.length > 0
+                    ? `<span class="text-[10px] text-slate-400 font-mono">Requires: ${escapeHtml(mod.dependencies.join(', '))}</span>`
+                    : '';
+
+                let badgeHtml = '';
+                if (isMandatory) {
+                    badgeHtml = '<span class="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Mandatory / Obligatorio</span>';
+                } else if (isAssignable) {
+                    badgeHtml = '<span class="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Available</span>';
+                } else {
+                    badgeHtml = '<span class="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">Coming Soon / Próximamente</span>';
+                }
+
+                const onchangeAttr = (!isDisabled && onToggleFnName) ? `onchange="${onToggleFnName}()"` : '';
+                const rowTone = !isAssignable ? 'bg-slate-100/70 border-slate-200/70 opacity-75' : 'bg-white border-slate-200/90';
+
+                return `
+                    <label class="flex items-start gap-3 p-3 rounded-xl border ${rowTone} ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer hover:border-blue-300'} transition">
+                        <input
+                            type="checkbox"
+                            id="${prefix}-mod-${escapeHtml(code)}"
+                            data-module-code="${escapeHtml(code)}"
+                            data-assignable="${isAssignable ? 'true' : 'false'}"
+                            ${isChecked ? 'checked' : ''}
+                            ${isDisabled ? 'disabled' : ''}
+                            ${onchangeAttr}
+                            class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60"
+                        >
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-bold text-slate-900 text-xs">${escapeHtml(mod.name || code)}</span>
+                                <span class="font-mono text-[10px] font-bold text-slate-500">${escapeHtml(code)}</span>
+                                ${badgeHtml}
+                            </div>
+                            ${mod.description ? `<p class="text-[11px] text-slate-500 mt-0.5 leading-snug">${escapeHtml(mod.description)}</p>` : ''}
+                            ${deps ? `<div class="mt-1">${deps}</div>` : ''}
+                        </div>
+                    </label>
+                `;
+            }).join('');
+        }
+
+        function togglePlatformCreateLenderField() {
+            const lendingCheckbox = document.getElementById('plat-create-mod-LENDING');
+            const cfgBox = document.getElementById('plat-create-lending-config-box');
+            const isChecked = Boolean(lendingCheckbox && lendingCheckbox.checked);
+            cfgBox?.classList.toggle('hidden', !isChecked);
+        }
+
+        function togglePlatformDetailLenderField() {
+            const lendingCheckbox = document.getElementById('plat-detail-mod-LENDING');
+            const cfgBox = document.getElementById('plat-detail-lending-config-box');
+            const lenderInput = document.getElementById('plat-detail-lending-entity-name');
+            const warnEl = document.getElementById('plat-detail-lender-unconfigured-hint');
+            const isChecked = Boolean(lendingCheckbox && lendingCheckbox.checked);
+            cfgBox?.classList.toggle('hidden', !isChecked);
+            if (warnEl) {
+                const hasVal = Boolean(lenderInput && lenderInput.value.trim());
+                warnEl.classList.toggle('hidden', !isChecked || hasVal);
+            }
+        }
+
+        async function openPlatformCreateOrgModal() {
             if (!isPlatformSuperadmin(currentUser)) return;
             const form = document.getElementById('platform-create-org-form');
             if (form) form.reset();
@@ -466,7 +604,23 @@
                 submitBtn.disabled = false;
                 submitBtn.innerText = 'Create Organization';
             }
+            const lenderInput = document.getElementById('plat-create-lending-entity-name');
+            if (lenderInput) lenderInput.value = '';
+            document.getElementById('plat-create-lending-config-box')?.classList.add('hidden');
+            const listEl = document.getElementById('plat-create-modules-list');
+            if (listEl) listEl.innerHTML = '<p class="text-[11px] text-slate-400 py-2">Loading module catalog...</p>';
+
             document.getElementById('platform-create-org-modal')?.classList.remove('hidden');
+
+            try {
+                await loadPlatformModulesCatalog();
+                renderPlatformModuleCheckboxes('plat-create-modules-list', 'plat-create', new Set(['CORE']), 'togglePlatformCreateLenderField');
+                togglePlatformCreateLenderField();
+            } catch (err) {
+                if (listEl) {
+                    listEl.innerHTML = `<p class="text-[11px] text-red-600">${escapeHtml(err.message || 'Could not load module catalog.')}</p>`;
+                }
+            }
         }
 
         function closePlatformCreateOrgModal() {
@@ -520,6 +674,16 @@
                 return;
             }
 
+            const selectedModules = ['CORE'];
+            document.querySelectorAll('#plat-create-modules-list input[type="checkbox"][data-assignable="true"]').forEach(cb => {
+                const code = cb.getAttribute('data-module-code');
+                if (cb.checked && code && !selectedModules.includes(code)) {
+                    selectedModules.push(code);
+                }
+            });
+            const hasLendingSelected = selectedModules.includes('LENDING');
+            const lendingEntityRaw = (document.getElementById('plat-create-lending-entity-name')?.value || '').trim();
+
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.innerText = 'Creating...';
@@ -532,8 +696,12 @@
                     legal_name: legalNameRaw || null,
                     owner_email: ownerEmail,
                     owner_password: ownerPassword,
-                    owner_full_name: ownerFullNameRaw || null
+                    owner_full_name: ownerFullNameRaw || null,
+                    modules: selectedModules
                 };
+                if (hasLendingSelected && lendingEntityRaw) {
+                    payload.lending_entity_name = lendingEntityRaw;
+                }
                 const created = await platformFetch('/api/platform/tenants', {
                     method: 'POST',
                     body: JSON.stringify(payload)
@@ -542,7 +710,8 @@
                 closePlatformCreateOrgModal();
                 const createdSlug = created?.tenant?.slug || slug;
                 const createdEmail = created?.owner_admin?.email || ownerEmail;
-                showPlatformNotice('success', `Organization "${createdSlug}" created with initial OWNER_ADMIN ${createdEmail}.`);
+                const createdMods = Array.isArray(created?.enabled_modules) ? created.enabled_modules.join(', ') : selectedModules.join(', ');
+                showPlatformNotice('success', `Organization "${createdSlug}" created (${createdMods}) with initial OWNER_ADMIN ${createdEmail}.`);
                 await loadPlatformOrganizations();
             } catch (err) {
                 if (err.status !== 401) {
@@ -622,6 +791,36 @@
                 editErr.classList.add('hidden');
             }
 
+            // Render Modules & Entitlements section (hidden for system platform tenant)
+            const modSection = document.getElementById('platform-edit-modules-section');
+            const modErr = document.getElementById('plat-edit-modules-error');
+            if (modErr) {
+                modErr.innerText = '';
+                modErr.classList.add('hidden');
+            }
+            if (modSection) {
+                if (isPlatformTenant) {
+                    modSection.classList.add('hidden');
+                } else {
+                    modSection.classList.remove('hidden');
+                    const enabledSet = new Set(Array.isArray(detail.enabled_modules) ? detail.enabled_modules : ['CORE']);
+                    renderPlatformModuleCheckboxes('plat-detail-modules-list', 'plat-detail', enabledSet, 'togglePlatformDetailLenderField');
+
+                    const lenderInput = document.getElementById('plat-detail-lending-entity-name');
+                    if (lenderInput) {
+                        let storedLender = detail.lending_entity_name || '';
+                        if (!storedLender && Array.isArray(detail.modules)) {
+                            const lendRow = detail.modules.find(m => m.module_code === 'LENDING');
+                            if (lendRow && lendRow.config_json && typeof lendRow.config_json.lending_entity_name === 'string') {
+                                storedLender = lendRow.config_json.lending_entity_name;
+                            }
+                        }
+                        lenderInput.value = storedLender;
+                    }
+                    togglePlatformDetailLenderField();
+                }
+            }
+
             const statusBtn = document.getElementById('plat-detail-status-action-btn');
             if (statusBtn) {
                 if (isPlatformTenant) {
@@ -692,7 +891,8 @@
             try {
                 const [detail, users] = await Promise.all([
                     platformFetch(`/api/platform/tenants/${idNum}`),
-                    platformFetch(`/api/platform/tenants/${idNum}/users`)
+                    platformFetch(`/api/platform/tenants/${idNum}/users`),
+                    loadPlatformModulesCatalog()
                 ]);
                 renderPlatformOrgDetail(detail, users);
                 bodyEl?.classList.remove('hidden');
@@ -764,6 +964,64 @@
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerText = 'Save Changes';
+                }
+            }
+        }
+
+        async function handlePlatformEditModulesSubmit(e) {
+            e.preventDefault();
+            if (!isPlatformSuperadmin(currentUser) || !platformSelectedTenant) return;
+            if (platformSelectedTenant.slug === 'platform') return;
+
+            const tenantId = Number(platformSelectedTenant.id);
+            const errBox = document.getElementById('plat-edit-modules-error');
+            const submitBtn = document.getElementById('plat-edit-modules-submit');
+            if (errBox) errBox.classList.add('hidden');
+
+            const moduleUpdates = [];
+            document.querySelectorAll('#plat-detail-modules-list input[type="checkbox"][data-assignable="true"]').forEach(cb => {
+                const code = cb.getAttribute('data-module-code');
+                if (!code || code === 'CORE') return;
+                const entry = {
+                    module_code: code,
+                    is_enabled: Boolean(cb.checked)
+                };
+                if (code === 'LENDING' && cb.checked) {
+                    const lenderVal = (document.getElementById('plat-detail-lending-entity-name')?.value || '').trim();
+                    entry.lending_entity_name = lenderVal || null;
+                }
+                moduleUpdates.push(entry);
+            });
+
+            if (moduleUpdates.length === 0) return;
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Saving Modules...';
+            }
+
+            try {
+                await platformFetch(`/api/platform/tenants/${tenantId}/modules`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ modules: moduleUpdates })
+                });
+                const [freshDetail, freshUsers] = await Promise.all([
+                    platformFetch(`/api/platform/tenants/${tenantId}`),
+                    platformFetch(`/api/platform/tenants/${tenantId}/users`),
+                    loadPlatformModulesCatalog()
+                ]);
+                renderPlatformOrgDetail(freshDetail, freshUsers);
+                showPlatformNotice('success', `Modules updated for "${freshDetail.slug}" (${(freshDetail.enabled_modules || []).join(', ')}).`);
+                await loadPlatformOrganizations();
+            } catch (err) {
+                if (err.status !== 401 && errBox) {
+                    errBox.innerText = err.message || 'Could not update organization modules.';
+                    errBox.classList.remove('hidden');
+                }
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Save Modules';
                 }
             }
         }

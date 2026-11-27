@@ -34,11 +34,7 @@ from dependencies.db import get_db
 from models import CustomerDocumentModel, CustomerModel, InteractionModel, UserModel
 from schemas.core_crm import CustomerCreateRequest, CustomerUpdateRequest, InteractionCreateRequest
 from services.audit import record_audit_event
-from services.customer_detail import (
-    get_customer_active_loan_summary,
-    get_customer_detail_payload,
-    get_customers_loan_stats,
-)
+from services.customer_detail import get_customer_detail_payload
 from services.serializers_core import (
     resolve_customer_name_for_create,
     resolve_customer_name_for_update,
@@ -144,26 +140,11 @@ def list_customers(
     offset = (page - 1) * page_size
     items = query.offset(offset).limit(page_size).all()
 
-    cust_ids = [c.id for c in items]
-    loan_stats, last_payments_map = get_customers_loan_stats(db, current_user.tenant_id, cust_ids)
-
-    serialized_items = []
-    for c in items:
-        st = loan_stats.get(c.id, {"count": 0, "principal": 0})
-        serialized_items.append(
-            serialize_customer(
-                c,
-                active_loans_count=st["count"],
-                unpaid_principal_cents=st["principal"],
-                last_payment_date=last_payments_map.get(c.id)
-            )
-        )
-
     return {
         "total": total,
         "page": page,
         "page_size": page_size,
-        "items": serialized_items
+        "items": [serialize_customer(c) for c in items]
     }
 
 
@@ -298,7 +279,7 @@ def create_customer(
         )
         db.commit()
         db.refresh(new_customer)
-        return serialize_customer(new_customer, active_loans_count=0, unpaid_principal_cents=0)
+        return serialize_customer(new_customer)
     except HTTPException:
         db.rollback()
         raise
@@ -502,10 +483,7 @@ def update_customer(
         )
         db.commit()
         db.refresh(customer)
-        active_loans_count, unpaid_principal = get_customer_active_loan_summary(
-            db, current_user.tenant_id, customer
-        )
-        return serialize_customer(customer, active_loans_count=active_loans_count, unpaid_principal_cents=unpaid_principal)
+        return serialize_customer(customer)
     except HTTPException:
         db.rollback()
         raise

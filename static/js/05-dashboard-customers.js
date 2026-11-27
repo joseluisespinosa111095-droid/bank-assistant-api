@@ -22,111 +22,153 @@ async function loadDashboardSummary() {
     if (isDashboardSummaryLoading) return;
 
     isDashboardSummaryLoading = true;
+    const errBox = document.getElementById('dashboard-summary-error');
+    if (errBox) errBox.classList.add('hidden');
 
     try {
-        const res = await fetch('/api/dashboard/summary');
+        // 1. Core CRM Dashboard Summary (always loaded for commercial tenants)
+        const coreRes = await fetch('/api/dashboard/summary');
 
-        if (res.status === 401) {
+        if (coreRes.status === 401) {
             mostrarAuthView();
             return;
         }
 
-        if (res.status === 403) {
+        if (coreRes.status === 403) {
             throw new Error('Insufficient permissions to view dashboard metrics.');
         }
 
-        if (!res.ok) {
-            throw new Error(`Dashboard request failed (HTTP ${res.status}).`);
+        if (!coreRes.ok) {
+            throw new Error(`Dashboard request failed (HTTP ${coreRes.status}).`);
         }
 
-        const data = await res.json();
-
-        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        const coreData = await coreRes.json();
+        if (!coreData || typeof coreData !== 'object' || Array.isArray(coreData)) {
             throw new Error('Invalid dashboard response.');
         }
 
-        const amountFields = [
-            ['active_loan_portfolio_cents', 'saldo-val'],
-            ['due_today_cents', 'dash-due-today-val'],
-            ['overdue_amount_cents', 'dash-overdue-val'],
-            ['total_outstanding_principal_cents', 'dash-outstanding-principal-val'],
-            ['total_amount_due_cents', 'dash-total-amount-due-val']
-        ];
+        const setIntText = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && Number.isSafeInteger(val) && val >= 0) el.innerText = String(val);
+        };
 
-        for (const [field, elementId] of amountFields) {
-            if (Number.isFinite(data[field])) {
-                setDashboardPrivacyMetric(elementId, data[field]);
+        const coreCounts = (coreData.counts && typeof coreData.counts === 'object') ? coreData.counts : {};
+        const callList = (coreData.call_list && typeof coreData.call_list === 'object') ? coreData.call_list : {};
+        setIntText('dash-customers-count', coreCounts.customers);
+        setIntText('dash-leads-count', coreCounts.open_leads);
+        setIntText('dash-calls-today-count', callList.today ?? coreCounts.call_list_today);
+        setIntText('dash-calls-overdue-count', callList.overdue ?? coreCounts.call_list_overdue);
+        setIntText('dash-calls-upcoming-count', callList.upcoming ?? coreCounts.call_list_upcoming);
+
+        const activityListEl = document.getElementById('dash-recent-activity-list');
+        if (activityListEl) {
+            const activity = Array.isArray(coreData.recent_activity) ? coreData.recent_activity : [];
+            if (activity.length === 0) {
+                activityListEl.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">No recent CRM activity recorded yet.</p>';
+            } else {
+                activityListEl.innerHTML = activity.map(item => `
+                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-start justify-between gap-2 text-xs">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">${escapeHtml(item.interaction_type || 'NOTE')}</span>
+                                ${item.outcome ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">${escapeHtml(item.outcome)}</span>` : ''}
+                            </div>
+                            <p class="text-slate-700 mt-1 line-clamp-2">${escapeHtml(item.content || '')}</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">${escapeHtml(item.created_by_name || 'Team')}</p>
+                        </div>
+                        <span class="text-[10px] text-slate-400 whitespace-nowrap shrink-0">${escapeHtml(formatDateTimeShort(item.created_at))}</span>
+                    </div>
+                `).join('');
             }
         }
 
-        const collectedEl = document.getElementById('dash-collected-week-val');
+        // 2. Lending Portfolio Dashboard Summary (ONLY when LENDING module is enabled)
+        if (typeof hasModule === 'function' && hasModule('LENDING')) {
+            const lendRes = await fetch('/api/loans/dashboard-summary');
 
-        if (
-            collectedEl &&
-            data.collected_this_week_enabled === true &&
-            Number.isFinite(data.collected_this_week_cents)
-        ) {
-            collectedEl.classList.add('privacy-metric', 'text-emerald-700');
-            collectedEl.classList.remove('text-slate-400');
+            if (lendRes.status === 401) {
+                mostrarAuthView();
+                return;
+            }
+            if (!lendRes.ok) {
+                throw new Error(`Lending dashboard request failed (HTTP ${lendRes.status}).`);
+            }
 
-            setDashboardPrivacyMetric(
-                'dash-collected-week-val',
-                data.collected_this_week_cents
-            );
-        } else if (collectedEl) {
-            collectedEl.classList.remove('privacy-metric', 'text-emerald-700');
-            collectedEl.classList.add('text-slate-400');
-            collectedEl.removeAttribute('data-real-value');
-            collectedEl.innerText = 'Pending Stage 4';
-        }
+            const data = await lendRes.json();
+            if (!data || typeof data !== 'object' || Array.isArray(data)) {
+                throw new Error('Invalid lending dashboard response.');
+            }
 
-        const counts = data.counts;
+            const amountFields = [
+                ['active_loan_portfolio_cents', 'saldo-val'],
+                ['due_today_cents', 'dash-due-today-val'],
+                ['overdue_amount_cents', 'dash-overdue-val'],
+                ['total_outstanding_principal_cents', 'dash-outstanding-principal-val'],
+                ['total_amount_due_cents', 'dash-total-amount-due-val']
+            ];
 
-        if (counts && typeof counts === 'object' && !Array.isArray(counts)) {
-            const activeLoans = counts.active_loans;
-            const countEl = document.getElementById('dash-active-loans-count');
-            const badgeEl = document.getElementById('dash-live-loans-badge');
-
-            if (Number.isSafeInteger(activeLoans) && activeLoans >= 0) {
-                if (countEl) countEl.innerText = String(activeLoans);
-                if (badgeEl) {
-                    badgeEl.innerText = `${activeLoans} Live ${activeLoans === 1 ? 'Loan' : 'Loans'}`;
+            for (const [field, elementId] of amountFields) {
+                if (Number.isFinite(data[field])) {
+                    setDashboardPrivacyMetric(elementId, data[field]);
                 }
             }
 
-            const setIntText = (id, val) => {
-                const el = document.getElementById(id);
-                if (el && Number.isSafeInteger(val) && val >= 0) el.innerText = String(val);
-            };
-            setIntText('dash-current-loans-count', counts.current_loans);
-            setIntText('dash-overdue-loans-count', counts.overdue_loans);
-            setIntText('dash-overdue-loans-badge', counts.overdue_loans);
-            setIntText('dash-paidoff-loans-count', counts.paid_off_loans);
-            setIntText('dash-defaulted-loans-count', counts.defaulted_loans);
-            setIntText('dash-due-today-inst-count', counts.due_today_installments);
-            setIntText('dash-overdue-inst-count', counts.overdue_installments);
-            setIntText('dash-collected-week-count', counts.collected_week_payments);
-            // Fill visual health bar for active/live loans
-            const totalLive = (counts.current_loans || 0) + (counts.overdue_loans || 0) + (counts.defaulted_loans || 0);
-            const hbCurrent = document.getElementById('dhb-current');
-            const hbOverdue = document.getElementById('dhb-overdue');
-            const hbDefaulted = document.getElementById('dhb-defaulted');
-            
-            if (totalLive > 0) {
-                if (hbCurrent) hbCurrent.style.width = `${(counts.current_loans / totalLive) * 100}%`;
-                if (hbOverdue) hbOverdue.style.width = `${(counts.overdue_loans / totalLive) * 100}%`;
-                if (hbDefaulted) hbDefaulted.style.width = `${(counts.defaulted_loans / totalLive) * 100}%`;
-            } else {
-                if (hbCurrent) hbCurrent.style.width = '0%';
-                if (hbOverdue) hbOverdue.style.width = '0%';
-                if (hbDefaulted) hbDefaulted.style.width = '0%';
+            const collectedEl = document.getElementById('dash-collected-week-val');
+            if (
+                collectedEl &&
+                data.collected_this_week_enabled === true &&
+                Number.isFinite(data.collected_this_week_cents)
+            ) {
+                collectedEl.classList.add('privacy-metric', 'text-emerald-700');
+                collectedEl.classList.remove('text-slate-400');
+                setDashboardPrivacyMetric('dash-collected-week-val', data.collected_this_week_cents);
+            } else if (collectedEl) {
+                collectedEl.classList.remove('privacy-metric', 'text-emerald-700');
+                collectedEl.classList.add('text-slate-400');
+                collectedEl.removeAttribute('data-real-value');
+                collectedEl.innerText = 'Pending Stage 4';
+            }
+
+            const counts = data.counts;
+            if (counts && typeof counts === 'object' && !Array.isArray(counts)) {
+                const activeLoans = counts.active_loans;
+                const countEl = document.getElementById('dash-active-loans-count');
+                const badgeEl = document.getElementById('dash-live-loans-badge');
+
+                if (Number.isSafeInteger(activeLoans) && activeLoans >= 0) {
+                    if (countEl) countEl.innerText = String(activeLoans);
+                    if (badgeEl) {
+                        badgeEl.innerText = `${activeLoans} Live ${activeLoans === 1 ? 'Loan' : 'Loans'}`;
+                    }
+                }
+
+                setIntText('dash-current-loans-count', counts.current_loans);
+                setIntText('dash-overdue-loans-count', counts.overdue_loans);
+                setIntText('dash-overdue-loans-badge', counts.overdue_loans);
+                setIntText('dash-paidoff-loans-count', counts.paid_off_loans);
+                setIntText('dash-defaulted-loans-count', counts.defaulted_loans);
+                setIntText('dash-due-today-inst-count', counts.due_today_installments);
+                setIntText('dash-overdue-inst-count', counts.overdue_installments);
+                setIntText('dash-collected-week-count', counts.collected_week_payments);
+
+                const totalLive = (counts.current_loans || 0) + (counts.overdue_loans || 0) + (counts.defaulted_loans || 0);
+                const hbCurrent = document.getElementById('dhb-current');
+                const hbOverdue = document.getElementById('dhb-overdue');
+                const hbDefaulted = document.getElementById('dhb-defaulted');
+
+                if (totalLive > 0) {
+                    if (hbCurrent) hbCurrent.style.width = `${(counts.current_loans / totalLive) * 100}%`;
+                    if (hbOverdue) hbOverdue.style.width = `${(counts.overdue_loans / totalLive) * 100}%`;
+                    if (hbDefaulted) hbDefaulted.style.width = `${(counts.defaulted_loans / totalLive) * 100}%`;
+                } else {
+                    if (hbCurrent) hbCurrent.style.width = '0%';
+                    if (hbOverdue) hbOverdue.style.width = '0%';
+                    if (hbDefaulted) hbDefaulted.style.width = '0%';
+                }
             }
         }
-
     } catch (err) {
         console.error('Dashboard summary error:', err);
-
-        const errBox = document.getElementById('dashboard-summary-error');
 
         if (errBox) {
             errBox.innerText = 'Unable to refresh dashboard metrics. Please try again.';
@@ -168,7 +210,7 @@ async function loadDashboardSummary() {
                 if (!data.items || data.items.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="8" class="py-12 px-6 text-center">
+                            <td colspan="6" class="py-12 px-6 text-center">
                                 <div class="max-w-md mx-auto space-y-2">
                                     <p class="text-sm font-bold text-slate-900">No customers found</p>
                                     <p class="text-xs text-slate-500">Click "+ New Customer" or convert a qualified Lead.</p>
@@ -186,13 +228,9 @@ async function loadDashboardSummary() {
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : (c.status === 'INACTIVE' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-amber-50 text-amber-800 border-amber-200');
 
-                        const balanceText = Number.isFinite(c.current_outstanding_balance_cents)
-                            ? NuraFinancialEngine.formatMXNFromCents(c.current_outstanding_balance_cents)
-                            : 'N/A';
-                        const activeLoansText = (Number.isSafeInteger(c.active_loans_count) && c.active_loans_count >= 0)
-                            ? String(c.active_loans_count)
-                            : 'N/A';
-                        const lastPayText = c.last_payment_date ? escapeHtml(c.last_payment_date) : 'N/A';
+                        const kycBadgeClass = c.verification_status === 'VERIFIED'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : (c.verification_status === 'PENDING_VERIFICATION' ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-slate-100 text-slate-600 border-slate-200');
 
                         tr.innerHTML = `
                             <td class="py-3.5 px-4 font-mono font-bold text-blue-700">${escapeHtml(c.customer_number)}</td>
@@ -201,12 +239,12 @@ async function loadDashboardSummary() {
                                 <p class="text-[10px] text-slate-500">${c.entity_type === 'BUSINESS' ? `Business • Rep: ${escapeHtml(c.legal_representative_name || 'N/A')}` : `Individual • ${escapeHtml(c.email || 'No email')}`}</p>
                             </td>
                             <td class="py-3.5 px-4 font-medium text-slate-700">${escapeHtml(c.phone_primary)}</td>
-                            <td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-900">${escapeHtml(balanceText)}</td>
-                            <td class="py-3.5 px-4 text-center font-bold text-slate-700">${escapeHtml(activeLoansText)}</td>
                             <td class="py-3.5 px-4">
                                 <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${statusBadgeClass}">${escapeHtml(c.status)}</span>
                             </td>
-                            <td class="py-3.5 px-4 ${c.last_payment_date ? 'font-mono font-semibold text-emerald-700' : 'text-slate-400'}">${lastPayText}</td>
+                            <td class="py-3.5 px-4">
+                                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${kycBadgeClass}">${escapeHtml(c.verification_status || 'NOT_PROVIDED')}</span>
+                            </td>
                             <td class="py-3.5 px-4 text-right">
                                 <button type="button" class="text-xs font-bold text-blue-600 hover:underline">View Profile →</button>
                             </td>
@@ -221,7 +259,7 @@ async function loadDashboardSummary() {
                 document.getElementById('cust-prev-btn').disabled = page <= 1;
                 document.getElementById('cust-next-btn').disabled = endIdx >= currentCustomersTotal;
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-red-600">${escapeHtml(err.message)}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-red-600">${escapeHtml(err.message)}</td></tr>`;
             }
         }
 
@@ -268,10 +306,15 @@ async function loadDashboardSummary() {
                 
                 if (qsPhone) qsPhone.innerText = c.phone_primary || 'No Phone';
                 if (qsRfc) qsRfc.innerText = c.tax_id_rfc || 'No RFC';
-                if (qsBalance) {
-                    const bal = Number(c.current_outstanding_principal_cents) || 0;
-                    qsBalance.innerText = NuraFinancialEngine.formatMXNFromCents(bal);
-                    qsBalance.className = bal > 0 ? 'font-mono text-red-600 font-extrabold' : 'font-mono text-emerald-600 font-extrabold';
+
+                const hasLending = (typeof hasModule === 'function') && hasModule('LENDING');
+                document.getElementById('cd-qs-balance-sep')?.classList.toggle('hidden', !hasLending);
+                document.getElementById('cd-qs-balance-wrap')?.classList.toggle('hidden', !hasLending);
+                document.getElementById('ctab-btn-summary')?.classList.toggle('hidden', !hasLending);
+                document.getElementById('ctab-btn-loans')?.classList.toggle('hidden', !hasLending);
+                if (!hasLending) {
+                    document.getElementById('ctab-panel-summary')?.classList.add('hidden');
+                    document.getElementById('ctab-panel-loans')?.classList.add('hidden');
                 }
 
                 const valOrNP = v => (v && String(v).trim()) ? String(v) : 'Not Provided';
@@ -299,103 +342,122 @@ async function loadDashboardSummary() {
                     bizBlock.classList.add('hidden');
                 }
 
-                // Populate Tab B: Credit Summary (c.credit_summary)
-                const cs = (c.credit_summary && typeof c.credit_summary === 'object') ? c.credit_summary : {};
-                const outPrincipalEl = document.getElementById('csum-outstanding-principal');
-                const totalDueEl = document.getElementById('csum-total-due');
-                const overdueEl = document.getElementById('csum-overdue-amount');
-                const ratioEl = document.getElementById('csum-loans-ratio');
-                const nextDueEl = document.getElementById('csum-next-due-date');
-                const remInstEl = document.getElementById('csum-remaining-installments');
-                const lastPayEl = document.getElementById('csum-last-payment-date');
+                // Populate Lending Tabs B & C ONLY when LENDING module is enabled (zero /api/loans calls for CORE-only)
+                if (hasLending) {
+                    let lendingSummary = null;
+                    try {
+                        const lendRes = await fetch(`/api/loans/customers/${customerId}/summary`);
+                        if (lendRes.ok) {
+                            lendingSummary = await lendRes.json();
+                        }
+                    } catch (_) {}
 
-                if (outPrincipalEl) {
-                    outPrincipalEl.innerText = Number.isFinite(cs.current_outstanding_principal_cents)
-                        ? NuraFinancialEngine.formatMXNFromCents(cs.current_outstanding_principal_cents)
-                        : 'N/A';
-                }
-                if (totalDueEl) {
-                    totalDueEl.innerText = Number.isFinite(cs.total_amount_due_cents)
-                        ? NuraFinancialEngine.formatMXNFromCents(cs.total_amount_due_cents)
-                        : 'N/A';
-                }
-                if (overdueEl) {
-                    overdueEl.innerText = Number.isFinite(cs.overdue_amount_cents)
-                        ? NuraFinancialEngine.formatMXNFromCents(cs.overdue_amount_cents)
-                        : 'N/A';
-                }
-                if (ratioEl) {
-                    const actCount = Number.isSafeInteger(cs.active_loans_count) ? cs.active_loans_count : 'N/A';
-                    const totCount = Number.isSafeInteger(cs.total_loans_count) ? cs.total_loans_count : 'N/A';
-                    ratioEl.innerText = `${actCount} / ${totCount}`;
-                }
-                if (nextDueEl) {
-                    nextDueEl.innerText = cs.next_payment_due_date ? String(cs.next_payment_due_date) : 'None scheduled';
-                }
-                if (remInstEl) {
-                    remInstEl.innerText = Number.isSafeInteger(cs.remaining_installments)
-                        ? String(cs.remaining_installments)
-                        : 'N/A';
-                }
-                if (lastPayEl) {
-                    lastPayEl.innerText = cs.last_payment_date ? String(cs.last_payment_date) : '—';
-                }
-                // Populate Tab C: Associated Customer Loans (c.loans)
-                const loansList = Array.isArray(c.loans) ? c.loans : [];
-                const loansTabBtn = document.getElementById('ctab-btn-loans');
-                if (loansTabBtn) {
-                    loansTabBtn.innerText = `C. Loans (${loansList.length})`;
-                }
+                    const cs = (lendingSummary && lendingSummary.credit_summary && typeof lendingSummary.credit_summary === 'object')
+                        ? lendingSummary.credit_summary
+                        : {};
+                    const loansList = (lendingSummary && Array.isArray(lendingSummary.loans)) ? lendingSummary.loans : [];
 
-                const loansTbody = document.getElementById('customer-loans-tbody');
-                if (loansTbody) {
-                    loansTbody.innerHTML = '';
-                    if (loansList.length === 0) {
-                        loansTbody.innerHTML = `
-                            <tr>
-                                <td colspan="10" class="py-8 text-center text-slate-400">
-                                    No loans associated with this customer yet.
-                                </td>
-                            </tr>
-                        `;
-                    } else {
-                        loansList.forEach(l => {
-                            const tr = document.createElement('tr');
-                            tr.className = 'hover:bg-slate-50/90 transition cursor-pointer';
-                            tr.onclick = () => {
-                                switchTab('loans');
-                                openLoanDetailBlueprint();
-                                if (typeof openLoanDetail === 'function') {
-                                    openLoanDetail(l.id);
-                                }
-                            };
+                    if (qsBalance) {
+                        const bal = Number(cs.current_outstanding_principal_cents) || 0;
+                        qsBalance.innerText = NuraFinancialEngine.formatMXNFromCents(bal);
+                        qsBalance.className = bal > 0 ? 'font-mono text-red-600 font-extrabold' : 'font-mono text-emerald-600 font-extrabold';
+                    }
 
-                            const badgeClass = getLoanStatusBadgeStyle(l.status);
-                            const origPrincipal = Number.isFinite(l.principal_cents) ? NuraFinancialEngine.formatMXNFromCents(l.principal_cents) : 'N/A';
-                            const unpaidPrincipal = Number.isFinite(l.unpaid_principal_cents) ? NuraFinancialEngine.formatMXNFromCents(l.unpaid_principal_cents) : 'N/A';
-                            const remInterest = Number.isFinite(l.remaining_contractual_interest_cents) ? NuraFinancialEngine.formatMXNFromCents(l.remaining_contractual_interest_cents) : 'N/A';
-                            const remTotal = Number.isFinite(l.remaining_contract_total_cents) ? NuraFinancialEngine.formatMXNFromCents(l.remaining_contract_total_cents) : 'N/A';
-                            const payableToday = Number.isFinite(l.current_payable_amount_cents) ? NuraFinancialEngine.formatMXNFromCents(l.current_payable_amount_cents) : 'N/A';
-                            const hasOverdue = Number.isFinite(l.overdue_amount_cents) && l.overdue_amount_cents > 0;
+                    const outPrincipalEl = document.getElementById('csum-outstanding-principal');
+                    const totalDueEl = document.getElementById('csum-total-due');
+                    const overdueEl = document.getElementById('csum-overdue-amount');
+                    const ratioEl = document.getElementById('csum-loans-ratio');
+                    const nextDueEl = document.getElementById('csum-next-due-date');
+                    const remInstEl = document.getElementById('csum-remaining-installments');
+                    const lastPayEl = document.getElementById('csum-last-payment-date');
 
-                            tr.innerHTML = `
-                                <td class="py-3 px-4 font-mono font-bold text-blue-700">${escapeHtml(l.loan_number)}</td>
-                                <td class="py-3 px-4 font-semibold text-slate-800">${escapeHtml(l.product_name)}</td>
-                                <td class="py-3 px-4">
-                                    <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${badgeClass}">${escapeHtml(l.status)}</span>
-                                </td>
-                                <td class="py-3 px-4 text-right font-mono text-slate-800">${escapeHtml(origPrincipal)}</td>
-                                <td class="py-3 px-4 text-right font-mono font-bold text-slate-900">${escapeHtml(unpaidPrincipal)}</td>
-                                <td class="py-3 px-4 text-right font-mono text-amber-700">${escapeHtml(remInterest)}</td>
-                                <td class="py-3 px-4 text-right font-mono font-bold text-blue-900">${escapeHtml(remTotal)}</td>
-                                <td class="py-3 px-4 text-right font-mono font-bold ${hasOverdue ? 'text-red-600' : 'text-slate-800'}">${escapeHtml(payableToday)}</td>
-                                <td class="py-3 px-4 font-mono text-slate-600">${escapeHtml(l.maturity_date || '—')}</td>
-                                <td class="py-3 px-4 text-right">
-                                    <button type="button" class="text-xs font-bold text-blue-600 hover:underline">Inspect →</button>
-                                </td>
+                    if (outPrincipalEl) {
+                        outPrincipalEl.innerText = Number.isFinite(cs.current_outstanding_principal_cents)
+                            ? NuraFinancialEngine.formatMXNFromCents(cs.current_outstanding_principal_cents)
+                            : 'N/A';
+                    }
+                    if (totalDueEl) {
+                        totalDueEl.innerText = Number.isFinite(cs.total_amount_due_cents)
+                            ? NuraFinancialEngine.formatMXNFromCents(cs.total_amount_due_cents)
+                            : 'N/A';
+                    }
+                    if (overdueEl) {
+                        overdueEl.innerText = Number.isFinite(cs.overdue_amount_cents)
+                            ? NuraFinancialEngine.formatMXNFromCents(cs.overdue_amount_cents)
+                            : 'N/A';
+                    }
+                    if (ratioEl) {
+                        const actCount = Number.isSafeInteger(cs.active_loans_count) ? cs.active_loans_count : 'N/A';
+                        const totCount = Number.isSafeInteger(cs.total_loans_count) ? cs.total_loans_count : 'N/A';
+                        ratioEl.innerText = `${actCount} / ${totCount}`;
+                    }
+                    if (nextDueEl) {
+                        nextDueEl.innerText = cs.next_payment_due_date ? String(cs.next_payment_due_date) : 'None scheduled';
+                    }
+                    if (remInstEl) {
+                        remInstEl.innerText = Number.isSafeInteger(cs.remaining_installments)
+                            ? String(cs.remaining_installments)
+                            : 'N/A';
+                    }
+                    if (lastPayEl) {
+                        lastPayEl.innerText = cs.last_payment_date ? String(cs.last_payment_date) : '—';
+                    }
+
+                    const loansTabBtn = document.getElementById('ctab-btn-loans');
+                    if (loansTabBtn) {
+                        loansTabBtn.innerText = `C. Loans (${loansList.length})`;
+                    }
+
+                    const loansTbody = document.getElementById('customer-loans-tbody');
+                    if (loansTbody) {
+                        loansTbody.innerHTML = '';
+                        if (loansList.length === 0) {
+                            loansTbody.innerHTML = `
+                                <tr>
+                                    <td colspan="10" class="py-8 text-center text-slate-400">
+                                        No loans associated with this customer yet.
+                                    </td>
+                                </tr>
                             `;
-                            loansTbody.appendChild(tr);
-                        });
+                        } else {
+                            loansList.forEach(l => {
+                                const tr = document.createElement('tr');
+                                tr.className = 'hover:bg-slate-50/90 transition cursor-pointer';
+                                tr.onclick = () => {
+                                    switchTab('loans');
+                                    openLoanDetailBlueprint();
+                                    if (typeof openLoanDetail === 'function') {
+                                        openLoanDetail(l.id);
+                                    }
+                                };
+
+                                const badgeClass = getLoanStatusBadgeStyle(l.status);
+                                const origPrincipal = Number.isFinite(l.principal_cents) ? NuraFinancialEngine.formatMXNFromCents(l.principal_cents) : 'N/A';
+                                const unpaidPrincipal = Number.isFinite(l.unpaid_principal_cents) ? NuraFinancialEngine.formatMXNFromCents(l.unpaid_principal_cents) : 'N/A';
+                                const remInterest = Number.isFinite(l.remaining_contractual_interest_cents) ? NuraFinancialEngine.formatMXNFromCents(l.remaining_contractual_interest_cents) : 'N/A';
+                                const remTotal = Number.isFinite(l.remaining_contract_total_cents) ? NuraFinancialEngine.formatMXNFromCents(l.remaining_contract_total_cents) : 'N/A';
+                                const payableToday = Number.isFinite(l.current_payable_amount_cents) ? NuraFinancialEngine.formatMXNFromCents(l.current_payable_amount_cents) : 'N/A';
+                                const hasOverdue = Number.isFinite(l.overdue_amount_cents) && l.overdue_amount_cents > 0;
+
+                                tr.innerHTML = `
+                                    <td class="py-3 px-4 font-mono font-bold text-blue-700">${escapeHtml(l.loan_number)}</td>
+                                    <td class="py-3 px-4 font-semibold text-slate-800">${escapeHtml(l.product_name)}</td>
+                                    <td class="py-3 px-4">
+                                        <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${badgeClass}">${escapeHtml(l.status)}</span>
+                                    </td>
+                                    <td class="py-3 px-4 text-right font-mono text-slate-800">${escapeHtml(origPrincipal)}</td>
+                                    <td class="py-3 px-4 text-right font-mono font-bold text-slate-900">${escapeHtml(unpaidPrincipal)}</td>
+                                    <td class="py-3 px-4 text-right font-mono text-amber-700">${escapeHtml(remInterest)}</td>
+                                    <td class="py-3 px-4 text-right font-mono font-bold text-blue-900">${escapeHtml(remTotal)}</td>
+                                    <td class="py-3 px-4 text-right font-mono font-bold ${hasOverdue ? 'text-red-600' : 'text-slate-800'}">${escapeHtml(payableToday)}</td>
+                                    <td class="py-3 px-4 font-mono text-slate-600">${escapeHtml(l.maturity_date || '—')}</td>
+                                    <td class="py-3 px-4 text-right">
+                                        <button type="button" class="text-xs font-bold text-blue-600 hover:underline">Inspect →</button>
+                                    </td>
+                                `;
+                                loansTbody.appendChild(tr);
+                            });
+                        }
                     }
                 }
 
@@ -608,12 +670,19 @@ async function loadDashboardSummary() {
         }
 
         function switchCustomerProfileTab(tabKey) {
+            const hasLending = (typeof hasModule === 'function') && hasModule('LENDING');
+            const effectiveKey = (!hasLending && (tabKey === 'summary' || tabKey === 'loans')) ? 'personal' : tabKey;
             const tabs = ['personal', 'summary', 'loans', 'interactions', 'documents'];
             tabs.forEach(k => {
                 const btn = document.getElementById('ctab-btn-' + k);
                 const panel = document.getElementById('ctab-panel-' + k);
                 if (!btn || !panel) return;
-                if (k === tabKey) {
+                if (!hasLending && (k === 'summary' || k === 'loans')) {
+                    btn.classList.add('hidden');
+                    panel.classList.add('hidden');
+                    return;
+                }
+                if (k === effectiveKey) {
                     btn.className = 'py-2 px-4 rounded-xl font-semibold bg-white text-slate-900 shadow-sm whitespace-nowrap';
                     panel.classList.remove('hidden');
                 } else {

@@ -156,12 +156,12 @@
                             <span>3. Customers</span>
                         </button>
 
-                        <button type="button" onclick="switchTab('loans')" id="side-btn-loans" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                        <button type="button" onclick="switchTab('loans')" id="side-btn-loans" class="lending-only-ui side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
                             <span>4. Loans</span>
                         </button>
 
-                        <button type="button" onclick="switchTab('simulator')" id="side-btn-simulator" class="side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                        <button type="button" onclick="switchTab('simulator')" id="side-btn-simulator" class="lending-only-ui side-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
                             <span>5. Loan Simulator</span>
                         </button>
@@ -244,7 +244,7 @@
                                 <button type="button" id="top-btn-new-customer" onclick="openCustomerFormModal('create')" class="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs transition">
                                     <span>+ New Customer</span>
                                 </button>
-                                <button type="button" onclick="switchTab('simulator')" class="hidden md:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
+                                <button type="button" id="top-btn-simulator" onclick="switchTab('simulator')" class="lending-only-ui hidden md:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
                                     <span>Loan Simulator</span>
                                 </button>
                                 <button type="button" onclick="switchTab('ia')" class="py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs flex items-center gap-1.5 transition">
@@ -282,22 +282,22 @@
                     <section id="tab-home" class="tab-content active space-y-6">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div>
-                                <h1 class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Executive Credit Dashboard</h1>
-                                <p class="text-xs text-slate-500 mt-0.5">Real-time portfolio accounting indicators, collections tracking, and origination pipeline</p>
+                                <h1 id="dash-main-title" class="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Executive Credit Dashboard</h1>
+                                <p id="dash-main-subtitle" class="text-xs text-slate-500 mt-0.5">Real-time portfolio accounting indicators, collections tracking, and origination pipeline</p>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button type="button" onclick="togglePrivacy()" id="privacy-btn" class="text-slate-600 hover:text-slate-900 text-xs flex items-center gap-1.5 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm transition">
+                                <button type="button" onclick="togglePrivacy()" id="privacy-btn" class="lending-only-ui text-slate-600 hover:text-slate-900 text-xs flex items-center gap-1.5 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm transition">
                                     <span id="privacy-label" class="font-semibold">Hide Figures</span>
                                 </button>
-                                <button type="button" onclick="switchTab('simulator')" class="btn-primary py-2 px-4 rounded-xl text-xs shadow-sm">
+                                <button type="button" id="dash-btn-simulator" onclick="switchTab('simulator')" class="lending-only-ui btn-primary py-2 px-4 rounded-xl text-xs shadow-sm">
                                     Open Loan Simulator
                                 </button>
                             </div>
                         </div>
                         <div id="dashboard-summary-error" class="hidden p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl"></div>
 
-                        <!-- 5 CORE ACCOUNTING KPI CARDS (A, B, C, D, E) -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <!-- 5 LENDING ACCOUNTING KPI CARDS (A, B, C, D, E) -->
+                        <div id="dash-lending-kpis-grid" class="lending-only-ui grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                             <button type="button" onclick="navigateToLoansFilter('active')" class="fintech-card p-4 bg-white hover:border-blue-400 text-left transition flex flex-col justify-between group">
                                 <div>
                                     <div class="flex items-center justify-between gap-2">
@@ -360,7 +360,7 @@
                         </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                            <div class="lg:col-span-7 fintech-card p-5 bg-white space-y-4">
+                            <div id="dash-lending-distribution-card" class="lending-only-ui lg:col-span-7 fintech-card p-5 bg-white space-y-4">
                                 <div class="border-b border-slate-100 pb-3 space-y-3">
                                     <div class="flex items-center justify-between">
                                         <div>
@@ -406,7 +406,7 @@
                                 </div>
                             </div>
 
-                            <div class="lg:col-span-5 fintech-card p-5 bg-white space-y-4">
+                            <div id="dash-core-funnel-card" class="lg:col-span-5 fintech-card p-5 bg-white space-y-4">
                                 <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                                     <div>
                                         <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Customers & Origination Funnel</h3>
@@ -431,6 +431,22 @@
                                         <p id="dash-calls-today-count" class="text-2xl font-extrabold text-amber-900 mt-0.5">0</p>
                                         <span class="text-[10px] font-semibold text-amber-800">Call List →</span>
                                     </button>
+                                </div>
+
+                                <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-600">
+                                    <div class="flex items-center gap-3 flex-wrap">
+                                        <span>Overdue Calls: <strong id="dash-calls-overdue-count" class="text-red-600">0</strong></span>
+                                        <span class="text-slate-300">|</span>
+                                        <span>Upcoming (7d): <strong id="dash-calls-upcoming-count" class="text-slate-800">0</strong></span>
+                                    </div>
+                                    <button type="button" onclick="switchTab('leads'); switchLeadsSubView('call-list');" class="text-[11px] font-semibold text-blue-600 hover:underline">Call Queue →</button>
+                                </div>
+
+                                <div class="pt-2 border-t border-slate-100 space-y-2">
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Recent CRM Activity</p>
+                                    <div id="dash-recent-activity-list" class="space-y-2">
+                                        <p class="text-xs text-slate-400 py-3 text-center">Loading activity...</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -724,16 +740,14 @@
                                                 <th class="py-3.5 px-4">Customer Number</th>
                                                 <th class="py-3.5 px-4">Full Name / Legal Entity</th>
                                                 <th class="py-3.5 px-4">Primary Phone</th>
-                                                <th class="py-3.5 px-4 text-right">Current Outstanding Balance</th>
-                                                <th class="py-3.5 px-4 text-center">Active Loans</th>
                                                 <th class="py-3.5 px-4">Customer Status</th>
-                                                <th class="py-3.5 px-4">Last Payment Date</th>
+                                                <th class="py-3.5 px-4">KYC Verification</th>
                                                 <th class="py-3.5 px-4 text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="customers-table-tbody" class="divide-y divide-slate-100 text-xs">
                                             <tr>
-                                                <td colspan="8" class="py-10 text-center text-slate-400">Loading customers from PostgreSQL...</td>
+                                                <td colspan="6" class="py-10 text-center text-slate-400">Loading customers from PostgreSQL...</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -769,8 +783,8 @@
                                         <span class="flex items-center gap-1">📞 <span id="cd-qs-phone">N/A</span></span>
                                         <span class="text-slate-300 hidden sm:inline">|</span>
                                         <span class="flex items-center gap-1 font-mono">📄 <span id="cd-qs-rfc">N/A</span></span>
-                                        <span class="text-slate-300 hidden sm:inline">|</span>
-                                        <span class="flex items-center gap-1 text-slate-900 font-bold">Balance: <span id="cd-qs-balance" class="font-mono text-slate-400">$0.00 MXN</span></span>
+                                        <span id="cd-qs-balance-sep" class="lending-only-ui text-slate-300 hidden sm:inline">|</span>
+                                        <span id="cd-qs-balance-wrap" class="lending-only-ui flex items-center gap-1 text-slate-900 font-bold">Balance: <span id="cd-qs-balance" class="font-mono text-slate-400">$0.00 MXN</span></span>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
@@ -783,8 +797,8 @@
                             <!-- 5 Profile Sub-Tabs Navigation -->
                             <div class="flex gap-1.5 overflow-x-auto no-scrollbar bg-slate-200/70 p-1.5 rounded-2xl text-xs">
                                 <button type="button" id="ctab-btn-personal" onclick="switchCustomerProfileTab('personal')" class="py-2 px-4 rounded-xl font-semibold bg-white text-slate-900 shadow-sm whitespace-nowrap">A. Personal Information</button>
-                                <button type="button" id="ctab-btn-summary" onclick="switchCustomerProfileTab('summary')" class="py-2 px-4 rounded-xl font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap">B. Credit Summary</button>
-                                <button type="button" id="ctab-btn-loans" onclick="switchCustomerProfileTab('loans')" class="py-2 px-4 rounded-xl font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap">C. Loans (0)</button>
+                                <button type="button" id="ctab-btn-summary" onclick="switchCustomerProfileTab('summary')" class="lending-only-ui py-2 px-4 rounded-xl font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap">B. Credit Summary</button>
+                                <button type="button" id="ctab-btn-loans" onclick="switchCustomerProfileTab('loans')" class="lending-only-ui py-2 px-4 rounded-xl font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap">C. Loans (0)</button>
                                 <button type="button" id="ctab-btn-interactions" onclick="switchCustomerProfileTab('interactions')" class="py-2 px-4 rounded-xl font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap">D. Interactions & Notes</button>
                                 <button type="button" id="ctab-btn-documents" onclick="switchCustomerProfileTab('documents')" class="py-2 px-4 rounded-xl font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap">E. Documents (KYC)</button>
                             </div>
@@ -2036,6 +2050,7 @@
                                             <option value="">All Events</option>
                                             <option value="PLATFORM_TENANT_CREATED">PLATFORM_TENANT_CREATED</option>
                                             <option value="PLATFORM_TENANT_UPDATED">PLATFORM_TENANT_UPDATED</option>
+                                            <option value="PLATFORM_TENANT_MODULES_UPDATED">PLATFORM_TENANT_MODULES_UPDATED</option>
                                             <option value="PLATFORM_ACCESS_DENIED">PLATFORM_ACCESS_DENIED</option>
                                             <option value="COMMERCIAL_ACCESS_DENIED">COMMERCIAL_ACCESS_DENIED</option>
                                         </select>
@@ -3388,6 +3403,22 @@
                         <p class="text-[10px] text-slate-500">Initial credentials are sent securely over HTTPS and are never stored in the browser or shown again.</p>
                     </div>
 
+                    <!-- Section 3: Modules & Entitlements -->
+                    <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                        <div>
+                            <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">3. Modules &amp; Entitlements</p>
+                            <p class="text-[11px] text-slate-500 mt-0.5">Select the commercial modules enabled for this organization. CORE CRM is always included.</p>
+                        </div>
+                        <div id="plat-create-modules-list" class="space-y-2">
+                            <p class="text-[11px] text-slate-400">Loading module catalog...</p>
+                        </div>
+                        <div id="plat-create-lending-config-box" class="hidden pt-2 border-t border-slate-200/80 space-y-1.5">
+                            <label for="plat-create-lending-entity-name" class="block text-[11px] font-semibold text-slate-700">Lending Legal Entity Name (<code>lending_entity_name</code>) <span class="text-slate-400 font-normal">(optional now)</span></label>
+                            <input type="text" id="plat-create-lending-entity-name" maxlength="200" class="w-full fintech-input bg-white rounded-xl px-3 py-2 text-xs" placeholder="e.g., Financiera Ejemplo S.A. de C.V. SOFOM ENR">
+                            <p class="text-[10px] text-slate-500">Exact legal lender name printed on Contract &amp; Pagaré. Never falls back to Organization Name or Legal Name.</p>
+                        </div>
+                    </div>
+
                     <div id="plat-create-org-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
 
                     <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -3473,6 +3504,31 @@
                                 </div>
                             </div>
                         </form>
+
+                        <!-- MODULES & ENTITLEMENTS MANAGEMENT (SUPERADMIN) -->
+                        <div id="platform-edit-modules-section" class="hidden">
+                            <form id="platform-edit-modules-form" onsubmit="handlePlatformEditModulesSubmit(event)" class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 text-xs">
+                                <div>
+                                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Modules &amp; Entitlements</p>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">Enable or disable assignable modules. Disabling a module revokes access immediately while preserving all historical data.</p>
+                                </div>
+                                <div id="plat-detail-modules-list" class="space-y-2"></div>
+
+                                <div id="plat-detail-lending-config-box" class="hidden pt-2 border-t border-slate-200/80 space-y-1.5">
+                                    <label for="plat-detail-lending-entity-name" class="block text-[11px] font-semibold text-slate-700">Lending Legal Entity Name (<code>lending_entity_name</code>)</label>
+                                    <input type="text" id="plat-detail-lending-entity-name" maxlength="200" oninput="togglePlatformDetailLenderField()" class="w-full fintech-input bg-white rounded-xl px-3 py-2 text-xs" placeholder="e.g., Financiera Ejemplo S.A. de C.V. SOFOM ENR">
+                                    <p id="plat-detail-lender-unconfigured-hint" class="hidden text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                                        Not configured: Contract &amp; Pagaré printing will remain blocked until a legal lender entity is saved here.
+                                    </p>
+                                </div>
+
+                                <div id="plat-edit-modules-error" class="hidden p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"></div>
+
+                                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/70">
+                                    <button type="submit" id="plat-edit-modules-submit" class="btn-primary py-2 px-4 rounded-xl text-xs font-semibold shadow-sm">Save Modules</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
 
                     <!-- TAB 2: USERS (READ-ONLY ADMINISTRATIVE VIEW) -->
@@ -3540,10 +3596,10 @@
             <button type="button" onclick="switchTab('customers')" id="btn-customers" class="nav-item flex flex-col items-center gap-1 py-1">
                 <span class="text-[9px] font-semibold truncate">Customers</span>
             </button>
-            <button type="button" onclick="switchTab('loans')" id="btn-loans" class="nav-item flex flex-col items-center gap-1 py-1">
+            <button type="button" onclick="switchTab('loans')" id="btn-loans" class="lending-only-ui nav-item flex flex-col items-center gap-1 py-1">
                 <span class="text-[9px] font-semibold truncate">Loans</span>
             </button>
-            <button type="button" onclick="switchTab('simulator')" id="btn-simulator" class="nav-item flex flex-col items-center gap-1 py-1">
+            <button type="button" onclick="switchTab('simulator')" id="btn-simulator" class="lending-only-ui nav-item flex flex-col items-center gap-1 py-1">
                 <span class="text-[9px] font-semibold truncate">Simulator</span>
             </button>
             <button type="button" onclick="switchTab('perfil')" id="btn-perfil" class="nav-item flex flex-col items-center gap-1 py-1">
@@ -3567,12 +3623,13 @@
 
     <script src="/static/js/01-financial-engine.js?v=20261126-e4b3"></script>
     <script src="/static/js/02-http-i18n.js?v=20261126-e4b3"></script>
-    <script src="/static/js/03-core-auth.js?v=20261126-e4b3"></script>
-    <script src="/static/js/04-platform.js?v=20261126-e4b3"></script>
-    <script src="/static/js/05-dashboard-customers.js?v=20261126-e4b4"></script>
+    <script src="/static/js/03-core-auth.js?v=20261126-e5a"></script>
+    <script src="/static/js/04-platform.js?v=20261126-e5a"></script>
+    <script src="/static/js/05-dashboard-customers.js?v=20261126-e5a"></script>
     <script src="/static/js/06-leads.js?v=20261126-e4b4"></script>
     <script src="/static/js/07-loans-payments.js?v=20261126-e4b4"></script>
     <script src="/static/js/08-team-assistant.js?v=20261126-e4b4"></script>
-    <script src="/static/js/09-extensions.js?v=20261126-e4b4"></script>
+    <script src="/static/js/09-extensions.js?v=20261126-e5a"></script>
+    <script src="/static/js/09b-lending-extensions.js?v=20261126-e5a"></script>
 </body>
 </html>

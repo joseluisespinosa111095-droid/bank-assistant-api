@@ -47,6 +47,7 @@ from models import (
     LoanModel,
     LoanPaymentModel,
     TenantModel,
+    TenantModuleModel,
     TenantSequenceModel,
     UserModel,
 )
@@ -158,6 +159,8 @@ def _seed_actors(SessionLocal) -> dict:
         for t in (tenant_b, tenant_c):
             for et in ("customers", "leads", "loans", "loan_payments"):
                 db.add(TenantSequenceModel(tenant_id=t.id, entity_type=et, last_value=0))
+        for mc in ("CORE", "LENDING"):
+            db.add(TenantModuleModel(tenant_id=tenant_b.id, module_code=mc, is_enabled=True))
 
         pw = "Password123!"
         pw_hash = main.pwd_context.hash(pw)
@@ -391,8 +394,10 @@ def test_a1_superadmin_receives_403_on_all_commercial_routes_without_mutations(p
             ("PATCH", f"/api/leads/{lead_id}", {"json": {"full_name": "Tampered Lead"}}),
             ("POST", f"/api/leads/{lead_id}/interactions", {"json": {"interaction_type": "CALL", "content": "Unauthorized"}}),
             ("POST", f"/api/leads/{lead_id}/convert", {"json": {}}),
-            # Loans, collections & payments (12)
+            # Loans, collections & payments (14)
             ("GET", "/api/loans", {}),
+            ("GET", "/api/loans/dashboard-summary", {}),
+            ("GET", f"/api/loans/customers/{cust_id}/summary", {}),
             ("POST", "/api/loans", {"json": {"idempotency_key": "super-loan-1", "customer_id": cust_id, "product_name": "Personal Loan", "principal_pesos": 5000.0, "monthly_interest_rate_percent": 10.0, "assumed_interest_months": 1, "term_installments_count": 4, "start_date": today_iso, "first_payment_date": today_iso}}),
             ("GET", f"/api/loans/{loan_id}", {}),
             ("POST", f"/api/loans/{loan_id}/approve", {"json": {"approval_notes": "No"}}),
@@ -412,7 +417,7 @@ def test_a1_superadmin_receives_403_on_all_commercial_routes_without_mutations(p
             ("DELETE", f"/api/conversations/{conv_id}", {}),
             ("POST", "/chat-ejecutivo", {"json": {"mensaje": "Hola"}}),
         ]
-        assert len(commercial_calls) == 38
+        assert len(commercial_calls) == 40
 
         for method, path, kwargs in commercial_calls:
             req_kwargs = dict(kwargs)
@@ -494,10 +499,12 @@ def test_b_commercial_owner_receives_403_on_all_platform_routes_and_audited(p3_e
     try:
         platform_calls = [
             ("GET", "/api/admin/schema-status", {}),
+            ("GET", "/api/platform/modules", {}),
             ("GET", "/api/platform/tenants", {}),
             ("POST", "/api/platform/tenants", {"json": {"name": "Rogue Org", "slug": "rogue-org", "owner_email": "r@rogue.io", "owner_password": "Password123!"}}),
             ("GET", f"/api/platform/tenants/{ids['tenant_a_id']}", {}),
             ("PATCH", f"/api/platform/tenants/{ids['tenant_b_id']}", {"json": {"name": "Hijacked"}}),
+            ("PATCH", f"/api/platform/tenants/{ids['tenant_b_id']}/modules", {"json": {"modules": [{"module_code": "LENDING", "is_enabled": False}]}}),
             ("GET", f"/api/platform/tenants/{ids['tenant_a_id']}/users", {}),
             ("GET", "/api/platform/audit-logs", {}),
         ]
@@ -554,10 +561,12 @@ def test_c_fastapi_route_inventory_and_effective_dependency_coverage(p3_env):
     }
     PLATFORM_ROUTES = {
         ("GET", "/api/admin/schema-status"),
+        ("GET", "/api/platform/modules"),
         ("GET", "/api/platform/tenants"),
         ("POST", "/api/platform/tenants"),
         ("GET", "/api/platform/tenants/{tenant_id}"),
         ("PATCH", "/api/platform/tenants/{tenant_id}"),
+        ("PATCH", "/api/platform/tenants/{tenant_id}/modules"),
         ("GET", "/api/platform/tenants/{tenant_id}/users"),
         ("GET", "/api/platform/audit-logs"),
     }
@@ -583,6 +592,8 @@ def test_c_fastapi_route_inventory_and_effective_dependency_coverage(p3_env):
         ("POST", "/api/leads/{lead_id}/interactions"),
         ("POST", "/api/leads/{lead_id}/convert"),
         ("GET", "/api/loans"),
+        ("GET", "/api/loans/dashboard-summary"),
+        ("GET", "/api/loans/customers/{customer_id}/summary"),
         ("POST", "/api/loans"),
         ("GET", "/api/loans/{loan_id}"),
         ("POST", "/api/loans/{loan_id}/approve"),
@@ -814,6 +825,9 @@ def test_d_platform_endpoints_metrics_isolation_privacy_and_404(p3_env):
             "customers_count",
             "leads_count",
             "loans_count",
+            "enabled_modules",
+            "lending_entity_name",
+            "modules",
         }
         assert det_a["users_count"] == 3
         assert det_a["active_users_count"] == 2

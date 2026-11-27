@@ -36,3 +36,33 @@ class UserLanguageUpdateRequest(BaseModel):
 class UserChangePasswordRequest(BaseModel):
     current_password: str = Field(..., min_length=1, max_length=128)
     new_password: str = Field(..., min_length=8, max_length=128)
+
+
+class AuthLoginResponse(BaseModel):
+    message: str
+    email: str
+    full_name: Optional[str] = None
+    role: str
+    tenant_id: int
+    tenant_slug: str
+    tenant_name: str
+    is_superadmin: bool
+    preferred_language: str
+    enabled_modules: list[str]
+    lending_entity_name: Optional[str] = None
+
+
+class AuthMeResponse(BaseModel):
+    id: int
+    tenant_id: int
+    tenant_slug: Optional[str] = None
+    tenant_name: Optional[str] = None
+    email: str
+    full_name: Optional[str] = None
+    role: str
+    is_superadmin: bool
+    preferred_language: str
+    is_active: bool
+    supported_products: list[str]
+    enabled_modules: list[str]
+    lending_entity_name: Optional[str] = None

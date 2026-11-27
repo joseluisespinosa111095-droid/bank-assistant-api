@@ -25,9 +25,21 @@
 
         const PLATFORM_TABS = new Set(['platform-orgs', 'platform-audit', 'perfil']);
         const COMMERCIAL_TABS = new Set(['home', 'leads', 'customers', 'loans', 'simulator', 'perfil', 'ia']);
+        const LENDING_TABS = new Set(['loans', 'simulator']);
 
         function isPlatformSuperadmin(user) {
             return Boolean(user && user.is_superadmin === true && user.tenant_slug === 'platform');
+        }
+
+        function getEnabledModules(user) {
+            const target = user !== undefined ? user : currentUser;
+            if (!target || !Array.isArray(target.enabled_modules)) return [];
+            return target.enabled_modules;
+        }
+
+        function hasModule(moduleCode, user) {
+            const code = String(moduleCode || '').trim().toUpperCase();
+            return getEnabledModules(user).includes(code);
         }
 
         const SECTION_TITLES = {
@@ -69,8 +81,8 @@
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
-            initializeSimulatorDates();
-            runLoanSimulation();
+            if (typeof initializeSimulatorDates === 'function') initializeSimulatorDates();
+            if (typeof runLoanSimulation === 'function') runLoanSimulation();
 
             // Check if URL contains a password reset token parameter
             const urlParams = new URLSearchParams(window.location.search);
@@ -215,16 +227,21 @@
                         switchTab('platform-orgs');
                     } else {
                         const canWriteOrigination = ['OWNER_ADMIN', 'SALES_AGENT', 'CREDIT_ADVISOR'].includes(data.role);
+                        const hasLending = hasModule('LENDING', data);
                         document.getElementById('btn-new-customer')?.classList.toggle('hidden', !canWriteOrigination);
                         document.getElementById('btn-edit-customer')?.classList.toggle('hidden', !canWriteOrigination);
                         document.getElementById('btn-new-lead')?.classList.toggle('hidden', !canWriteOrigination);
                         document.getElementById('top-btn-new-lead')?.classList.toggle('hidden', !canWriteOrigination);
                         document.getElementById('top-btn-new-customer')?.classList.toggle('hidden', !canWriteOrigination);
-                        document.getElementById('btn-new-loan')?.classList.toggle('hidden', !canWriteOrigination);
-                        document.getElementById('btn-customer-new-loan')?.classList.toggle('hidden', !canWriteOrigination);
+                        document.getElementById('btn-new-loan')?.classList.toggle('hidden', !(canWriteOrigination && hasLending));
+                        document.getElementById('btn-customer-new-loan')?.classList.toggle('hidden', !(canWriteOrigination && hasLending));
 
                         switchTab('home');
-                        await Promise.all([loadDashboardSummary(), loadLoans(1), cargarConversaciones(), loadCustomers(1), loadLeads(1)]);
+                        const initialLoads = [loadDashboardSummary(), cargarConversaciones(), loadCustomers(1), loadLeads(1)];
+                        if (hasLending && typeof loadLoans === 'function') {
+                            initialLoads.push(loadLoans(1));
+                        }
+                        await Promise.all(initialLoads);
                     }
                 } else {
                     mostrarAuthView();
@@ -294,6 +311,9 @@
                 return;
             }
             if (!platformMode && String(tabId).startsWith('platform-')) {
+                return;
+            }
+            if (!platformMode && LENDING_TABS.has(tabId) && !hasModule('LENDING')) {
                 return;
             }
 
