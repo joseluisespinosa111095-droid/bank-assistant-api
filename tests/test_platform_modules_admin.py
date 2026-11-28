@@ -189,8 +189,12 @@ def test_01_platform_modules_catalog_visibility_and_guard(b3_env):
         assert catalog["LENDING"]["is_assignable"] is True
         assert catalog["LENDING"]["dependencies"] == ["CORE"]
 
+        assert catalog["BROKER"]["is_core_mandatory"] is False
+        assert catalog["BROKER"]["is_assignable"] is True
+        assert catalog["BROKER"]["is_active"] is True
+        assert catalog["BROKER"]["dependencies"] == ["CORE"]
+
         for future_code, expected_deps in (
-            ("BROKER", ["CORE"]),
             ("COMMERCE", ["CORE"]),
             ("FINANCING", ["COMMERCE", "CORE"]),
         ):
@@ -353,8 +357,8 @@ def test_04_rejections_400_for_non_assignable_core_disable_platform_and_dependen
     ids = _seed_superadmin_and_default_owner(b3_env["SessionLocal"])
     c_super, hdr_s, _ = _login_client("super@nura.nura.io", ids["password"])
     try:
-        # 1. Onboarding rejects BROKER, COMMERCE, FINANCING (400)
-        for bad_mod in ("BROKER", "COMMERCE", "FINANCING"):
+        # 1. Onboarding rejects non-assignable future modules COMMERCE, FINANCING (400)
+        for bad_mod in ("COMMERCE", "FINANCING"):
             r_bad = c_super.post(
                 "/api/platform/tenants",
                 headers=hdr_s,
@@ -383,8 +387,8 @@ def test_04_rejections_400_for_non_assignable_core_disable_platform_and_dependen
         )
         assert r_bad_lender.status_code == 400
 
-        # 3. PATCH rejects BROKER, COMMERCE, FINANCING on existing tenant
-        for bad_mod in ("BROKER", "COMMERCE", "FINANCING"):
+        # 3. PATCH rejects non-assignable COMMERCE, FINANCING on existing tenant
+        for bad_mod in ("COMMERCE", "FINANCING"):
             r_patch_bad = c_super.patch(
                 f"/api/platform/tenants/{ids['default_tenant_id']}/modules",
                 headers=hdr_s,
@@ -419,15 +423,16 @@ def test_04_rejections_400_for_non_assignable_core_disable_platform_and_dependen
         finally:
             db.close()
 
-        # Enabling LENDING without CORE -> 400
-        assert (
-            c_super.patch(
-                f"/api/platform/tenants/{bare_id}/modules",
-                headers=hdr_s,
-                json={"modules": [{"module_code": "LENDING", "is_enabled": True}]},
-            ).status_code
-            == 400
-        )
+        # Enabling LENDING or BROKER without CORE -> 400
+        for dep_mod in ("LENDING", "BROKER"):
+            assert (
+                c_super.patch(
+                    f"/api/platform/tenants/{bare_id}/modules",
+                    headers=hdr_s,
+                    json={"modules": [{"module_code": dep_mod, "is_enabled": True}]},
+                ).status_code
+                == 400
+            )
 
         # Disabling COMMERCE while FINANCING is active -> 400
         db = b3_env["SessionLocal"]()
@@ -738,6 +743,215 @@ def test_06_long_lending_entity_name_audit_integrity_and_financing_enable_dep(b3
             ]
         finally:
             db.rollback()
+            db.close()
+    finally:
+        c_super.close()
+
+
+def test_07_superadmin_broker_onboarding_post_activation_sequences_and_e2e_flow(b3_env):
+    """End-to-end Bloque 5 verification:
+    1. SUPERADMIN onboards a new franchise tenant with modules=['BROKER'] -> CORE+BROKER enabled,
+       sequences strictly {'customers', 'leads', 'broker_cases', 'broker_commissions'} (no loans).
+    2. Franchise owner logs in, is blocked (403) on /api/loans, and executes full Broker flow
+       (customer -> lender -> case BRK-00001 -> submission -> offer -> select -> fund -> COM-00001
+        -> dashboard-summary & customer summary).
+    3. SUPERADMIN enables BROKER post-onboarding on default-org (CORE+LENDING -> CORE+LENDING+BROKER)
+       with idempotent sequence creation and PLATFORM_TENANT_MODULES_UPDATED audit, then disables BROKER
+       and verifies immediate active-session revocation with full data preservation.
+    """
+    ids = _seed_superadmin_and_default_owner(b3_env["SessionLocal"])
+    c_super, hdr_s, _ = _login_client("super@nura.nura.io", ids["password"])
+    try:
+        # 1. SUPERADMIN onboards a CORE + BROKER franchise
+        r_create = c_super.post(
+            "/api/platform/tenants",
+            headers=hdr_s,
+            json={
+                "name": "Franquicia Broker Norte",
+                "slug": "franquicia-broker-norte",
+                "legal_name": "Franquicia Broker Norte S.A.P.I. de C.V.",
+                "owner_email": "owner@broker-norte.com",
+                "owner_password": "BrokerPassword123!",
+                "owner_full_name": "Director Broker Norte",
+                "modules": ["BROKER"],
+            },
+        )
+        assert r_create.status_code == 200, r_create.text
+        body = r_create.json()
+        fran_tid = body["tenant"]["id"]
+        assert body["tenant"]["enabled_modules"] == ["BROKER", "CORE"]
+        assert body["tenant"]["lending_entity_name"] is None
+
+        # Verify strictly CORE + BROKER sequences (no loans / loan_payments)
+        db = b3_env["SessionLocal"]()
+        try:
+            seq_map = {
+                row.entity_type: int(row.last_value)
+                for row in db.query(TenantSequenceModel).filter(TenantSequenceModel.tenant_id == fran_tid).all()
+            }
+            assert seq_map == {
+                "customers": 0,
+                "leads": 0,
+                "broker_cases": 0,
+                "broker_commissions": 0,
+            }
+        finally:
+            db.close()
+
+        # 2. Franchise owner logs in and executes full Broker workflow
+        c_fran, h_fran, login_fran = _login_client("owner@broker-norte.com", "BrokerPassword123!")
+        try:
+            assert login_fran["enabled_modules"] == ["BROKER", "CORE"]
+            assert "lending_entity_name" not in login_fran
+            assert c_fran.get("/api/loans").status_code == 403
+            assert c_fran.get("/api/loans/dashboard-summary").status_code == 403
+
+            r_cust = c_fran.post(
+                "/api/customers",
+                headers=h_fran,
+                json={
+                    "entity_type": "BUSINESS",
+                    "full_legal_name": "Logistica del Norte SA de CV",
+                    "legal_representative_name": "Roberto Garza",
+                    "phone_primary": "8110002233",
+                },
+            )
+            assert r_cust.status_code == 200, r_cust.text
+            cust_id = r_cust.json()["id"]
+
+            r_lender = c_fran.post(
+                "/api/broker/lenders",
+                headers=h_fran,
+                json={
+                    "code": "BANREGIO",
+                    "name": "Banregio Empresas",
+                    "lender_type": "BANK",
+                    "default_commission_bps": 250,
+                },
+            )
+            assert r_lender.status_code == 200, r_lender.text
+            lender_id = r_lender.json()["id"]
+
+            r_case = c_fran.post(
+                "/api/broker/cases",
+                headers=h_fran,
+                json={
+                    "idempotency_key": "fran-norte-case-001",
+                    "customer_id": cust_id,
+                    "product_type": "PyME Fleet",
+                    "requested_amount_pesos": 800000.0,
+                    "requested_term_months": 36,
+                },
+            )
+            assert r_case.status_code == 200, r_case.text
+            bcase = r_case.json()["case"]
+            assert bcase["case_number"] == "BRK-00001"
+            case_id = bcase["id"]
+
+            r_sub = c_fran.post(
+                f"/api/broker/cases/{case_id}/submissions",
+                headers=h_fran,
+                json={"lender_id": lender_id, "external_reference": "BRG-2026-01"},
+            )
+            assert r_sub.status_code == 200, r_sub.text
+            sub_id = r_sub.json()["id"]
+
+            r_app = c_fran.patch(
+                f"/api/broker/cases/{case_id}/submissions/{sub_id}",
+                headers=h_fran,
+                json={
+                    "status": "APPROVED",
+                    "offered_amount_pesos": 750000.0,
+                    "offered_rate_bps": 1750,
+                    "offered_term_months": 36,
+                    "offered_commission_bps": 250,
+                },
+            )
+            assert r_app.status_code == 200, r_app.text
+
+            r_sel = c_fran.post(
+                f"/api/broker/cases/{case_id}/submissions/{sub_id}/select",
+                headers=h_fran,
+                json={},
+            )
+            assert r_sel.status_code == 200, r_sel.text
+
+            r_fund = c_fran.post(
+                f"/api/broker/cases/{case_id}/fund",
+                headers=h_fran,
+                json={"funded_amount_pesos": 750000.0, "external_loan_reference": "BRG-FUND-77"},
+            )
+            assert r_fund.status_code == 200, r_fund.text
+            funded = r_fund.json()
+            assert funded["status"] == "FUNDED"
+            assert funded["commission"]["commission_number"] == "COM-00001"
+            assert funded["commission"]["expected_commission_cents"] == 1_875_000  # 750,000 * 2.50%
+
+            r_bdash = c_fran.get("/api/broker/dashboard-summary")
+            assert r_bdash.status_code == 200
+            assert r_bdash.json()["funded_volume_cents"] == 75_000_000
+            assert r_bdash.json()["commissions"]["pending_cents"] == 1_875_000
+
+            r_bcust = c_fran.get(f"/api/broker/customers/{cust_id}/summary")
+            assert r_bcust.status_code == 200
+            assert r_bcust.json()["broker_summary"]["total_funded_cents"] == 75_000_000
+
+            # 3. SUPERADMIN disables BROKER on franchise -> immediate 403 on active session
+            r_dis = c_super.patch(
+                f"/api/platform/tenants/{fran_tid}/modules",
+                headers=hdr_s,
+                json={"modules": [{"module_code": "BROKER", "is_enabled": False}]},
+            )
+            assert r_dis.status_code == 200, r_dis.text
+            assert r_dis.json()["enabled_modules"] == ["CORE"]
+            assert c_fran.get("/api/broker/dashboard-summary").status_code == 403
+            assert c_fran.get("/api/auth/me").json()["enabled_modules"] == ["CORE"]
+
+            # Re-enable BROKER -> immediate recovery with BRK-00001 & COM-00001 intact
+            r_reen = c_super.patch(
+                f"/api/platform/tenants/{fran_tid}/modules",
+                headers=hdr_s,
+                json={"modules": [{"module_code": "BROKER", "is_enabled": True}]},
+            )
+            assert r_reen.status_code == 200, r_reen.text
+            assert r_reen.json()["enabled_modules"] == ["BROKER", "CORE"]
+            r_rec = c_fran.get(f"/api/broker/cases/{case_id}")
+            assert r_rec.status_code == 200
+            assert r_rec.json()["case_number"] == "BRK-00001"
+            assert r_rec.json()["commission"]["commission_number"] == "COM-00001"
+        finally:
+            c_fran.close()
+
+        # 4. SUPERADMIN activates BROKER post-onboarding on default-org (CORE + LENDING -> CORE + LENDING + BROKER)
+        r_hyb = c_super.patch(
+            f"/api/platform/tenants/{ids['default_tenant_id']}/modules",
+            headers=hdr_s,
+            json={"modules": [{"module_code": "BROKER", "is_enabled": True}]},
+        )
+        assert r_hyb.status_code == 200, r_hyb.text
+        assert r_hyb.json()["enabled_modules"] == ["BROKER", "CORE", "LENDING"]
+
+        db = b3_env["SessionLocal"]()
+        try:
+            def_seqs = {
+                row.entity_type
+                for row in db.query(TenantSequenceModel)
+                .filter(TenantSequenceModel.tenant_id == ids["default_tenant_id"])
+                .all()
+            }
+            assert {"customers", "leads", "loans", "loan_payments", "broker_cases", "broker_commissions"}.issubset(def_seqs)
+
+            audit_rows = (
+                db.query(AuditLogModel)
+                .filter(
+                    AuditLogModel.event_type == "PLATFORM_TENANT_MODULES_UPDATED",
+                    AuditLogModel.resource_id == str(ids["default_tenant_id"]),
+                )
+                .all()
+            )
+            assert len(audit_rows) >= 1
+            assert audit_rows[-1].scope == "PLATFORM"
+        finally:
             db.close()
     finally:
         c_super.close()

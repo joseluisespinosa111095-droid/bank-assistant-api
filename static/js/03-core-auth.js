@@ -24,8 +24,9 @@
         let activeCallListBucket = 'TODAY';
 
         const PLATFORM_TABS = new Set(['platform-orgs', 'platform-audit', 'perfil']);
-        const COMMERCIAL_TABS = new Set(['home', 'leads', 'customers', 'loans', 'simulator', 'perfil', 'ia']);
+        const COMMERCIAL_TABS = new Set(['home', 'leads', 'customers', 'loans', 'simulator', 'broker', 'perfil', 'ia']);
         const LENDING_TABS = new Set(['loans', 'simulator']);
+        const BROKER_TABS = new Set(['broker']);
 
         function isPlatformSuperadmin(user) {
             return Boolean(user && user.is_superadmin === true && user.tenant_slug === 'platform');
@@ -48,6 +49,7 @@
             get customers() { return t('section.customers'); },
             get loans() { return t('section.loans'); },
             get simulator() { return t('section.simulator'); },
+            get broker() { return (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang === 'es') ? 'Broker de Crédito' : 'Credit Broker'; },
             get perfil() { return isPlatformSuperadmin(currentUser) ? t('section.platform-account') : t('section.perfil'); },
             get ia() { return t('section.ia'); },
             get 'platform-orgs'() { return t('section.platform-orgs'); },
@@ -227,7 +229,9 @@
                         switchTab('platform-orgs');
                     } else {
                         const canWriteOrigination = ['OWNER_ADMIN', 'SALES_AGENT', 'CREDIT_ADVISOR'].includes(data.role);
+                        const canManageLenders = ['OWNER_ADMIN', 'CREDIT_ADVISOR'].includes(data.role);
                         const hasLending = hasModule('LENDING', data);
+                        const hasBroker = hasModule('BROKER', data);
                         document.getElementById('btn-new-customer')?.classList.toggle('hidden', !canWriteOrigination);
                         document.getElementById('btn-edit-customer')?.classList.toggle('hidden', !canWriteOrigination);
                         document.getElementById('btn-new-lead')?.classList.toggle('hidden', !canWriteOrigination);
@@ -235,11 +239,18 @@
                         document.getElementById('top-btn-new-customer')?.classList.toggle('hidden', !canWriteOrigination);
                         document.getElementById('btn-new-loan')?.classList.toggle('hidden', !(canWriteOrigination && hasLending));
                         document.getElementById('btn-customer-new-loan')?.classList.toggle('hidden', !(canWriteOrigination && hasLending));
+                        document.getElementById('top-btn-new-broker-case')?.classList.toggle('module-hidden', !(canWriteOrigination && hasBroker));
+                        document.getElementById('btn-new-broker-case')?.classList.toggle('hidden', !(canWriteOrigination && hasBroker));
+                        document.getElementById('btn-customer-new-broker-case')?.classList.toggle('hidden', !(canWriteOrigination && hasBroker));
+                        document.getElementById('btn-new-broker-lender')?.classList.toggle('hidden', !(canManageLenders && hasBroker));
 
                         switchTab('home');
                         const initialLoads = [loadDashboardSummary(), cargarConversaciones(), loadCustomers(1), loadLeads(1)];
                         if (hasLending && typeof loadLoans === 'function') {
                             initialLoads.push(loadLoans(1));
+                        }
+                        if (hasBroker && typeof loadBrokerWorkspace === 'function') {
+                            initialLoads.push(loadBrokerWorkspace());
                         }
                         await Promise.all(initialLoads);
                     }
@@ -316,6 +327,9 @@
             if (!platformMode && LENDING_TABS.has(tabId) && !hasModule('LENDING')) {
                 return;
             }
+            if (!platformMode && BROKER_TABS.has(tabId) && !hasModule('BROKER')) {
+                return;
+            }
 
             const targetTab = document.getElementById('tab-' + tabId);
             if (!targetTab) return;
@@ -346,6 +360,8 @@
                 loadPlatformOrganizations();
             } else if (platformMode && tabId === 'platform-audit') {
                 loadPlatformAuditLogs();
+            } else if (!platformMode && tabId === 'broker' && hasModule('BROKER') && typeof loadBrokerWorkspace === 'function') {
+                loadBrokerWorkspace();
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }

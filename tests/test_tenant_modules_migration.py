@@ -79,8 +79,8 @@ def test_01_clean_upgrade_head_seeds_catalog_dependencies_and_backfill(tmp_path:
     db_file = tmp_path / "clean_013.db"
     db_url = f"sqlite:///{db_file.as_posix()}"
 
-    res = _run_alembic(["upgrade", "head"], db_url)
-    assert res.returncode == 0, f"alembic upgrade head failed:\n{res.stdout}\n{res.stderr}"
+    res = _run_alembic(["upgrade", "013"], db_url)
+    assert res.returncode == 0, f"alembic upgrade 013 failed:\n{res.stdout}\n{res.stderr}"
 
     conn = _connect_sqlite(db_file)
     try:
@@ -179,7 +179,7 @@ def test_02_upgrade_from_012_backfills_all_commercial_tenants_and_downgrade_reup
         conn.close()
 
     # Upgrade 012 -> 013
-    r013 = _run_alembic(["upgrade", "head"], db_url)
+    r013 = _run_alembic(["upgrade", "013"], db_url)
     assert r013.returncode == 0, f"alembic upgrade 012->013 failed:\n{r013.stdout}\n{r013.stderr}"
 
     conn = _connect_sqlite(db_file)
@@ -233,7 +233,7 @@ def test_02_upgrade_from_012_backfills_all_commercial_tenants_and_downgrade_reup
         conn.close()
 
     # Re-upgrade 012 -> 013 succeeds cleanly
-    r_reup = _run_alembic(["upgrade", "head"], db_url)
+    r_reup = _run_alembic(["upgrade", "013"], db_url)
     assert r_reup.returncode == 0, f"re-upgrade 012->013 failed:\n{r_reup.stdout}\n{r_reup.stderr}"
 
 

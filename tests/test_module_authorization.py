@@ -266,8 +266,8 @@ def test_02_module_service_rules_dependencies_assignability_and_lender_identity(
         assert is_module_enabled(db, ids["core_tenant_id"], "CORE") is True
         assert is_module_enabled(db, ids["platform_id"], "CORE") is False
 
-        # Non-assignable future modules rejected (BROKER, COMMERCE, FINANCING)
-        for non_assignable in ("BROKER", "COMMERCE", "FINANCING"):
+        # Non-assignable future modules rejected (COMMERCE, FINANCING); BROKER is now assignable
+        for non_assignable in ("COMMERCE", "FINANCING"):
             with pytest.raises(ModuleValidationError) as exc_info:
                 validate_module_enable(db, ids["core_tenant_id"], non_assignable)
             assert exc_info.value.error_code == "MODULE_NOT_ASSIGNABLE"
@@ -285,23 +285,30 @@ def test_02_module_service_rules_dependencies_assignability_and_lender_identity(
             validate_module_set_for_tenant(db, ["LENDING"])
         assert exc_core.value.error_code == "MANDATORY_CORE_REQUIRED"
 
-        # Valid bulk sets
+        with pytest.raises(ModuleValidationError) as exc_core_brk:
+            validate_module_set_for_tenant(db, ["BROKER"])
+        assert exc_core_brk.value.error_code == "MANDATORY_CORE_REQUIRED"
+
+        # Valid bulk sets (CORE, CORE+LENDING, CORE+BROKER, CORE+LENDING+BROKER)
         assert validate_module_set_for_tenant(db, ["core"]) == ["CORE"]
         assert validate_module_set_for_tenant(db, ["lending", "core"]) == ["CORE", "LENDING"]
+        assert validate_module_set_for_tenant(db, ["broker", "core"]) == ["BROKER", "CORE"]
+        assert validate_module_set_for_tenant(db, ["broker", "lending", "core"]) == ["BROKER", "CORE", "LENDING"]
 
         # CORE cannot be disabled
         with pytest.raises(ModuleValidationError) as exc_disable_core:
             validate_module_disable(db, ids["default_tenant_id"], "CORE")
         assert exc_disable_core.value.error_code == "CORE_MODULE_IMMUTABLE"
 
-        # Dependency enforcement on enable (tenant with 0 modules cannot enable LENDING without CORE)
+        # Dependency enforcement on enable (tenant with 0 modules cannot enable LENDING or BROKER without CORE)
         bare_tenant = TenantModel(name="Bare Org", slug="bare-org", is_active=True)
         db.add(bare_tenant)
         db.flush()
-        with pytest.raises(ModuleValidationError) as exc_dep:
-            validate_module_enable(db, bare_tenant.id, "LENDING")
-        assert exc_dep.value.error_code == "MISSING_MODULE_DEPENDENCIES"
-        assert exc_dep.value.details["missing_dependencies"] == ["CORE"]
+        for dep_mod in ("LENDING", "BROKER"):
+            with pytest.raises(ModuleValidationError) as exc_dep:
+                validate_module_enable(db, bare_tenant.id, dep_mod)
+            assert exc_dep.value.error_code == "MISSING_MODULE_DEPENDENCIES"
+            assert exc_dep.value.details["missing_dependencies"] == ["CORE"]
 
         # Dependency enforcement on disable (COMMERCE cannot be disabled while FINANCING is active)
         db.add_all([

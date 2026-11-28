@@ -14,12 +14,14 @@ from models import (
 
 CORE_MODULE_CODE = "CORE"
 LENDING_MODULE_CODE = "LENDING"
+BROKER_MODULE_CODE = "BROKER"
 LENDING_ENTITY_NAME_KEY = "lending_entity_name"
 MAX_LENDING_ENTITY_NAME_LEN = 200
 
 MODULE_SEQUENCE_ENTITIES: dict[str, tuple[str, ...]] = {
     CORE_MODULE_CODE: ("customers", "leads"),
     LENDING_MODULE_CODE: ("loans", "loan_payments"),
+    BROKER_MODULE_CODE: ("broker_cases", "broker_commissions"),
 }
 
 

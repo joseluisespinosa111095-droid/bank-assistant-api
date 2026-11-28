@@ -176,6 +176,7 @@ from routers import (
     admin as admin_router,
     assistant as assistant_router,
     auth as auth_router,
+    broker as broker_router,
     customers as customers_router,
     dashboard as dashboard_router,
     health as health_router,
@@ -207,6 +208,7 @@ app.include_router(admin_router.router)
 app.include_router(customers_router.router)
 app.include_router(leads_router.router)
 app.include_router(loans_router.router)
+app.include_router(broker_router.router)
 app.include_router(dashboard_router.router)
 app.include_router(assistant_router.router)
 

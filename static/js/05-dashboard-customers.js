@@ -167,6 +167,11 @@ async function loadDashboardSummary() {
                 }
             }
         }
+
+        // 3. Broker Pipeline & Commissions Summary (ONLY when BROKER module is enabled)
+        if (typeof hasModule === 'function' && hasModule('BROKER') && typeof loadBrokerDashboardSummary === 'function') {
+            await loadBrokerDashboardSummary();
+        }
     } catch (err) {
         console.error('Dashboard summary error:', err);
 
@@ -308,6 +313,7 @@ async function loadDashboardSummary() {
                 if (qsRfc) qsRfc.innerText = c.tax_id_rfc || 'No RFC';
 
                 const hasLending = (typeof hasModule === 'function') && hasModule('LENDING');
+                const hasBroker = (typeof hasModule === 'function') && hasModule('BROKER');
                 document.getElementById('cd-qs-balance-sep')?.classList.toggle('module-hidden', !hasLending);
                 document.getElementById('cd-qs-balance-wrap')?.classList.toggle('module-hidden', !hasLending);
                 document.getElementById('cd-qs-balance-wrap')?.classList.toggle('hidden', !hasLending);
@@ -318,6 +324,14 @@ async function loadDashboardSummary() {
                 if (!hasLending) {
                     document.getElementById('ctab-panel-summary')?.classList.add('hidden');
                     document.getElementById('ctab-panel-loans')?.classList.add('hidden');
+                }
+                document.getElementById('cd-qs-broker-sep')?.classList.toggle('module-hidden', !hasBroker);
+                document.getElementById('cd-qs-broker-wrap')?.classList.toggle('module-hidden', !hasBroker);
+                document.getElementById('cd-qs-broker-wrap')?.classList.toggle('hidden', !hasBroker);
+                document.getElementById('ctab-btn-broker')?.classList.toggle('module-hidden', !hasBroker);
+                document.getElementById('ctab-btn-broker')?.classList.toggle('hidden', !hasBroker);
+                if (!hasBroker) {
+                    document.getElementById('ctab-panel-broker')?.classList.add('hidden');
                 }
 
                 const valOrNP = v => (v && String(v).trim()) ? String(v) : 'Not Provided';
@@ -462,6 +476,11 @@ async function loadDashboardSummary() {
                             });
                         }
                     }
+                }
+
+                // Populate Broker Tab ONLY when BROKER module is enabled (zero /api/broker calls without BROKER)
+                if (hasBroker && typeof loadCustomerBrokerSummary === 'function') {
+                    await loadCustomerBrokerSummary(customerId);
                 }
 
                 document.getElementById('customers-master-view').classList.add('hidden');
@@ -674,22 +693,37 @@ async function loadDashboardSummary() {
 
         function switchCustomerProfileTab(tabKey) {
             const hasLending = (typeof hasModule === 'function') && hasModule('LENDING');
-            const effectiveKey = (!hasLending && (tabKey === 'summary' || tabKey === 'loans')) ? 'personal' : tabKey;
-            const tabs = ['personal', 'summary', 'loans', 'interactions', 'documents'];
+            const hasBroker = (typeof hasModule === 'function') && hasModule('BROKER');
+            let effectiveKey = tabKey;
+            if (!hasLending && (tabKey === 'summary' || tabKey === 'loans')) {
+                effectiveKey = 'personal';
+            }
+            if (!hasBroker && tabKey === 'broker') {
+                effectiveKey = 'personal';
+            }
+            const tabs = ['personal', 'summary', 'loans', 'broker', 'interactions', 'documents'];
             tabs.forEach(k => {
                 const btn = document.getElementById('ctab-btn-' + k);
                 const panel = document.getElementById('ctab-panel-' + k);
                 if (!btn || !panel) return;
+                const moduleCls = (k === 'summary' || k === 'loans')
+                    ? 'lending-only-ui '
+                    : (k === 'broker' ? 'broker-only-ui ' : '');
                 if (!hasLending && (k === 'summary' || k === 'loans')) {
-                    btn.classList.add('hidden');
+                    btn.classList.add('hidden', 'module-hidden');
+                    panel.classList.add('hidden');
+                    return;
+                }
+                if (!hasBroker && k === 'broker') {
+                    btn.classList.add('hidden', 'module-hidden');
                     panel.classList.add('hidden');
                     return;
                 }
                 if (k === effectiveKey) {
-                    btn.className = 'py-2 px-4 rounded-xl font-semibold bg-white text-slate-900 shadow-sm whitespace-nowrap';
+                    btn.className = `${moduleCls}py-2 px-4 rounded-xl font-semibold bg-white text-slate-900 shadow-sm whitespace-nowrap`;
                     panel.classList.remove('hidden');
                 } else {
-                    btn.className = 'py-2 px-4 rounded-xl font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap';
+                    btn.className = `${moduleCls}py-2 px-4 rounded-xl font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap`;
                     panel.classList.add('hidden');
                 }
             });
