@@ -192,16 +192,52 @@ def test_02_google_genai_service_and_zero_deprecated_imports():
     prior_msg.content = "Hola Nura"
 
     clear_gemini_client_cache()
-    with patch.dict(os.environ, {"GEMINI_API_KEY": "test-fake-key-123"}, clear=False), patch.object(
+    with patch.dict(
+        os.environ,
+        {"GEMINI_API_KEY": "test-fake-key-123", "GEMINI_MODEL": "", "GEMINI_API_VERSION": ""},
+        clear=False,
+    ), patch.object(
         gemini_mod.genai, "Client", return_value=mock_client
     ) as client_ctor:
         reply = AIService.generate_reply("Resumen del expediente", [prior_msg], "OWNER_ADMIN")
         assert reply == "Respuesta generada por Gemini 2.5"
-        client_ctor.assert_called_once_with(api_key="test-fake-key-123")
+        client_ctor.assert_called_once()
+        ctor_kwargs = client_ctor.call_args.kwargs
+        assert ctor_kwargs["api_key"] == "test-fake-key-123"
+        assert ctor_kwargs["http_options"].api_version == "v1beta"
         mock_client.models.generate_content.assert_called_once()
         call_kwargs = mock_client.models.generate_content.call_args.kwargs
+        assert call_kwargs["model"] == "gemini-2.5-flash"
         assert len(call_kwargs["contents"]) == 2
         assert "OWNER_ADMIN" in call_kwargs["config"].system_instruction
+
+    # 4. Verify clean fallback when primary model returns 404 NOT_FOUND
+    class _FakeNotFoundError(Exception):
+        code = 404
+        status = "NOT_FOUND"
+
+    mock_fallback_client = MagicMock()
+    mock_fallback_resp = MagicMock()
+    mock_fallback_resp.text = "Respuesta desde fallback"
+    mock_fallback_client.models.generate_content.side_effect = [
+        _FakeNotFoundError("404 NOT_FOUND: model not found"),
+        mock_fallback_resp,
+    ]
+
+    clear_gemini_client_cache()
+    with patch.dict(
+        os.environ,
+        {
+            "GEMINI_API_KEY": "test-fake-key-456",
+            "GEMINI_MODEL": "gemini-2.5-flash",
+            "GEMINI_API_VERSION": "",
+        },
+        clear=False,
+    ), patch.object(gemini_mod.genai, "Client", return_value=mock_fallback_client):
+        reply_fb = AIService.generate_reply("Hola", [], "OWNER_ADMIN")
+        assert reply_fb == "Respuesta desde fallback"
+        called_models = [c.kwargs["model"] for c in mock_fallback_client.models.generate_content.call_args_list]
+        assert called_models == ["gemini-2.5-flash", "gemini-3.8-flash"]
     clear_gemini_client_cache()
 
 
