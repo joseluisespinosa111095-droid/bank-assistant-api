@@ -49,7 +49,7 @@
             get customers() { return t('section.customers'); },
             get loans() { return t('section.loans'); },
             get simulator() { return t('section.simulator'); },
-            get broker() { return (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang === 'es') ? 'Broker de Crédito' : 'Credit Broker'; },
+            get broker() { return t('section.broker'); },
             get perfil() { return isPlatformSuperadmin(currentUser) ? t('section.platform-account') : t('section.perfil'); },
             get ia() { return t('section.ia'); },
             get 'platform-orgs'() { return t('section.platform-orgs'); },

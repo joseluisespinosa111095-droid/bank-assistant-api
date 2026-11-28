@@ -387,8 +387,9 @@ def test_a1_superadmin_receives_403_on_all_commercial_routes_without_mutations(p
             ("GET", f"/api/customers/{cust_id}/documents", {}),
             ("GET", f"/api/customers/{cust_id}/documents/{doc_id}/download", {}),
             ("DELETE", f"/api/customers/{cust_id}/documents/{doc_id}", {}),
-            # Leads & pipeline (6)
+            # Leads & pipeline (7)
             ("GET", "/api/leads", {}),
+            ("GET", "/api/leads/calendar?year=2026&month=11", {}),
             ("POST", "/api/leads", {"json": {"full_name": "Unauthorized Lead", "phone_primary": "5577778888", "product_interest": "Personal Loan", "requested_amount_pesos": 5000.0}}),
             ("GET", f"/api/leads/{lead_id}", {}),
             ("PATCH", f"/api/leads/{lead_id}", {"json": {"full_name": "Tampered Lead"}}),
@@ -433,7 +434,7 @@ def test_a1_superadmin_receives_403_on_all_commercial_routes_without_mutations(p
             ("DELETE", f"/api/conversations/{conv_id}", {}),
             ("POST", "/chat-ejecutivo", {"json": {"mensaje": "Hola"}}),
         ]
-        assert len(commercial_calls) == 55
+        assert len(commercial_calls) == 56
 
         for method, path, kwargs in commercial_calls:
             req_kwargs = dict(kwargs)
@@ -602,6 +603,7 @@ def test_c_fastapi_route_inventory_and_effective_dependency_coverage(p3_env):
         ("GET", "/api/customers/{customer_id}/documents/{doc_id}/download"),
         ("DELETE", "/api/customers/{customer_id}/documents/{doc_id}"),
         ("GET", "/api/leads"),
+        ("GET", "/api/leads/calendar"),
         ("POST", "/api/leads"),
         ("GET", "/api/leads/{lead_id}"),
         ("PATCH", "/api/leads/{lead_id}"),

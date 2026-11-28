@@ -318,7 +318,17 @@ async function exportCustomersCSV() {
         [/^••• (\d+) intermediate weekly installments \(#4 to #(\d+)\) hidden in summary view — Click to expand all (\d+) installments •••$/i, (m) => `••• ${m[1]} cuotas semanales intermedias (#4 a #${m[2]}) ocultas en vista resumen — Haz clic para expandir las ${m[3]} cuotas •••`],
         [/^Last Interaction \((.+)\)$/i, (m) => `Última Interacción (${tEnum(m[1].trim())})`],
         [/^Rem\. Total: (.+)$/i, (m) => `Total Rest.: ${m[1]}`],
-        [/^Actor ID: ([^•]+) • Role: ([^•]+) • (.+)$/i, (m) => `ID Actor: ${m[1].trim()} • Rol: ${m[2].trim()} • ${m[3].trim()}`]
+        [/^Actor ID: ([^•]+) • Role: ([^•]+) • (.+)$/i, (m) => `ID Actor: ${m[1].trim()} • Rol: ${m[2].trim()} • ${m[3].trim()}`],
+        [/^(\d+) Active Lenders?$/i, (m) => `${m[1]} ${m[1] === '1' ? 'Financiera Activa' : 'Financieras Activas'}`],
+        [/^Broker \((\d+)\)$/i, (m) => `Broker (${m[1]})`],
+        [/^Showing (\d+)–(\d+) of (\d+) cases$/i, (m) => `Mostrando ${m[1]}–${m[2]} de ${m[3]} expedientes`],
+        [/^Showing (\d+) of (\d+) cases$/i, (m) => `Mostrando ${m[1]} de ${m[2]} expedientes`],
+        [/^(\d+) lenders$/i, (m) => `${m[1]} financieras`],
+        [/^(\d+) offers \((\d+) sent\)$/i, (m) => `${m[1]} ofertas (${m[2]} envíos)`],
+        [/^(\d+) sent • (\d+) appr\.$/i, (m) => `${m[1]} envíos • ${m[2]} aprob.`],
+        [/^Edit Partner Lender \((.+)\)$/i, (m) => `Editar Financiera Aliada (${m[1]})`],
+        [/^Update Offer — (.+)$/i, (m) => `Actualizar Oferta — ${m[1]}`],
+        [/^Update Commission (.+)$/i, (m) => `Actualizar Comisión ${m[1]}`]
     ];
 
     const dynamicExactEs = {
@@ -401,7 +411,21 @@ async function exportCustomersCSV() {
         "Loading team...": "Cargando equipo...",
         "Loading security audit trail...": "Cargando bitácora de auditoría de seguridad...",
         "New Consultation": "Nueva Consulta",
-        "Hello, I'm Nura. How can I help you with your leads, customers, or credit simulations today?": "Hola, soy Nura. ¿Cómo puedo ayudarte hoy con tus prospectos, clientes o simulaciones de crédito?"
+        "Hello, I'm Nura. How can I help you with your leads, customers, or credit simulations today?": "Hola, soy Nura. ¿Cómo puedo ayudarte hoy con tus prospectos, clientes o simulaciones de crédito?",
+        "No recent CRM activity recorded yet.": "Aún no hay actividad reciente registrada en el CRM.",
+        "No broker cases yet. Click \"+ Broker Case\" to start.": "Aún no hay expedientes de broker. Haz clic en \"+ Caso Broker\" para comenzar.",
+        "No broker cases found. Click \"+ New Broker Case\" to originate a brokerage file.": "No se encontraron expedientes de broker. Haz clic en \"+ Nuevo Expediente Broker\" para iniciar uno.",
+        "No lender submissions yet. Submit this case to one or more partner lenders.": "Aún no hay envíos a financieras. Envía este expediente a una o más financieras aliadas.",
+        "No partner lenders registered yet. Add banks, SOFOMs, or fintech lenders.": "Aún no hay financieras registradas. Agrega bancos, SOFOMes o fintechs aliadas.",
+        "No commissions recorded yet. Fund a broker case with a selected offer to generate a commission.": "Aún no hay comisiones registradas. Fondea un expediente con oferta seleccionada para generar una comisión.",
+        "Pending funding": "Pendiente de fondeo",
+        "Manage →": "Gestionar →",
+        "Open Case →": "Abrir Expediente →",
+        "Update Offer": "Actualizar Oferta",
+        "Select Winner": "Elegir Ganadora",
+        "Read-only": "Solo lectura",
+        "Edit": "Editar",
+        "Update": "Actualizar"
     };
 
     function translateSingleDynamicStringToEs(norm) {

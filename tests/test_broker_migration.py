@@ -80,8 +80,8 @@ def test_01_clean_upgrade_head_creates_broker_tables_and_enables_broker_assignab
     db_file = tmp_path / "clean_014.db"
     db_url = f"sqlite:///{db_file.as_posix()}"
 
-    res = _run_alembic(["upgrade", "head"], db_url)
-    assert res.returncode == 0, f"alembic upgrade head failed:\n{res.stdout}\n{res.stderr}"
+    res = _run_alembic(["upgrade", "014"], db_url)
+    assert res.returncode == 0, f"alembic upgrade 014 failed:\n{res.stdout}\n{res.stderr}"
 
     conn = _connect_sqlite(db_file)
     try:
@@ -174,7 +174,7 @@ def test_02_upgrade_from_013_preserves_data_and_clean_downgrade_reupgrade(tmp_pa
         conn.close()
 
     # Upgrade 013 -> 014
-    r014 = _run_alembic(["upgrade", "head"], db_url)
+    r014 = _run_alembic(["upgrade", "014"], db_url)
     assert r014.returncode == 0, f"alembic upgrade 013->014 failed:\n{r014.stdout}\n{r014.stderr}"
 
     conn = _connect_sqlite(db_file)
@@ -211,7 +211,7 @@ def test_02_upgrade_from_013_preserves_data_and_clean_downgrade_reupgrade(tmp_pa
         conn.close()
 
     # Clean re-upgrade 013 -> 014
-    r_reup = _run_alembic(["upgrade", "head"], db_url)
+    r_reup = _run_alembic(["upgrade", "014"], db_url)
     assert r_reup.returncode == 0, f"alembic re-upgrade 013->014 failed:\n{r_reup.stdout}\n{r_reup.stderr}"
 
 

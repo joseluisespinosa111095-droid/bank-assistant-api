@@ -172,11 +172,16 @@
                 const orgName = (user && user.tenant_name) ? user.tenant_name : '';
                 const hasLending = (typeof hasModule === 'function') ? hasModule('LENDING', user) : false;
                 const hasBroker = (typeof hasModule === 'function') ? hasModule('BROKER', user) : false;
+                const isEs = (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang === 'es');
 
                 if (sideSubtitle) {
                     const defaultSub = (hasLending && hasBroker)
-                        ? 'Credit & Broker Ops'
-                        : (hasLending ? 'Credit Operations' : (hasBroker ? 'Credit Broker' : 'CRM Workspace'));
+                        ? (isEs ? 'Crédito y Broker' : 'Credit & Broker Ops')
+                        : (hasLending
+                            ? (isEs ? 'Operaciones de Crédito' : 'Credit Operations')
+                            : (hasBroker
+                                ? (isEs ? 'Broker de Crédito' : 'Credit Broker')
+                                : (isEs ? 'Espacio CRM' : 'CRM Workspace')));
                     sideSubtitle.innerText = orgName || defaultSub;
                 }
                 if (topbarContext) topbarContext.innerText = orgName ? `${orgName} /` : 'NURA CRM /';
@@ -222,7 +227,6 @@
                 }
                 const dashTitle = document.getElementById('dash-main-title');
                 const dashSubtitle = document.getElementById('dash-main-subtitle');
-                const isEs = (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang === 'es');
                 if (dashTitle) {
                     if (hasLending && hasBroker) {
                         dashTitle.innerText = isEs ? 'Panel Ejecutivo de Crédito y Broker' : 'Executive Credit & Broker Dashboard';

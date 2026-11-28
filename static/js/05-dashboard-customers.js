@@ -62,9 +62,10 @@ async function loadDashboardSummary() {
 
         const activityListEl = document.getElementById('dash-recent-activity-list');
         if (activityListEl) {
+            const isEsDash = (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang === 'es');
             const activity = Array.isArray(coreData.recent_activity) ? coreData.recent_activity : [];
             if (activity.length === 0) {
-                activityListEl.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">No recent CRM activity recorded yet.</p>';
+                activityListEl.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">${isEsDash ? 'Aún no hay actividad reciente registrada en el CRM.' : 'No recent CRM activity recorded yet.'}</p>`;
             } else {
                 activityListEl.innerHTML = activity.map(item => `
                     <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-start justify-between gap-2 text-xs">
