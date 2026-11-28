@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
+from core.config import get_build_git_commit
 from dependencies.auth import require_superadmin
 from dependencies.db import get_db
 from models import UserModel
@@ -19,7 +20,12 @@ router = APIRouter()
 def health_check(db: Session = Depends(get_db)):
     try:
         db.execute(text("SELECT 1"))
-        return {"status": "healthy", "database": "connected", "version": "7.4.0"}
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "version": "7.4.0",
+            "git_commit": get_build_git_commit(),
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database unhealthy: {type(e).__name__}")
 

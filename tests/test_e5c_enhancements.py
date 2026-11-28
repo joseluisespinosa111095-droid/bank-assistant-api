@@ -373,6 +373,90 @@ def test_02c_r1b_chat_ejecutivo_injects_live_enabled_modules_and_hot_updates(tmp
         engine.dispose()
 
 
+def test_02d_r1c_health_git_commit_resolution_and_sanitization(tmp_path):
+    from core.config import get_build_git_commit
+
+    # 1. Unit checks on get_build_git_commit()
+    with patch.dict(
+        os.environ,
+        {"RENDER_GIT_COMMIT": "6692D1C9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5", "GIT_COMMIT": "aaaaaaa"},
+        clear=False,
+    ):
+        assert get_build_git_commit() == "6692d1c"
+
+    with patch.dict(
+        os.environ,
+        {"RENDER_GIT_COMMIT": "", "GIT_COMMIT": "ABCDEF1234567890"},
+        clear=False,
+    ):
+        assert get_build_git_commit() == "abcdef1"
+
+    with patch.dict(
+        os.environ,
+        {"RENDER_GIT_COMMIT": "", "GIT_COMMIT": ""},
+        clear=False,
+    ):
+        assert get_build_git_commit() == "local"
+
+    for bad_val in ("secret-token; rm -rf", "xyz1234", "123456", "a" * 41, "dead beef"):
+        with patch.dict(
+            os.environ,
+            {"RENDER_GIT_COMMIT": bad_val, "GIT_COMMIT": ""},
+            clear=False,
+        ):
+            assert get_build_git_commit() == "local", f"Expected 'local' for {bad_val!r}"
+
+    # 2. Integration checks via GET /api/health
+    main_mod, engine, prev_override = _bootstrap_test_app(tmp_path)
+    try:
+        client = TestClient(main_mod.app, base_url="http://localhost:8000")
+
+        with patch.dict(
+            os.environ,
+            {"RENDER_GIT_COMMIT": "6692d1c9a0b1c2d3e4f5", "GIT_COMMIT": ""},
+            clear=False,
+        ):
+            r_render = client.get("/api/health")
+            assert r_render.status_code == 200, r_render.text
+            assert r_render.json() == {
+                "status": "healthy",
+                "database": "connected",
+                "version": "7.4.0",
+                "git_commit": "6692d1c",
+            }
+
+        with patch.dict(
+            os.environ,
+            {"RENDER_GIT_COMMIT": "", "GIT_COMMIT": ""},
+            clear=False,
+        ):
+            r_local = client.get("/api/health")
+            assert r_local.status_code == 200, r_local.text
+            assert r_local.json() == {
+                "status": "healthy",
+                "database": "connected",
+                "version": "7.4.0",
+                "git_commit": "local",
+            }
+
+        with patch.dict(
+            os.environ,
+            {"RENDER_GIT_COMMIT": "secret-token; rm -rf", "GIT_COMMIT": ""},
+            clear=False,
+        ):
+            r_bad = client.get("/api/health")
+            assert r_bad.status_code == 200, r_bad.text
+            body_bad = r_bad.json()
+            assert body_bad["git_commit"] == "local"
+            assert "secret" not in r_bad.text
+    finally:
+        if prev_override is None:
+            main_mod.app.dependency_overrides.pop(main_mod.get_db, None)
+        else:
+            main_mod.app.dependency_overrides[main_mod.get_db] = prev_override
+        engine.dispose()
+
+
 def _bootstrap_test_app(tmp_path):
     """Create a fresh SQLite DB upgraded to head (015) and wire main.app overrides."""
     db_file = tmp_path / "e5c_api.db"

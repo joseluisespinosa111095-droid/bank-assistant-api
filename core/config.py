@@ -1,8 +1,24 @@
 import logging
+import os
+import re
 
 from passlib.context import CryptContext
 
 from db_config import is_production
+
+_GIT_COMMIT_HEX_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
+
+
+def get_build_git_commit() -> str:
+    """Return a sanitized 7-char lowercase git commit SHA from env vars, or 'local'."""
+    for env_key in ("RENDER_GIT_COMMIT", "GIT_COMMIT"):
+        raw = os.getenv(env_key, "").strip()
+        if not raw:
+            continue
+        if _GIT_COMMIT_HEX_RE.match(raw):
+            return raw[:7].lower()
+        return "local"
+    return "local"
 
 # --- SERVER LOGGING ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
