@@ -290,6 +290,23 @@
             } catch (e) { console.error("Error deleting", e); }
         }
 
+        function getAssistantWelcomeMessage() {
+            const hasLending = (typeof hasModule === 'function') ? hasModule('LENDING') : false;
+            const hasBroker = (typeof hasModule === 'function') ? hasModule('BROKER') : false;
+            let key = 'ia.welcome.core';
+            if (hasLending && hasBroker) {
+                key = 'ia.welcome.hybrid';
+            } else if (hasBroker) {
+                key = 'ia.welcome.broker';
+            } else if (hasLending) {
+                key = 'ia.welcome.lending';
+            }
+            if (typeof NuraI18n !== 'undefined' && typeof NuraI18n.t === 'function') {
+                return NuraI18n.t(key);
+            }
+            return "Hello, I'm Nura. How can I help you with your leads, customers, or follow-ups today?";
+        }
+
         async function cargarMensajes(convId) {
             try {
                 const res = await fetch(`/api/conversations/${convId}/messages`);
@@ -300,7 +317,11 @@
                     if (messages.length === 0) {
                         const welcome = document.createElement('div');
                         welcome.className = 'chat-msg-executive p-3.5 mr-12 text-[13px] leading-relaxed self-start max-w-[85%]';
-                        welcome.innerHTML = '<p class="font-bold text-slate-900 mb-1">Hello, I\'m Nura. How can I help you with your leads, customers, or credit simulations today?</p>';
+                        const p = document.createElement('p');
+                        p.className = 'font-bold text-slate-900 mb-1';
+                        p.setAttribute('data-ia-welcome', 'true');
+                        p.innerText = getAssistantWelcomeMessage();
+                        welcome.appendChild(p);
                         container.appendChild(welcome);
                     } else {
                         messages.forEach(msg => {

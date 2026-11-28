@@ -614,7 +614,11 @@
                     "ia.assistant_sub": "Advisory Mode • Read-Only Safety",
                     "ia.placeholder": "Message Nura...",
                     "ia.send_btn": "Send",
-                    "ia.welcome": "Hello, I'm Nura. How can I help you with your leads, customers, or credit simulations today?",
+                    "ia.welcome": "Hello, I'm Nura. How can I help you with your leads, customers, or daily CRM operations today?",
+                    "ia.welcome.core": "Hello, I'm Nura. How can I help you with your leads, customers, calendar follow-ups, or daily CRM workflow today?",
+                    "ia.welcome.broker": "Hello, I'm Nura. How can I help you with your leads, customers, brokerage cases, partner lender offers, or commissions today?",
+                    "ia.welcome.lending": "Hello, I'm Nura. How can I help you with your leads, customers, credit simulations, loans, or collections today?",
+                    "ia.welcome.hybrid": "Hello, I'm Nura. How can I help you with your CRM pipeline, direct lending portfolio, or multi-lender brokerage cases today?",
                     "ia.confirm_delete": "Are you sure you want to delete this conversation history?",
 
                     // --- Print & PDF Templates ---
@@ -1243,7 +1247,11 @@
                     "ia.assistant_sub": "Modo Consultivo • Seguridad de Solo Lectura",
                     "ia.placeholder": "Escribe un mensaje a Nura...",
                     "ia.send_btn": "Enviar",
-                    "ia.welcome": "Hola, soy Nura. ¿Cómo puedo ayudarte hoy con tus prospectos, clientes o simulaciones de crédito?",
+                    "ia.welcome": "Hola, soy Nura. ¿Cómo puedo ayudarte hoy con tus prospectos, clientes o tu operación diaria del CRM?",
+                    "ia.welcome.core": "Hola, soy Nura. ¿Cómo puedo ayudarte hoy con tus prospectos, clientes, seguimiento en calendario u operación del CRM?",
+                    "ia.welcome.broker": "Hola, soy Nura. ¿Cómo puedo ayudarte hoy con tus prospectos, clientes, expedientes de broker, ofertas de financieras o comisiones?",
+                    "ia.welcome.lending": "Hola, soy Nura. ¿Cómo puedo ayudarte hoy con tus prospectos, clientes, simulaciones de crédito, préstamos o cobranza?",
+                    "ia.welcome.hybrid": "Hola, soy Nura. ¿Cómo puedo ayudarte hoy con tu pipeline CRM, cartera de crédito directo o expedientes de intermediación broker?",
                     "ia.confirm_delete": "¿Estás seguro de que deseas eliminar el historial de esta conversación?",
 
                     // --- Print & PDF Templates ---
@@ -2297,6 +2305,10 @@
                 }
                 if (typeof window.rerenderCalendarOnLangChange === 'function') {
                     window.rerenderCalendarOnLangChange();
+                }
+                const iaWelcomeEl = document.querySelector('#chat-messages [data-ia-welcome="true"]');
+                if (iaWelcomeEl && typeof getAssistantWelcomeMessage === 'function') {
+                    iaWelcomeEl.innerText = getAssistantWelcomeMessage();
                 }
             },
 

@@ -11,6 +11,7 @@ from models import ChatMessageModel, ConversationModel, UserModel
 from schemas.core_crm import ChatRequest
 from services.audit import record_audit_event
 from services.external import AIService
+from services.modules import get_enabled_module_codes
 
 router = APIRouter()
 
@@ -132,10 +133,17 @@ def chat_ejecutivo(
         db.add(ChatMessageModel(tenant_id=current_user.tenant_id, conversation_id=conv_id, role="user", content=req.mensaje))
         db.commit()
 
+        enabled_modules = get_enabled_module_codes(
+            db,
+            current_user.tenant_id,
+            is_superadmin=bool(current_user.is_superadmin),
+        )
+
         respuesta_texto = AIService.generate_reply(
             user_message=req.mensaje,
             prior_messages=prior_messages,
-            user_role=current_user.role
+            user_role=current_user.role,
+            enabled_modules=enabled_modules,
         )
 
         db.add(ChatMessageModel(tenant_id=current_user.tenant_id, conversation_id=conv_id, role="executive", content=respuesta_texto))

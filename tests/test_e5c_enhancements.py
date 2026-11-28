@@ -241,6 +241,138 @@ def test_02_google_genai_service_and_zero_deprecated_imports():
     clear_gemini_client_cache()
 
 
+def test_02b_r1b_assistant_system_rules_all_4_module_profiles():
+    from services.external import AIService
+
+    lending_only_tokens = ("Personal Loan", "Business Loan", "LN-", "PAY-", "disburse", "amortization", "collections")
+    broker_only_tokens = ("BRK-", "COM-", "partner financial institutions", "multi-lender")
+
+    # 1. enabled_modules=None -> defensive CORE-only fallback (never assumes LENDING)
+    rules_default = AIService.build_system_rules("SALES_AGENT")
+    assert "SALES_AGENT" in rules_default
+    assert "CORE CRM" in rules_default
+    assert "read-only mode" in rules_default.lower()
+    for tok in (*lending_only_tokens, *broker_only_tokens):
+        assert tok not in rules_default, f"Unexpected token {tok!r} in default CORE rules"
+
+    # 2. Explicit CORE-only
+    rules_core = AIService.build_system_rules("OWNER_ADMIN", enabled_modules=["CORE"])
+    assert "Active organization modules: CORE." in rules_core
+    for tok in (*lending_only_tokens, *broker_only_tokens):
+        assert tok not in rules_core, f"Unexpected token {tok!r} in CORE-only rules"
+
+    # 3. CORE + BROKER (no LENDING leakage)
+    rules_broker = AIService.build_system_rules("CREDIT_ADVISOR", enabled_modules=["core", "broker"])
+    assert "Active organization modules: BROKER, CORE." in rules_broker
+    assert "BRK-" in rules_broker and "COM-" in rules_broker and "partner financial institutions" in rules_broker
+    for tok in lending_only_tokens:
+        assert tok not in rules_broker, f"Unexpected LENDING token {tok!r} in CORE+BROKER rules"
+
+    # 4. CORE + LENDING (no BROKER leakage)
+    rules_lending = AIService.build_system_rules("OPERATIONS_OFFICER", enabled_modules=["CORE", "LENDING"])
+    assert "Active organization modules: CORE, LENDING." in rules_lending
+    assert "Personal Loan" in rules_lending and "Business Loan" in rules_lending and "LN-" in rules_lending
+    for tok in broker_only_tokens:
+        assert tok not in rules_lending, f"Unexpected BROKER token {tok!r} in CORE+LENDING rules"
+
+    # 5. CORE + BROKER + LENDING (both verticals + explicit distinction)
+    rules_hybrid = AIService.build_system_rules("OWNER_ADMIN", enabled_modules=["CORE", "BROKER", "LENDING"])
+    assert "Active organization modules: BROKER, CORE, LENDING." in rules_hybrid
+    assert "Personal Loan" in rules_hybrid and "LN-" in rules_hybrid
+    assert "BRK-" in rules_hybrid and "COM-" in rules_hybrid
+    assert "distinguish clearly" in rules_hybrid.lower()
+
+
+def test_02c_r1b_chat_ejecutivo_injects_live_enabled_modules_and_hot_updates(tmp_path):
+    from models import TenantModel, TenantModuleModel
+    from services.external import clear_gemini_client_cache
+    from services.external import gemini as gemini_mod
+
+    main_mod, engine, prev_override = _bootstrap_test_app(tmp_path)
+    SessionCheck = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    try:
+        # Tenant A (default-org -> CORE + LENDING)
+        client_a, headers_a = _login_client(main_mod.app, "owner-a@e5c.nura.io", "StrongPass123!")
+        # Tenant B (tenant-b-e5c -> CORE + BROKER)
+        client_b, headers_b = _login_client(main_mod.app, "owner-b@e5c.nura.io", "StrongPass123!")
+
+        captured_instructions: list[str] = []
+
+        def _fake_generate_content(**kwargs):
+            captured_instructions.append(kwargs["config"].system_instruction)
+            resp = MagicMock()
+            resp.text = "OK respuesta de prueba"
+            return resp
+
+        mock_client = MagicMock()
+        mock_client.models.generate_content.side_effect = _fake_generate_content
+
+        clear_gemini_client_cache()
+        with patch.dict(
+            os.environ,
+            {"GEMINI_API_KEY": "test-r1b-key", "GEMINI_MODEL": "gemini-2.5-flash", "GEMINI_API_VERSION": "v1beta"},
+            clear=False,
+        ), patch.object(gemini_mod.genai, "Client", return_value=mock_client):
+            # 1. Tenant A (CORE + LENDING)
+            r_a = client_a.post(
+                "/chat-ejecutivo",
+                json={"mensaje": "¿Cómo revisar pagos de un préstamo?"},
+                headers=headers_a,
+            )
+            assert r_a.status_code == 200, r_a.text
+            assert len(captured_instructions) == 1
+            assert "Active organization modules: CORE, LENDING." in captured_instructions[0]
+            assert "Personal Loan" in captured_instructions[0]
+            assert "BRK-" not in captured_instructions[0]
+
+            # 2. Tenant B (CORE + BROKER)
+            r_b1 = client_b.post(
+                "/chat-ejecutivo",
+                json={"mensaje": "¿Cómo comparar ofertas de financieras?"},
+                headers=headers_b,
+            )
+            assert r_b1.status_code == 200, r_b1.text
+            assert len(captured_instructions) == 2
+            assert "Active organization modules: BROKER, CORE." in captured_instructions[1]
+            assert "BRK-" in captured_instructions[1] and "COM-" in captured_instructions[1]
+            assert "Personal Loan" not in captured_instructions[1]
+
+            # 3. Hot module change in DB (disable BROKER for Tenant B without restarting session)
+            db = SessionCheck()
+            try:
+                t_b = db.query(TenantModel).filter(TenantModel.slug == "tenant-b-e5c").one()
+                tm = (
+                    db.query(TenantModuleModel)
+                    .filter(
+                        TenantModuleModel.tenant_id == t_b.id,
+                        TenantModuleModel.module_code == "BROKER",
+                    )
+                    .one()
+                )
+                tm.is_enabled = False
+                db.commit()
+            finally:
+                db.close()
+
+            r_b2 = client_b.post(
+                "/chat-ejecutivo",
+                json={"mensaje": "Resumen de seguimiento CRM", "conversation_id": r_b1.json()["conversation_id"]},
+                headers=headers_b,
+            )
+            assert r_b2.status_code == 200, r_b2.text
+            assert len(captured_instructions) == 3
+            assert "Active organization modules: CORE." in captured_instructions[2]
+            assert "BRK-" not in captured_instructions[2]
+            assert "Personal Loan" not in captured_instructions[2]
+        clear_gemini_client_cache()
+    finally:
+        if prev_override is None:
+            main_mod.app.dependency_overrides.pop(main_mod.get_db, None)
+        else:
+            main_mod.app.dependency_overrides[main_mod.get_db] = prev_override
+        engine.dispose()
+
+
 def _bootstrap_test_app(tmp_path):
     """Create a fresh SQLite DB upgraded to head (015) and wire main.app overrides."""
     db_file = tmp_path / "e5c_api.db"
@@ -828,6 +960,14 @@ def test_05_headless_chrome_spanish_i18n_calendar_and_new_lead_curp_ui():
         };
         closeCustomerFormModal();
 
+        // Check dynamic Assistant welcome message by module profile in Spanish (R1B)
+        const iaWelcomeBrokerEs = getAssistantWelcomeMessage();
+        currentUser.enabled_modules = ['CORE'];
+        const iaWelcomeCoreEs = getAssistantWelcomeMessage();
+        currentUser.enabled_modules = ['CORE', 'LENDING'];
+        const iaWelcomeLendingEs = getAssistantWelcomeMessage();
+        currentUser.enabled_modules = ['CORE', 'BROKER'];
+
         return {
             sidebarBrokerText,
             dashCoreHtml,
@@ -839,7 +979,10 @@ def test_05_headless_chrome_spanish_i18n_calendar_and_new_lead_curp_ui():
             indState,
             bizState,
             custIndState,
-            custBizState
+            custBizState,
+            iaWelcomeBrokerEs,
+            iaWelcomeCoreEs,
+            iaWelcomeLendingEs
         };
     })()
     """
@@ -895,3 +1038,10 @@ def test_05_headless_chrome_spanish_i18n_calendar_and_new_lead_curp_ui():
         "curpHidden": True,
         "curpRequired": False,
     }, out["custBizState"]
+
+    # 4. Dynamic Assistant welcome message by module profile (R1B)
+    assert "expedientes de broker" in out["iaWelcomeBrokerEs"].lower(), out["iaWelcomeBrokerEs"]
+    assert "simulaciones de crédito" not in out["iaWelcomeBrokerEs"].lower(), out["iaWelcomeBrokerEs"]
+    assert "simulaciones de crédito" not in out["iaWelcomeCoreEs"].lower(), out["iaWelcomeCoreEs"]
+    assert "expedientes de broker" not in out["iaWelcomeCoreEs"].lower(), out["iaWelcomeCoreEs"]
+    assert "simulaciones de crédito" in out["iaWelcomeLendingEs"].lower(), out["iaWelcomeLendingEs"]

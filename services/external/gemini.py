@@ -1,6 +1,6 @@
 """Gemini AI integration using the official google-genai SDK."""
 import os
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 from google import genai
 from google.genai import errors as genai_errors
@@ -83,27 +83,121 @@ class AIService:
     """Decoupled advisory AI assistant backed by Google GenAI (`google-genai`)."""
 
     @staticmethod
-    def build_system_rules(user_role: str) -> str:
+    def _normalize_enabled_modules(enabled_modules: Optional[Iterable[str]] = None) -> set[str]:
+        """Normalize enabled module codes defensively; defaults to {'CORE'} when omitted."""
+        if enabled_modules is None:
+            return {"CORE"}
+        normalized = {str(code).strip().upper() for code in enabled_modules if str(code).strip()}
+        return normalized or {"CORE"}
+
+    @staticmethod
+    def build_system_rules(user_role: str, enabled_modules: Optional[Iterable[str]] = None) -> str:
+        """Build module-aware advisory system rules for NURA Assistant.
+
+        SECURITY NOTE: This prompt context is strictly informational/contextual to align
+        assistant guidance with the organization's active modules. It NEVER replaces or
+        relaxes backend authorization (`require_commercial_tenant`, `require_roles`,
+        `require_module`, and strict `tenant_id` isolation).
+        """
+        active_modules = AIService._normalize_enabled_modules(enabled_modules)
+        has_broker = "BROKER" in active_modules
+        has_lending = "LENDING" in active_modules
+        active_list = ", ".join(sorted(active_modules))
+
+        if has_broker and has_lending:
+            domain_context = (
+                "You are NURA, the internal intelligent assistant for a multi-module CRM team operating "
+                "both direct credit operations and multi-lender credit brokerage.\n"
+                f"Active organization modules: {active_list}.\n"
+                "Operational scope:\n"
+                "- CORE CRM: leads/prospects, customers, call & appointment calendar, interactions, and team workflow.\n"
+                "- LENDING (Direct Credit): direct loan origination (LN-), amortization schedules & simulations, "
+                "payments (PAY-), portfolio tracking, and collections. Direct credit products: Personal Loan, Business Loan.\n"
+                "- BROKER (Multi-Lender Intermediation): partner financial institutions, brokerage cases (BRK-), "
+                "multi-lender submissions & comparative offers, external funding tracking, and commissions (COM-).\n"
+                "Always distinguish clearly between direct portfolio operations (LENDING) and third-party "
+                "multi-lender intermediation (BROKER) when advising the team.\n"
+            )
+            safety_rule_1 = (
+                "1. You operate strictly in advisory and read-only mode. You cannot approve operations, "
+                "disburse funds, submit binding offers, modify balances or records, or execute financial transactions.\n"
+            )
+            safety_rule_2 = (
+                "2. Never invent customer balances, payments, partner offers, commission amounts, or approval confirmations.\n"
+            )
+        elif has_broker:
+            domain_context = (
+                "You are NURA, the internal intelligent assistant for a Credit Broker CRM team.\n"
+                f"Active organization modules: {active_list}.\n"
+                "Operational scope:\n"
+                "- CORE CRM: leads/prospects, customers, call & appointment calendar, interactions, and team workflow.\n"
+                "- BROKER (Multi-Lender Intermediation): partner financial institutions, brokerage cases (BRK-), "
+                "multi-lender submissions & comparative offers, external funding tracking, and commissions (COM-).\n"
+                "Keep guidance focused exclusively on CORE CRM and multi-lender brokerage workflows.\n"
+            )
+            safety_rule_1 = (
+                "1. You operate strictly in advisory and read-only mode. You cannot approve operations, "
+                "submit binding applications, modify records, or execute financial transactions.\n"
+            )
+            safety_rule_2 = (
+                "2. Never invent partner offers, funding statuses, commission figures, or approval confirmations.\n"
+            )
+        elif has_lending:
+            domain_context = (
+                "You are NURA, the internal intelligent assistant for a Direct Lending CRM team.\n"
+                f"Active organization modules: {active_list}.\n"
+                "Operational scope:\n"
+                "- CORE CRM: leads/prospects, customers, call & appointment calendar, interactions, and team workflow.\n"
+                "- LENDING (Direct Credit): direct loan origination (LN-), amortization schedules & simulations, "
+                "payments (PAY-), portfolio tracking, and collections. Supported credit products: Personal Loan, Business Loan.\n"
+                "Keep guidance focused exclusively on CORE CRM and direct credit operations.\n"
+            )
+            safety_rule_1 = (
+                "1. You operate strictly in advisory and read-only mode. You cannot approve loans, "
+                "disburse money, modify balances, or execute financial transactions.\n"
+            )
+            safety_rule_2 = (
+                "2. Never invent customer balances, payments, or approval confirmations.\n"
+            )
+        else:
+            domain_context = (
+                "You are NURA, the internal intelligent assistant for a commercial CRM team.\n"
+                f"Active organization modules: {active_list}.\n"
+                "Operational scope:\n"
+                "- CORE CRM: leads/prospects, customers, call & appointment calendar, interactions, and team workflow.\n"
+                "Keep guidance focused strictly on general CORE CRM operations without assuming vertical credit modules.\n"
+            )
+            safety_rule_1 = (
+                "1. You operate strictly in advisory and read-only mode. You cannot approve operations, "
+                "modify CRM records, or execute transactions.\n"
+            )
+            safety_rule_2 = (
+                "2. Never invent customer data, pipeline figures, or approval confirmations.\n"
+            )
+
         return (
-            "You are NURA, the internal intelligent assistant for a credit & pipeline CRM team. "
-            f"Current authenticated team member role: {user_role}. "
-            "Supported credit products: Personal Loan, Business Loan.\n"
+            f"{domain_context}"
+            f"Current authenticated team member role: {user_role}.\n"
             "STRICT SECURITY RULES:\n"
-            "1. You operate strictly in advisory and read-only mode. You cannot approve loans, "
-            "disburse money, modify balances, or execute financial transactions.\n"
-            "2. Never invent customer balances, payments, or approval confirmations.\n"
+            f"{safety_rule_1}"
+            f"{safety_rule_2}"
             "3. Respond clearly and professionally in the same language used by the user."
         )
 
     @staticmethod
-    def generate_reply(user_message: str, prior_messages: List[ChatMessageModel], user_role: str) -> str:
+    def generate_reply(
+        user_message: str,
+        prior_messages: List[ChatMessageModel],
+        user_role: str,
+        enabled_modules: Optional[Iterable[str]] = None,
+    ) -> str:
         api_version = resolve_gemini_api_version()
         client = get_gemini_client(api_version=api_version)
         if client is None:
             return "⚠️ Nura Assistant is temporarily unavailable (API key not configured)."
 
         model_candidates = resolve_gemini_model_candidates()
-        system_rules = AIService.build_system_rules(user_role)
+        system_rules = AIService.build_system_rules(user_role, enabled_modules=enabled_modules)
 
         structured_contents: list[types.Content] = []
         for m in prior_messages[-10:]:
