@@ -20,7 +20,7 @@ class CustomerCreateRequest(BaseModel):
     trade_name: Optional[str] = Field(default=None, max_length=160)
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
-    curp: Optional[str] = Field(default=None, max_length=18)
+    curp: Optional[str] = Field(default=None, max_length=32)
     date_of_birth: Optional[date] = None
     phone_primary: str = Field(..., min_length=10, max_length=25)
     phone_secondary: Optional[str] = Field(default=None, max_length=25)
@@ -44,7 +44,7 @@ class CustomerUpdateRequest(BaseModel):
     trade_name: Optional[str] = Field(default=None, max_length=160)
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
-    curp: Optional[str] = Field(default=None, max_length=18)
+    curp: Optional[str] = Field(default=None, max_length=32)
     date_of_birth: Optional[date] = None
     phone_primary: Optional[str] = Field(default=None, min_length=10, max_length=25)
     phone_secondary: Optional[str] = Field(default=None, max_length=25)
@@ -66,7 +66,7 @@ class LeadCreateRequest(BaseModel):
     trade_name: Optional[str] = Field(default=None, max_length=160)
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
-    curp: Optional[str] = Field(default=None, max_length=18)
+    curp: Optional[str] = Field(default=None, max_length=32)
     phone_primary: str = Field(..., min_length=10, max_length=25)
     email: Optional[EmailStr] = None
     source: str = Field(default="DIRECT_OUTREACH")
@@ -90,7 +90,7 @@ class LeadUpdateRequest(BaseModel):
     trade_name: Optional[str] = Field(default=None, max_length=160)
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
-    curp: Optional[str] = Field(default=None, max_length=18)
+    curp: Optional[str] = Field(default=None, max_length=32)
     phone_primary: Optional[str] = Field(default=None, min_length=10, max_length=25)
     email: Optional[EmailStr] = None
     source: Optional[str] = None
@@ -124,6 +124,6 @@ class LeadConvertRequest(BaseModel):
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
     trade_name: Optional[str] = Field(default=None, max_length=160)
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
-    curp: Optional[str] = Field(default=None, max_length=18)
+    curp: Optional[str] = Field(default=None, max_length=32)
     address_full: Optional[str] = Field(default=None, max_length=1000)
     notes: Optional[str] = Field(default=None, max_length=500)

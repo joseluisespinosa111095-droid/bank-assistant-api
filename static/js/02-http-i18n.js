@@ -1429,6 +1429,7 @@
                 "Optional": "Opcional",
                 "Legal entity name": "Nombre o Razón Social",
                 "18-char CURP": "CURP de 18 caracteres",
+                "Optional 18-char CURP": "CURP opcional de 18 caracteres",
                 "Optional RFC": "RFC opcional",
                 "Search by Case # (BRK-00001), product, purpose, or external ref...": "Buscar por No. Expediente (BRK-00001), producto, destino o ref. externa...",
                 "Search lender by code, name, or contact...": "Buscar financiera por código, nombre o contacto..."
@@ -2118,6 +2119,7 @@
                 "Payment Reference": "Referencia de Pago",
                 "Save Commission": "Guardar Comisión",
                 "CURP *": "CURP *",
+                "CURP (Optional)": "CURP (Opcional)",
                 "CURP": "CURP",
                 "Tax ID (RFC) (Optional)": "RFC (Opcional)",
                 "Next Follow-up Activity": "Tipo de Próxima Actividad",

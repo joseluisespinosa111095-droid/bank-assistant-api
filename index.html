@@ -720,7 +720,7 @@
                                             <p class="text-[10px] font-bold text-slate-400 uppercase">Next Scheduled Call</p>
                                             <p id="ldet-followup" class="font-bold text-amber-700 mt-0.5">—</p>
                                         </div>
-                                        <div class="col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <div id="ldet-curp-card" class="col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                             <p class="text-[10px] font-bold text-slate-400 uppercase">CURP</p>
                                             <p id="ldet-curp" class="font-mono font-bold text-slate-800 mt-0.5">—</p>
                                         </div>
@@ -928,6 +928,10 @@
                                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase">Customer Since & Tax ID (RFC)</p>
                                         <p id="det-since-rfc" class="font-semibold text-slate-700 mt-1">—</p>
+                                    </div>
+                                    <div id="det-curp-card" class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">CURP</p>
+                                        <p id="det-curp" class="font-mono font-bold text-slate-800 mt-1">—</p>
                                     </div>
                                 </div>
 
@@ -2519,8 +2523,8 @@
                         </div>
 
                         <div id="lf-curp-group">
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">CURP *</label>
-                            <input type="text" id="lf-curp" required minlength="18" maxlength="18" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono uppercase" placeholder="18-char CURP">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">CURP (Optional)</label>
+                            <input type="text" id="lf-curp" maxlength="18" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono uppercase" placeholder="Optional 18-char CURP">
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tax ID (RFC) (Optional)</label>
@@ -3089,6 +3093,10 @@
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Email Address</label>
                             <input type="email" id="cf-email" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="customer@email.com">
+                        </div>
+                        <div id="cf-curp-group">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">CURP (Optional)</label>
+                            <input type="text" id="cf-curp" maxlength="18" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono uppercase" placeholder="Optional 18-char CURP">
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tax ID (RFC)</label>
@@ -4287,11 +4295,11 @@
     </div>
 
     <script src="/static/js/01-financial-engine.js?v=20261126-e4b3"></script>
-    <script src="/static/js/02-http-i18n.js?v=20261127-e5c"></script>
+    <script src="/static/js/02-http-i18n.js?v=20261128-r1a"></script>
     <script src="/static/js/03-core-auth.js?v=20261127-e5c"></script>
     <script src="/static/js/04-platform.js?v=20261127-e5c"></script>
-    <script src="/static/js/05-dashboard-customers.js?v=20261127-e5c"></script>
-    <script src="/static/js/06-leads.js?v=20261127-e5c"></script>
+    <script src="/static/js/05-dashboard-customers.js?v=20261128-r1a"></script>
+    <script src="/static/js/06-leads.js?v=20261128-r1a"></script>
     <script src="/static/js/07-loans-payments.js?v=20261126-e4b4"></script>
     <script src="/static/js/08-team-assistant.js?v=20261126-e4b4"></script>
     <script src="/static/js/09-extensions.js?v=20261127-e5c"></script>

@@ -213,9 +213,8 @@ def create_lead(
 
     curp_clean = None
     if entity_type == "INDIVIDUAL":
-        curp_required = bool(name_fields["used_split"]) or (payload.curp is not None)
         try:
-            curp_clean = normalize_and_validate_curp(payload.curp, required=curp_required)
+            curp_clean = normalize_and_validate_curp(payload.curp, required=False)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
 
@@ -638,7 +637,7 @@ def update_lead(
                 updated_fields.append("curp")
         elif payload.curp is not None:
             try:
-                lead.curp = normalize_and_validate_curp(payload.curp, required=True)
+                lead.curp = normalize_and_validate_curp(payload.curp, required=False)
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc))
             updated_fields.append("curp")

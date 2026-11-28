@@ -334,46 +334,67 @@ def _login_client(app, email: str, password: str) -> tuple[TestClient, dict]:
     return client, {"X-CSRF-Token": csrf, "Origin": "http://localhost:8000"}
 
 
-def test_03_lead_split_name_mandatory_curp_and_conversion_carryover(tmp_path):
+def test_03_lead_split_name_optional_curp_and_conversion_carryover(tmp_path):
     main_mod, engine, prev_override = _bootstrap_test_app(tmp_path)
     try:
         client, headers = _login_client(main_mod.app, "owner-a@e5c.nura.io", "StrongPass123!")
 
-        # 1. INDIVIDUAL with split name and missing CURP -> 422
-        r_missing_curp = client.post(
+        # 1. INDIVIDUAL with split name and NO CURP -> 200 (R1A: CURP is optional in CORE)
+        r_no_curp = client.post(
             "/api/leads",
             json={
                 "entity_type": "INDIVIDUAL",
-                "first_name": "Carlos",
-                "middle_name": "Eduardo",
-                "last_name": "Mendoza Ruiz",
-                "phone_primary": "5511223344",
+                "first_name": "Elena",
+                "last_name": "Torres",
+                "phone_primary": "5511223300",
                 "source": "REFERRAL",
                 "product_interest": "Personal Loan",
             },
             headers=headers,
         )
-        assert r_missing_curp.status_code == 422, r_missing_curp.text
-        assert "CURP" in r_missing_curp.text
+        assert r_no_curp.status_code == 200, r_no_curp.text
+        lead_no_curp = r_no_curp.json()
+        assert lead_no_curp["curp"] is None
+        assert lead_no_curp["full_name"] == "Elena Torres"
 
-        # 2. INDIVIDUAL with malformed CURP -> 422
-        r_bad_curp = client.post(
-            "/api/leads",
-            json={
-                "entity_type": "INDIVIDUAL",
-                "first_name": "Carlos",
-                "last_name": "Mendoza Ruiz",
-                "curp": "BADCURP123",
-                "phone_primary": "5511223344",
-                "source": "REFERRAL",
-                "product_interest": "Personal Loan",
-            },
+        # 1b. Historical compatibility: PATCH another field on lead with curp=NULL without sending curp -> 200
+        r_patch_hist = client.patch(
+            f"/api/leads/{lead_no_curp['id']}",
+            json={"summary_notes": "Updated notes without touching CURP"},
             headers=headers,
         )
-        assert r_bad_curp.status_code == 422, r_bad_curp.text
+        assert r_patch_hist.status_code == 200, r_patch_hist.text
+        assert r_patch_hist.json()["curp"] is None
+        assert r_patch_hist.json()["summary_notes"] == "Updated notes without touching CURP"
 
-        # 3. INDIVIDUAL with valid split name + 18-char CURP and NO RFC -> 200
-        valid_curp = "gode561231hdfrrl09"
+        # 1c. Convert lead with curp=NULL -> 200 (does not block conversion)
+        r_conv_null = client.post(
+            f"/api/leads/{lead_no_curp['id']}/convert",
+            json={"notes": "Converted without CURP"},
+            headers=headers,
+        )
+        assert r_conv_null.status_code == 200, r_conv_null.text
+        assert r_conv_null.json()["customer"]["curp"] is None
+
+        # 2. INDIVIDUAL with malformed CURP (bad syntax or internal spaces) -> 422
+        for bad_curp in ("BADCURP123", "GODE 561231HDFRRL09", "123456789012345678"):
+            r_bad_curp = client.post(
+                "/api/leads",
+                json={
+                    "entity_type": "INDIVIDUAL",
+                    "first_name": "Carlos",
+                    "last_name": "Mendoza Ruiz",
+                    "curp": bad_curp,
+                    "phone_primary": "5511223344",
+                    "source": "REFERRAL",
+                    "product_interest": "Personal Loan",
+                },
+                headers=headers,
+            )
+            assert r_bad_curp.status_code == 422, f"Expected 422 for {bad_curp!r}: {r_bad_curp.text}"
+
+        # 3. INDIVIDUAL with valid split name + 18-char CURP (with surrounding spaces & lowercase) -> 200 normalized
+        valid_curp = "  gode561231hdfrrl09  "
         r_ok = client.post(
             "/api/leads",
             json={
@@ -414,12 +435,13 @@ def test_03_lead_split_name_mandatory_curp_and_conversion_carryover(tmp_path):
         assert cust["full_legal_name"] == "Carlos Eduardo Mendoza Ruiz"
         assert cust["curp"] == "GODE561231HDFRRL09"
 
-        # 5. BUSINESS without CURP -> 200
+        # 5. BUSINESS lead -> CURP stored as NULL even if omitted or passed
         r_biz = client.post(
             "/api/leads",
             json={
                 "entity_type": "BUSINESS",
                 "full_name": "Constructora Norte SA de CV",
+                "curp": "GODE561231HDFRRL09",
                 "phone_primary": "5599887766",
                 "source": "WEBSITE",
                 "product_interest": "Business Loan",
@@ -431,6 +453,136 @@ def test_03_lead_split_name_mandatory_curp_and_conversion_carryover(tmp_path):
         assert biz["full_name"] == "Constructora Norte SA de CV"
         assert biz["curp"] is None
         assert biz["first_name"] is None
+    finally:
+        if prev_override is None:
+            main_mod.app.dependency_overrides.pop(main_mod.get_db, None)
+        else:
+            main_mod.app.dependency_overrides[main_mod.get_db] = prev_override
+        engine.dispose()
+
+
+def test_03b_r1a_customers_curp_contract_and_historical_compat(tmp_path):
+    main_mod, engine, prev_override = _bootstrap_test_app(tmp_path)
+    try:
+        client, headers = _login_client(main_mod.app, "owner-a@e5c.nura.io", "StrongPass123!")
+
+        # 1. Create INDIVIDUAL customer WITHOUT CURP -> 200, curp=None
+        r_no_curp = client.post(
+            "/api/customers",
+            json={
+                "entity_type": "INDIVIDUAL",
+                "first_name": "Laura",
+                "last_name": "Sánchez",
+                "phone_primary": "5544001101",
+            },
+            headers=headers,
+        )
+        assert r_no_curp.status_code == 200, r_no_curp.text
+        c1 = r_no_curp.json()
+        assert c1["curp"] is None
+
+        # 2. Historical compatibility: PATCH another field on customer with curp=NULL without sending curp -> 200
+        r_patch_other = client.patch(
+            f"/api/customers/{c1['id']}",
+            json={"address_full": "Av. Reforma 100"},
+            headers=headers,
+        )
+        assert r_patch_other.status_code == 200, r_patch_other.text
+        assert r_patch_other.json()["curp"] is None
+        assert r_patch_other.json()["address_full"] == "Av. Reforma 100"
+
+        # 3. PATCH customer with INVALID CURP -> 422
+        r_patch_bad = client.patch(
+            f"/api/customers/{c1['id']}",
+            json={"curp": "INVALIDO123"},
+            headers=headers,
+        )
+        assert r_patch_bad.status_code == 422, r_patch_bad.text
+
+        # 4. PATCH customer with VALID CURP (lowercase + surrounding whitespace) -> 200 normalized
+        r_patch_ok = client.patch(
+            f"/api/customers/{c1['id']}",
+            json={"curp": "  sall910202mdfrrl05  "},
+            headers=headers,
+        )
+        assert r_patch_ok.status_code == 200, r_patch_ok.text
+        assert r_patch_ok.json()["curp"] == "SALL910202MDFRRL05"
+
+        # 5. GET customer detail & search by CURP return persisted value
+        r_det = client.get(f"/api/customers/{c1['id']}")
+        assert r_det.status_code == 200
+        assert r_det.json()["curp"] == "SALL910202MDFRRL05"
+        r_search = client.get("/api/customers?search=SALL910202MDFRRL05")
+        assert r_search.status_code == 200
+        assert r_search.json()["total"] == 1 and r_search.json()["items"][0]["id"] == c1["id"]
+
+        # 6. PATCH customer clearing CURP with empty string -> 200, curp=None
+        r_clear = client.patch(
+            f"/api/customers/{c1['id']}",
+            json={"curp": ""},
+            headers=headers,
+        )
+        assert r_clear.status_code == 200, r_clear.text
+        assert r_clear.json()["curp"] is None
+
+        # 7. Create INDIVIDUAL customer WITH valid CURP -> 200 normalized
+        r_create_ok = client.post(
+            "/api/customers",
+            json={
+                "entity_type": "INDIVIDUAL",
+                "first_name": "Mateo",
+                "last_name": "Gómez",
+                "curp": " gomm890303hdfrrl07 ",
+                "phone_primary": "5544001102",
+            },
+            headers=headers,
+        )
+        assert r_create_ok.status_code == 200, r_create_ok.text
+        assert r_create_ok.json()["curp"] == "GOMM890303HDFRRL07"
+
+        # 8. Create INDIVIDUAL customer WITH invalid CURP -> 422
+        r_create_bad = client.post(
+            "/api/customers",
+            json={
+                "entity_type": "INDIVIDUAL",
+                "first_name": "Mateo",
+                "last_name": "Gómez",
+                "curp": "NO_ES_CURP",
+                "phone_primary": "5544001103",
+            },
+            headers=headers,
+        )
+        assert r_create_bad.status_code == 422, r_create_bad.text
+
+        # 9. BUSINESS customer: curp stored as NULL even if provided
+        r_biz = client.post(
+            "/api/customers",
+            json={
+                "entity_type": "BUSINESS",
+                "full_legal_name": "Servicios Delta SA de CV",
+                "legal_representative_name": "Ana López",
+                "curp": "GOMM890303HDFRRL07",
+                "phone_primary": "5544001104",
+            },
+            headers=headers,
+        )
+        assert r_biz.status_code == 200, r_biz.text
+        assert r_biz.json()["curp"] is None
+
+        # 10. Switching INDIVIDUAL customer with CURP -> BUSINESS clears curp to NULL
+        c_with_curp_id = r_create_ok.json()["id"]
+        r_to_biz = client.patch(
+            f"/api/customers/{c_with_curp_id}",
+            json={
+                "entity_type": "BUSINESS",
+                "full_legal_name": "Comercializadora Mateo SA",
+                "legal_representative_name": "Mateo Gómez",
+            },
+            headers=headers,
+        )
+        assert r_to_biz.status_code == 200, r_to_biz.text
+        assert r_to_biz.json()["entity_type"] == "BUSINESS"
+        assert r_to_biz.json()["curp"] is None
     finally:
         if prev_override is None:
             main_mod.app.dependency_overrides.pop(main_mod.get_db, None)
@@ -662,6 +814,20 @@ def test_05_headless_chrome_spanish_i18n_calendar_and_new_lead_curp_ui():
             fullRequired: document.getElementById('lf-full-name').required,
         };
 
+        // Open New Customer Modal and test INDIVIDUAL vs BUSINESS CURP visibility (optional in R1A)
+        openCustomerFormModal('create');
+        const custIndState = {
+            curpVisible: !document.getElementById('cf-curp-group').classList.contains('hidden'),
+            curpRequired: document.getElementById('cf-curp').required,
+        };
+        document.getElementById('cf-entity-type').value = 'BUSINESS';
+        toggleCustomerModalEntityFields();
+        const custBizState = {
+            curpHidden: document.getElementById('cf-curp-group').classList.contains('hidden'),
+            curpRequired: document.getElementById('cf-curp').required,
+        };
+        closeCustomerFormModal();
+
         return {
             sidebarBrokerText,
             dashCoreHtml,
@@ -671,7 +837,9 @@ def test_05_headless_chrome_spanish_i18n_calendar_and_new_lead_curp_ui():
             callChips,
             meetingChips,
             indState,
-            bizState
+            bizState,
+            custIndState,
+            custBizState
         };
     })()
     """
@@ -702,12 +870,12 @@ def test_05_headless_chrome_spanish_i18n_calendar_and_new_lead_curp_ui():
     assert "Llamadas (1)" in out["calText"], out["calText"]
     assert "Citas en persona (1)" in out["calText"], out["calText"]
 
-    # 3. New Lead Modal Split Name & Mandatory CURP verification
+    # 3. New Lead & New Customer Modals: Split Name & Optional CURP verification (R1A)
     assert out["indState"] == {
         "splitVisible": True,
         "bizHidden": True,
         "curpVisible": True,
-        "curpRequired": True,
+        "curpRequired": False,
         "firstRequired": True,
         "lastRequired": True,
         "rfcRequired": False,
@@ -719,3 +887,11 @@ def test_05_headless_chrome_spanish_i18n_calendar_and_new_lead_curp_ui():
         "curpRequired": False,
         "fullRequired": True,
     }, out["bizState"]
+    assert out["custIndState"] == {
+        "curpVisible": True,
+        "curpRequired": False,
+    }, out["custIndState"]
+    assert out["custBizState"] == {
+        "curpHidden": True,
+        "curpRequired": False,
+    }, out["custBizState"]

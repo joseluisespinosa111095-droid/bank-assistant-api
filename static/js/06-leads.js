@@ -208,8 +208,10 @@
                 document.getElementById('ldet-phone').innerText = l.phone_primary;
                 document.getElementById('ldet-email').innerText = l.email || 'Not Provided';
                 document.getElementById('ldet-source').innerText = l.source;
+                const curpCard = document.getElementById('ldet-curp-card');
+                if (curpCard) curpCard.classList.toggle('hidden', l.entity_type === 'BUSINESS');
                 const curpEl = document.getElementById('ldet-curp');
-                if (curpEl) curpEl.innerText = l.curp || (l.entity_type === 'BUSINESS' ? 'N/A' : 'Not Provided');
+                if (curpEl) curpEl.innerText = l.entity_type === 'BUSINESS' ? 'N/A' : (l.curp || 'Not Provided');
                 const fTypeIcon = l.next_follow_up_type === 'MEETING' ? '🤝 ' : (l.next_follow_up_at ? '📞 ' : '');
                 document.getElementById('ldet-followup').innerText = l.next_follow_up_at
                     ? `${fTypeIcon}${formatDateTimeShort(l.next_follow_up_at)}`
@@ -296,7 +298,7 @@
             const curpEl = document.getElementById('lf-curp');
             if (firstEl) firstEl.required = !isBiz;
             if (lastEl) lastEl.required = !isBiz;
-            if (curpEl) curpEl.required = !isBiz;
+            if (curpEl) curpEl.required = false;
             if (fullEl) fullEl.required = isBiz;
         }
 
@@ -368,18 +370,23 @@
             const isBiz = (entityType === 'BUSINESS');
             const curpVal = (document.getElementById('lf-curp')?.value || '').trim().toUpperCase();
 
-            if (!isBiz) {
+            if (!isBiz && curpVal) {
                 const curpRe = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
-                if (!curpVal || curpVal.length !== 18 || !curpRe.test(curpVal)) {
+                if (curpVal.length !== 18 || !curpRe.test(curpVal)) {
                     errBox.innerText = isEs
-                        ? 'La CURP es obligatoria para Persona Física y debe tener 18 caracteres válidos.'
-                        : 'CURP is required for Individual (Persona Física) leads and must be 18 valid characters.';
+                        ? 'Formato de CURP inválido. Debe tener 18 caracteres con sintaxis estándar (ej. GODE561231HDFRRL09).'
+                        : 'Invalid CURP syntax. Expected 18 characters matching standard CURP format (e.g., GODE561231HDFRRL09).';
                     errBox.classList.remove('hidden');
                     return;
                 }
             }
 
             btn.disabled = true;
+
+            const isEdit = (leadFormMode === 'edit' && currentSelectedLead);
+            const curpPayload = isBiz
+                ? null
+                : (curpVal || (isEdit && currentSelectedLead?.curp ? '' : null));
 
             const followUpDt = document.getElementById('lf-followup').value || null;
             const followUpType = followUpDt
@@ -394,7 +401,7 @@
                 first_name: isBiz ? null : (document.getElementById('lf-first-name')?.value.trim() || ''),
                 middle_name: isBiz ? null : (document.getElementById('lf-middle-name')?.value.trim() || null),
                 last_name: isBiz ? null : (document.getElementById('lf-last-name')?.value.trim() || ''),
-                curp: isBiz ? null : curpVal,
+                curp: curpPayload,
                 legal_representative_name: document.getElementById('lf-legal-rep').value.trim() || null,
                 trade_name: document.getElementById('lf-trade-name').value.trim() || null,
                 phone_primary: document.getElementById('lf-phone').value.trim(),
@@ -407,7 +414,6 @@
                 summary_notes: document.getElementById('lf-notes').value.trim() || null
             };
 
-            const isEdit = (leadFormMode === 'edit' && currentSelectedLead);
             const url = isEdit ? `/api/leads/${currentSelectedLead.id}` : '/api/leads';
             const method = isEdit ? 'PATCH' : 'POST';
 

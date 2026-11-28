@@ -350,6 +350,15 @@ async function loadDashboardSummary() {
                 const sinceDate = c.customer_since ? c.customer_since.split('T')[0] : 'N/A';
                 document.getElementById('det-since-rfc').innerText = `Since ${sinceDate} • RFC: ${valOrNP(c.tax_id_rfc)}`;
 
+                const curpCard = document.getElementById('det-curp-card');
+                const curpValEl = document.getElementById('det-curp');
+                if (curpCard) {
+                    curpCard.classList.toggle('hidden', c.entity_type === 'BUSINESS');
+                }
+                if (curpValEl) {
+                    curpValEl.innerText = c.entity_type === 'BUSINESS' ? 'N/A' : valOrNP(c.curp);
+                }
+
                 const bizBlock = document.getElementById('det-business-block');
                 if (c.entity_type === 'BUSINESS') {
                     bizBlock.classList.remove('hidden');
@@ -577,9 +586,12 @@ async function loadDashboardSummary() {
             const isBiz = entityType === 'BUSINESS';
             document.getElementById('cf-business-group').classList.toggle('hidden', !isBiz);
             document.getElementById('cf-legal-rep').required = isBiz;
-            // Persona física: nombre, segundo nombre (opcional) y apellidos. Persona moral: razón social.
+            // Persona física: nombre, segundo nombre (opcional), apellidos y CURP (opcional). Persona moral: razón social.
             document.getElementById('cf-individual-name-group').classList.toggle('hidden', isBiz);
             document.getElementById('cf-business-name-group').classList.toggle('hidden', !isBiz);
+            document.getElementById('cf-curp-group')?.classList.toggle('hidden', isBiz);
+            const cfCurpEl = document.getElementById('cf-curp');
+            if (cfCurpEl) cfCurpEl.required = false;
             document.getElementById('cf-first-name').required = !isBiz;
             document.getElementById('cf-last-name').required = !isBiz;
             document.getElementById('cf-full-name').required = isBiz;
@@ -616,6 +628,7 @@ async function loadDashboardSummary() {
                 document.getElementById('cf-phone-primary').value = c.phone_primary || '';
                 document.getElementById('cf-phone-secondary').value = c.phone_secondary || '';
                 document.getElementById('cf-email').value = c.email || '';
+                if (document.getElementById('cf-curp')) document.getElementById('cf-curp').value = c.curp || '';
                 document.getElementById('cf-rfc').value = c.tax_id_rfc || '';
                 document.getElementById('cf-dob').value = c.date_of_birth || '';
                 document.getElementById('cf-emp-status').value = c.employment_status || '';
@@ -639,10 +652,29 @@ async function loadDashboardSummary() {
             e.preventDefault();
             const errBox = document.getElementById('customer-form-error');
             const submitBtn = document.getElementById('cf-submit-btn');
+            const isEs = (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang === 'es');
             errBox.classList.add('hidden');
-            submitBtn.disabled = true;
 
             const isBizEntity = document.getElementById('cf-entity-type').value === 'BUSINESS';
+            const curpVal = (document.getElementById('cf-curp')?.value || '').trim().toUpperCase();
+            if (!isBizEntity && curpVal) {
+                const curpRe = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
+                if (curpVal.length !== 18 || !curpRe.test(curpVal)) {
+                    errBox.innerText = isEs
+                        ? 'Formato de CURP inválido. Debe tener 18 caracteres con sintaxis estándar (ej. GODE561231HDFRRL09).'
+                        : 'Invalid CURP syntax. Expected 18 characters matching standard CURP format (e.g., GODE561231HDFRRL09).';
+                    errBox.classList.remove('hidden');
+                    return;
+                }
+            }
+
+            submitBtn.disabled = true;
+
+            const isEdit = (customerFormMode === 'edit' && currentSelectedCustomer);
+            const curpPayload = isBizEntity
+                ? null
+                : (curpVal || (isEdit && currentSelectedCustomer?.curp ? '' : null));
+
             const payload = {
                 entity_type: document.getElementById('cf-entity-type').value,
                 status: document.getElementById('cf-status').value,
@@ -657,6 +689,7 @@ async function loadDashboardSummary() {
                 phone_secondary: document.getElementById('cf-phone-secondary').value.trim() || null,
                 email: document.getElementById('cf-email').value.trim() || null,
                 tax_id_rfc: document.getElementById('cf-rfc').value.trim() || null,
+                curp: curpPayload,
                 date_of_birth: document.getElementById('cf-dob').value || null,
                 employment_status: document.getElementById('cf-emp-status').value.trim() || null,
                 employer_or_business_name: document.getElementById('cf-employer').value.trim() || null,
@@ -665,7 +698,6 @@ async function loadDashboardSummary() {
                 employment_address: document.getElementById('cf-emp-address').value.trim() || null
             };
 
-            const isEdit = (customerFormMode === 'edit' && currentSelectedCustomer);
             const url = isEdit ? `/api/customers/${currentSelectedCustomer.id}` : '/api/customers';
             const method = isEdit ? 'PATCH' : 'POST';
 

@@ -36,6 +36,7 @@ from schemas.core_crm import CustomerCreateRequest, CustomerUpdateRequest, Inter
 from services.audit import record_audit_event
 from services.customer_detail import get_customer_detail_payload
 from services.serializers_core import (
+    normalize_and_validate_curp,
     resolve_customer_name_for_create,
     resolve_customer_name_for_update,
     serialize_customer,
@@ -122,7 +123,8 @@ def list_customers(
             CustomerModel.customer_number.ilike(term),
             CustomerModel.full_legal_name.ilike(term),
             CustomerModel.trade_name.ilike(term),
-            CustomerModel.email.ilike(term)
+            CustomerModel.email.ilike(term),
+            CustomerModel.curp.ilike(term),
         ]
         if digits_only:
             filters.append(CustomerModel.phone_primary_normalized.ilike(f"%{digits_only}%"))
@@ -189,6 +191,13 @@ def create_customer(
     email_clean = payload.email.strip().lower() if payload.email else None
     rfc_clean = payload.tax_id_rfc.strip().upper() if payload.tax_id_rfc and payload.tax_id_rfc.strip() else None
 
+    curp_clean = None
+    if entity_type == "INDIVIDUAL":
+        try:
+            curp_clean = normalize_and_validate_curp(payload.curp, required=False)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
     dup_phone = (
         db.query(CustomerModel)
         .filter(
@@ -250,6 +259,7 @@ def create_customer(
             trade_name=payload.trade_name.strip() if payload.trade_name and payload.trade_name.strip() else None,
             legal_representative_name=legal_rep,
             tax_id_rfc=rfc_clean,
+            curp=curp_clean,
             date_of_birth=payload.date_of_birth,
             phone_primary=payload.phone_primary.strip(),
             phone_primary_normalized=phone_norm,
@@ -374,6 +384,17 @@ def update_customer(
                 status_code=422,
                 detail="Legal Representative Name is required for Business (Persona Moral) customers."
             )
+
+        if customer.entity_type == "BUSINESS":
+            if customer.curp is not None:
+                customer.curp = None
+                updated_fields.append("curp")
+        elif payload.curp is not None:
+            try:
+                customer.curp = normalize_and_validate_curp(payload.curp, required=False)
+            except ValueError as e:
+                raise HTTPException(status_code=422, detail=str(e))
+            updated_fields.append("curp")
 
         if payload.phone_primary is not None:
             phone_norm = normalize_phone_number(payload.phone_primary, required=True)

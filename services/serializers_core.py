@@ -96,13 +96,20 @@ CURP_REGEX = re.compile(r"^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$")
 
 
 def normalize_and_validate_curp(value: Optional[str], *, required: bool = False) -> Optional[str]:
-    clean = re.sub(r"\s+", "", value or "").upper()
+    """Normalize CURP (strip surrounding whitespace + uppercase) and validate syntax only.
+
+    Note: Performs syntactic format validation (18 chars / standard CURP regex) only;
+    it does not query RENAPO or verify official registration/authenticity.
+    """
+    clean = (value or "").strip().upper()
     if not clean:
         if required:
-            raise ValueError("CURP is required for Individual (Persona Física) leads.")
+            raise ValueError("CURP is required.")
         return None
     if len(clean) != 18 or not CURP_REGEX.match(clean):
-        raise ValueError("Invalid CURP format. Expected 18 alphanumeric characters (e.g., GODE561231GR8XXXXX).")
+        raise ValueError(
+            "Invalid CURP syntax. Expected 18 characters matching standard CURP format (e.g., GODE561231HDFRRL09)."
+        )
     return clean
 
 
