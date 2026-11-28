@@ -13,7 +13,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 DUMMY_BCRYPT_HASH = pwd_context.hash("nura-constant-time-mitigation-baseline-secret")
 
 IS_PRODUCTION = is_production()
-EXPECTED_ALEMBIC_REVISION = "014"  # al crear una nueva migracion, actualizar solo esta constante
+EXPECTED_ALEMBIC_REVISION = "015"  # al crear una nueva migracion, actualizar solo esta constante
 PLATFORM_TENANT_SLUG = "platform"
 
 # --- DOCUMENT UPLOAD LIMITS ---
@@ -35,6 +35,7 @@ VALID_LANGUAGES = {"en", "es"}
 SUPPORTED_PRODUCTS = ["Personal Loan", "Business Loan"]
 
 VALID_ENTITY_TYPES = {"INDIVIDUAL", "BUSINESS"}
+VALID_FOLLOW_UP_TYPES = {"CALL", "MEETING"}
 VALID_CUSTOMER_STATUSES = {"ACTIVE", "INACTIVE", "PENDING_VERIFICATION"}
 VALID_VERIFICATION_STATUSES = {"NOT_PROVIDED", "PENDING_VERIFICATION", "VERIFIED"}
 

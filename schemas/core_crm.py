@@ -20,6 +20,7 @@ class CustomerCreateRequest(BaseModel):
     trade_name: Optional[str] = Field(default=None, max_length=160)
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
+    curp: Optional[str] = Field(default=None, max_length=18)
     date_of_birth: Optional[date] = None
     phone_primary: str = Field(..., min_length=10, max_length=25)
     phone_secondary: Optional[str] = Field(default=None, max_length=25)
@@ -43,6 +44,7 @@ class CustomerUpdateRequest(BaseModel):
     trade_name: Optional[str] = Field(default=None, max_length=160)
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
+    curp: Optional[str] = Field(default=None, max_length=18)
     date_of_birth: Optional[date] = None
     phone_primary: Optional[str] = Field(default=None, min_length=10, max_length=25)
     phone_secondary: Optional[str] = Field(default=None, max_length=25)
@@ -56,11 +58,15 @@ class CustomerUpdateRequest(BaseModel):
 
 
 class LeadCreateRequest(BaseModel):
-    full_name: str = Field(..., min_length=3, max_length=180)
+    full_name: Optional[str] = Field(default=None, min_length=3, max_length=180)
+    first_name: Optional[str] = Field(default=None, max_length=50)
+    middle_name: Optional[str] = Field(default=None, max_length=50)
+    last_name: Optional[str] = Field(default=None, max_length=75)
     entity_type: str = Field(default="INDIVIDUAL")
     trade_name: Optional[str] = Field(default=None, max_length=160)
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
+    curp: Optional[str] = Field(default=None, max_length=18)
     phone_primary: str = Field(..., min_length=10, max_length=25)
     email: Optional[EmailStr] = None
     source: str = Field(default="DIRECT_OUTREACH")
@@ -70,16 +76,21 @@ class LeadCreateRequest(BaseModel):
     stage: str = Field(default="NEW")
     priority: str = Field(default="MEDIUM")
     next_follow_up_at: Optional[str] = None
+    next_follow_up_type: Optional[str] = Field(default=None, max_length=20)
     summary_notes: Optional[str] = Field(default=None, max_length=2000)
     owner_user_id: Optional[int] = None
 
 
 class LeadUpdateRequest(BaseModel):
     full_name: Optional[str] = Field(default=None, min_length=3, max_length=180)
+    first_name: Optional[str] = Field(default=None, max_length=50)
+    middle_name: Optional[str] = Field(default=None, max_length=50)
+    last_name: Optional[str] = Field(default=None, max_length=75)
     entity_type: Optional[str] = None
     trade_name: Optional[str] = Field(default=None, max_length=160)
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
+    curp: Optional[str] = Field(default=None, max_length=18)
     phone_primary: Optional[str] = Field(default=None, min_length=10, max_length=25)
     email: Optional[EmailStr] = None
     source: Optional[str] = None
@@ -90,6 +101,7 @@ class LeadUpdateRequest(BaseModel):
     priority: Optional[str] = None
     lost_reason: Optional[str] = Field(default=None, max_length=160)
     next_follow_up_at: Optional[str] = None
+    next_follow_up_type: Optional[str] = Field(default=None, max_length=20)
     clear_next_follow_up: Optional[bool] = False
     summary_notes: Optional[str] = Field(default=None, max_length=2000)
     stage_change_note: Optional[str] = Field(default=None, max_length=500)
@@ -103,6 +115,7 @@ class InteractionCreateRequest(BaseModel):
     outcome: Optional[str] = None
     content: str = Field(..., min_length=2, max_length=2500)
     next_follow_up_at: Optional[str] = None
+    next_follow_up_type: Optional[str] = Field(default=None, max_length=20)
     clear_next_follow_up: Optional[bool] = False
 
 
@@ -111,5 +124,6 @@ class LeadConvertRequest(BaseModel):
     legal_representative_name: Optional[str] = Field(default=None, max_length=160)
     trade_name: Optional[str] = Field(default=None, max_length=160)
     tax_id_rfc: Optional[str] = Field(default=None, max_length=20)
+    curp: Optional[str] = Field(default=None, max_length=18)
     address_full: Optional[str] = Field(default=None, max_length=1000)
     notes: Optional[str] = Field(default=None, max_length=500)

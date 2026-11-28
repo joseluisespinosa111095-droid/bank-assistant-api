@@ -15,12 +15,41 @@
         commissionsPage: 1,
         commissionsTotal: 0,
         commissionsCache: [],
+        lastDashboardSummary: null,
+        lastCustomerSummary: null,
         editingLenderId: null,
         editingSubmissionId: null,
         editingCommissionId: null,
         caseSearchTimer: null,
         lenderSearchTimer: null,
     };
+
+    function _isEs() {
+        return typeof NuraI18n !== 'undefined' && NuraI18n.currentLang === 'es';
+    }
+
+    function _statusLabel(st) {
+        if (!_isEs()) return String(st || '');
+        const map = {
+            DRAFT: 'BORRADOR',
+            SUBMITTED: 'ENVIADO',
+            OFFERS_RECEIVED: 'OFERTAS RECIBIDAS',
+            FUNDED: 'FONDEADO',
+            CLOSED_LOST: 'CERRADO PERDIDO',
+            CANCELLED: 'CANCELADO',
+            IN_UNDERWRITING: 'EN ANÁLISIS',
+            APPROVED: 'APROBADO',
+            SELECTED: 'SELECCIONADO',
+            DECLINED: 'RECHAZADO',
+            WITHDRAWN: 'RETIRADO',
+            PENDING: 'PENDIENTE',
+            INVOICED: 'FACTURADA',
+            PAID: 'PAGADA',
+            ACTIVE: 'ACTIVA',
+            INACTIVE: 'INACTIVA',
+        };
+        return map[st] || String(st || '');
+    }
 
     function _brokerEnabled() {
         return typeof hasModule === 'function' && hasModule('BROKER');
@@ -172,11 +201,9 @@
     // -------------------------------------------------------------------------
     // 1. DASHBOARD SUMMARY (GET /api/broker/dashboard-summary)
     // -------------------------------------------------------------------------
-    async function loadBrokerDashboardSummary() {
-        if (!_brokerEnabled()) return;
-        const data = await brokerFetch('/api/broker/dashboard-summary?recent_limit=8');
+    function renderBrokerDashboardSummary(data) {
         if (!data || typeof data !== 'object') return;
-
+        const isEs = _isEs();
         const counts = data.counts || {};
         const comm = data.commissions || {};
 
@@ -194,34 +221,45 @@
         setTxt('dash-broker-comm-pending-val', _fmtCents((comm.pending_cents || 0) + (comm.invoiced_cents || 0)));
         setTxt('dash-broker-active-lenders-val', data.active_lenders_count ?? counts.active_lenders ?? 0);
         setTxt('dash-broker-offers-count', counts.offers_received_cases ?? 0);
+        const lCount = data.active_lenders_count ?? 0;
         setTxt(
             'dash-broker-lenders-badge',
-            `${data.active_lenders_count ?? 0} Active ${(data.active_lenders_count ?? 0) === 1 ? 'Lender' : 'Lenders'}`
+            isEs
+                ? `${lCount} ${lCount === 1 ? 'Financiera Activa' : 'Financieras Activas'}`
+                : `${lCount} Active ${lCount === 1 ? 'Lender' : 'Lenders'}`
         );
 
         const recentEl = document.getElementById('dash-broker-recent-cases-list');
         if (recentEl) {
             const items = Array.isArray(data.recent_cases) ? data.recent_cases : [];
             if (items.length === 0) {
-                recentEl.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">No broker cases yet. Click "+ Broker Case" to start.</p>';
+                recentEl.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center col-span-2">${isEs ? 'Aún no hay expedientes de broker. Haz clic en "+ Caso Broker" para comenzar.' : 'No broker cases yet. Click "+ Broker Case" to start.'}</p>`;
             } else {
                 recentEl.innerHTML = items.map(c => `
                     <button type="button" onclick="openBrokerCaseFromAnywhere(${Number(c.id)})" class="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/70 flex items-center justify-between gap-2 text-left transition text-xs">
                         <div class="min-w-0">
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 <span class="font-mono font-bold text-indigo-700">${_esc(c.case_number)}</span>
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${_caseStatusBadge(c.status)}">${_esc(c.status)}</span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${_caseStatusBadge(c.status)}">${_esc(_statusLabel(c.status))}</span>
                             </div>
-                            <p class="font-semibold text-slate-800 truncate mt-0.5">${_esc(c.customer_name || 'Customer')} • ${_esc(c.product_type)}</p>
+                            <p class="font-semibold text-slate-800 truncate mt-0.5">${_esc(c.customer_name || (isEs ? 'Cliente' : 'Customer'))} • ${_esc(c.product_type)}</p>
                         </div>
                         <div class="text-right shrink-0">
                             <p class="font-mono font-bold text-slate-900">${_esc(_fmtCents(c.funded_amount_cents ?? c.requested_amount_cents))}</p>
-                            <p class="text-[10px] text-slate-400">${Number(c.submissions_count || 0)} lenders</p>
+                            <p class="text-[10px] text-slate-400">${Number(c.submissions_count || 0)} ${isEs ? 'financieras' : 'lenders'}</p>
                         </div>
                     </button>
                 `).join('');
             }
         }
+    }
+
+    async function loadBrokerDashboardSummary() {
+        if (!_brokerEnabled()) return;
+        const data = await brokerFetch('/api/broker/dashboard-summary?recent_limit=8');
+        if (!data || typeof data !== 'object') return;
+        brokerState.lastDashboardSummary = data;
+        renderBrokerDashboardSummary(data);
     }
 
     // -------------------------------------------------------------------------
@@ -281,7 +319,7 @@
     function switchBrokerSubView(subView) {
         if (!_brokerEnabled()) return;
         brokerState.subView = subView;
-        const views = ['cases', 'lenders', 'commissions'];
+        const views = ['cases', 'lenders', 'commissions', 'calendar'];
         views.forEach(v => {
             document.getElementById(`broker-${v}-view`)?.classList.toggle('hidden', v !== subView);
             const btn = document.getElementById(`seg-broker-${v}-btn`);
@@ -297,6 +335,8 @@
             loadBrokerLenders();
         } else if (subView === 'commissions') {
             loadBrokerCommissions(brokerState.commissionsPage);
+        } else if (subView === 'calendar' && typeof loadCrmCalendar === 'function') {
+            loadCrmCalendar('broker-calendar-root');
         }
     }
 
@@ -959,7 +999,18 @@
         }
     }
 
+    function rerenderBrokerViewsOnLangChange() {
+        if (!_brokerEnabled()) return;
+        if (brokerState.lastDashboardSummary) {
+            renderBrokerDashboardSummary(brokerState.lastDashboardSummary);
+        }
+        if (brokerState.selectedCase) {
+            renderBrokerCaseDetail(brokerState.selectedCase);
+        }
+    }
+
     // Export public Broker UI handlers on window
+    window.rerenderBrokerViewsOnLangChange = rerenderBrokerViewsOnLangChange;
     window.resetBrokerWorkspaceState = resetBrokerWorkspaceState;
     window.loadBrokerDashboardSummary = loadBrokerDashboardSummary;
     window.loadCustomerBrokerSummary = loadCustomerBrokerSummary;

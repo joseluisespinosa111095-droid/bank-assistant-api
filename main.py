@@ -4,7 +4,6 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-import google.generativeai as genai
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -194,9 +193,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="NURA CRM | Credit & Pipeline System", version="7.4.0", lifespan=lifespan)
-
-if os.getenv("GEMINI_API_KEY"):
-    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 app.add_middleware(DocumentUploadSizeGuard)
 

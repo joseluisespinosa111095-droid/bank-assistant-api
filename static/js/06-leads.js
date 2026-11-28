@@ -208,7 +208,12 @@
                 document.getElementById('ldet-phone').innerText = l.phone_primary;
                 document.getElementById('ldet-email').innerText = l.email || 'Not Provided';
                 document.getElementById('ldet-source').innerText = l.source;
-                document.getElementById('ldet-followup').innerText = l.next_follow_up_at ? formatDateTimeShort(l.next_follow_up_at) : 'None Scheduled';
+                const curpEl = document.getElementById('ldet-curp');
+                if (curpEl) curpEl.innerText = l.curp || (l.entity_type === 'BUSINESS' ? 'N/A' : 'Not Provided');
+                const fTypeIcon = l.next_follow_up_type === 'MEETING' ? '🤝 ' : (l.next_follow_up_at ? '📞 ' : '');
+                document.getElementById('ldet-followup').innerText = l.next_follow_up_at
+                    ? `${fTypeIcon}${formatDateTimeShort(l.next_follow_up_at)}`
+                    : 'None Scheduled';
                 document.getElementById('ldet-notes').innerText = l.summary_notes || 'No summary notes provided.';
 
                 const isConverted = (l.stage === 'CONVERTED' && l.converted_customer_id);
@@ -280,13 +285,26 @@
 
         function toggleLeadModalEntityFields() {
             const isBiz = document.getElementById('lf-entity-type').value === 'BUSINESS';
-            document.getElementById('lf-business-group').classList.toggle('hidden', !isBiz);
+            document.getElementById('lf-business-group')?.classList.toggle('hidden', !isBiz);
+            document.getElementById('lf-business-name-group')?.classList.toggle('hidden', !isBiz);
+            document.getElementById('lf-individual-name-group')?.classList.toggle('hidden', isBiz);
+            document.getElementById('lf-curp-group')?.classList.toggle('hidden', isBiz);
+
+            const firstEl = document.getElementById('lf-first-name');
+            const lastEl = document.getElementById('lf-last-name');
+            const fullEl = document.getElementById('lf-full-name');
+            const curpEl = document.getElementById('lf-curp');
+            if (firstEl) firstEl.required = !isBiz;
+            if (lastEl) lastEl.required = !isBiz;
+            if (curpEl) curpEl.required = !isBiz;
+            if (fullEl) fullEl.required = isBiz;
         }
 
         function openLeadFormModal(mode) {
             leadFormMode = mode;
             document.getElementById('lead-form-error').classList.add('hidden');
             document.getElementById('lead-form').reset();
+            document.getElementById('lf-legacy-name-hint')?.classList.add('hidden');
 
             if (mode === 'edit' && currentSelectedLead) {
                 const l = currentSelectedLead;
@@ -294,7 +312,21 @@
                 document.getElementById('lf-entity-type').value = l.entity_type || 'INDIVIDUAL';
                 document.getElementById('lf-source').value = l.source || 'DIRECT_OUTREACH';
                 document.getElementById('lf-priority').value = l.priority || 'MEDIUM';
-                document.getElementById('lf-full-name').value = l.full_name || '';
+                document.getElementById('lf-full-name').value = l.entity_type === 'BUSINESS' ? (l.full_name || '') : '';
+                if (document.getElementById('lf-first-name')) document.getElementById('lf-first-name').value = l.first_name || '';
+                if (document.getElementById('lf-middle-name')) document.getElementById('lf-middle-name').value = l.middle_name || '';
+                if (document.getElementById('lf-last-name')) document.getElementById('lf-last-name').value = l.last_name || '';
+                if (l.entity_type !== 'BUSINESS' && !l.first_name && !l.last_name && l.full_name) {
+                    const hint = document.getElementById('lf-legacy-name-hint');
+                    if (hint) {
+                        const isEs = (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang === 'es');
+                        hint.innerText = isEs
+                            ? `Nombre actual registrado: ${l.full_name}. Captúralo separado en nombre y apellidos.`
+                            : `Name currently on file: ${l.full_name}. Please enter it split into first and last name.`;
+                        hint.classList.remove('hidden');
+                    }
+                }
+                if (document.getElementById('lf-curp')) document.getElementById('lf-curp').value = l.curp || '';
                 document.getElementById('lf-legal-rep').value = l.legal_representative_name || '';
                 document.getElementById('lf-trade-name').value = l.trade_name || '';
                 document.getElementById('lf-phone').value = l.phone_primary || '';
@@ -306,9 +338,15 @@
                 if (l.next_follow_up_at) {
                     document.getElementById('lf-followup').value = l.next_follow_up_at.slice(0, 16);
                 }
+                if (document.getElementById('lf-followup-type')) {
+                    document.getElementById('lf-followup-type').value = l.next_follow_up_type || 'CALL';
+                }
             } else {
                 document.getElementById('lead-modal-title').innerText = 'Register New Lead';
                 document.getElementById('lf-amount-pesos').value = '50000';
+                if (document.getElementById('lf-followup-type')) {
+                    document.getElementById('lf-followup-type').value = 'CALL';
+                }
             }
 
             toggleLeadModalEntityFields();
@@ -323,21 +361,48 @@
             e.preventDefault();
             const errBox = document.getElementById('lead-form-error');
             const btn = document.getElementById('lf-submit-btn');
+            const isEs = (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang === 'es');
             errBox.classList.add('hidden');
+
+            const entityType = document.getElementById('lf-entity-type').value;
+            const isBiz = (entityType === 'BUSINESS');
+            const curpVal = (document.getElementById('lf-curp')?.value || '').trim().toUpperCase();
+
+            if (!isBiz) {
+                const curpRe = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
+                if (!curpVal || curpVal.length !== 18 || !curpRe.test(curpVal)) {
+                    errBox.innerText = isEs
+                        ? 'La CURP es obligatoria para Persona Física y debe tener 18 caracteres válidos.'
+                        : 'CURP is required for Individual (Persona Física) leads and must be 18 valid characters.';
+                    errBox.classList.remove('hidden');
+                    return;
+                }
+            }
+
             btn.disabled = true;
 
+            const followUpDt = document.getElementById('lf-followup').value || null;
+            const followUpType = followUpDt
+                ? (document.getElementById('lf-followup-type')?.value || 'CALL')
+                : null;
+
             const payload = {
-                entity_type: document.getElementById('lf-entity-type').value,
+                entity_type: entityType,
                 source: document.getElementById('lf-source').value,
                 priority: document.getElementById('lf-priority').value,
-                full_name: document.getElementById('lf-full-name').value.trim(),
+                full_name: isBiz ? (document.getElementById('lf-full-name').value.trim() || null) : null,
+                first_name: isBiz ? null : (document.getElementById('lf-first-name')?.value.trim() || ''),
+                middle_name: isBiz ? null : (document.getElementById('lf-middle-name')?.value.trim() || null),
+                last_name: isBiz ? null : (document.getElementById('lf-last-name')?.value.trim() || ''),
+                curp: isBiz ? null : curpVal,
                 legal_representative_name: document.getElementById('lf-legal-rep').value.trim() || null,
                 trade_name: document.getElementById('lf-trade-name').value.trim() || null,
                 phone_primary: document.getElementById('lf-phone').value.trim(),
                 email: document.getElementById('lf-email').value.trim() || null,
                 product_interest: document.getElementById('lf-product').value,
                 requested_amount_pesos: parseFloat(document.getElementById('lf-amount-pesos').value || '0') || 0,
-                next_follow_up_at: document.getElementById('lf-followup').value || null,
+                next_follow_up_at: followUpDt,
+                next_follow_up_type: followUpType,
                 tax_id_rfc: document.getElementById('lf-rfc').value.trim() || null,
                 summary_notes: document.getElementById('lf-notes').value.trim() || null
             };
@@ -444,13 +509,15 @@
             errBox.classList.add('hidden');
             btn.disabled = true;
 
+            const followUpDt = document.getElementById('li-followup').value || null;
             const payload = {
                 interaction_type: document.getElementById('li-type').value,
                 direction: 'OUTBOUND',
                 visibility: 'INTERNAL',
                 outcome: document.getElementById('li-outcome').value || null,
                 content: document.getElementById('li-content').value.trim(),
-                next_follow_up_at: document.getElementById('li-followup').value || null
+                next_follow_up_at: followUpDt,
+                next_follow_up_type: followUpDt ? (document.getElementById('li-followup-type')?.value || 'CALL') : null
             };
 
             try {
@@ -534,19 +601,28 @@
 
         function switchLeadsSubView(subView) {
             closeLeadDetailView();
-            const isPipeline = subView !== 'call-list';
-            document.getElementById('leads-pipeline-view').classList.toggle('hidden', !isPipeline);
-            document.getElementById('leads-calllist-view').classList.toggle('hidden', isPipeline);
+            const effective = (subView === 'call-list' || subView === 'calendar') ? subView : 'pipeline';
+            document.getElementById('leads-pipeline-view')?.classList.toggle('hidden', effective !== 'pipeline');
+            document.getElementById('leads-calllist-view')?.classList.toggle('hidden', effective !== 'call-list');
+            document.getElementById('leads-calendar-view')?.classList.toggle('hidden', effective !== 'calendar');
 
-            const pipeBtn = document.getElementById('seg-pipeline-btn');
-            const callBtn = document.getElementById('seg-calllist-btn');
-            if (isPipeline) {
-                pipeBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm';
-                callBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all text-slate-500 hover:text-slate-800';
+            const btns = {
+                pipeline: document.getElementById('seg-pipeline-btn'),
+                'call-list': document.getElementById('seg-calllist-btn'),
+                calendar: document.getElementById('seg-leads-calendar-btn'),
+            };
+            Object.entries(btns).forEach(([k, btn]) => {
+                if (!btn) return;
+                btn.className = (k === effective)
+                    ? 'py-2 px-4 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm'
+                    : 'py-2 px-4 rounded-xl text-xs font-semibold transition-all text-slate-500 hover:text-slate-800';
+            });
+
+            if (effective === 'pipeline') {
                 loadLeads(currentLeadsPage);
-            } else {
-                callBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm';
-                pipeBtn.className = 'py-2 px-4 rounded-xl text-xs font-semibold transition-all text-slate-500 hover:text-slate-800';
+            } else if (effective === 'call-list') {
                 setCallListBucketFilter(activeCallListBucket);
+            } else if (effective === 'calendar' && typeof loadCrmCalendar === 'function') {
+                loadCrmCalendar('leads-calendar-root');
             }
         }

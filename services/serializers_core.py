@@ -92,6 +92,95 @@ def resolve_customer_name_for_update(final_entity_type, type_changed, current_fi
 # --- CUSTOMER NAME (PURE HELPERS) END ---
 
 
+CURP_REGEX = re.compile(r"^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$")
+
+
+def normalize_and_validate_curp(value: Optional[str], *, required: bool = False) -> Optional[str]:
+    clean = re.sub(r"\s+", "", value or "").upper()
+    if not clean:
+        if required:
+            raise ValueError("CURP is required for Individual (Persona Física) leads.")
+        return None
+    if len(clean) != 18 or not CURP_REGEX.match(clean):
+        raise ValueError("Invalid CURP format. Expected 18 alphanumeric characters (e.g., GODE561231GR8XXXXX).")
+    return clean
+
+
+def resolve_lead_name_for_create(entity_type, first_name, middle_name, last_name, full_name) -> dict:
+    """Resolve split name vs full_name for Leads (supports modern split name and legacy full_name)."""
+    if entity_type == "BUSINESS":
+        legal_name = normalize_name_part(full_name)
+        if len(legal_name) < 3:
+            raise ValueError("Legal entity name is required for Business (Persona Moral) leads.")
+        return {"first_name": None, "middle_name": None, "last_name": None, "full_name": legal_name, "used_split": False}
+
+    parts_sent = any(p is not None and str(p).strip() != "" for p in (first_name, middle_name, last_name))
+    if parts_sent:
+        first = normalize_name_part(first_name)
+        middle = normalize_name_part(middle_name)
+        last = normalize_name_part(last_name)
+        if not first or not last:
+            raise ValueError("First name and last name are required for Individual (Persona Física) leads.")
+        return {
+            "first_name": first,
+            "middle_name": middle or None,
+            "last_name": last,
+            "full_name": compose_full_legal_name(first, middle, last),
+            "used_split": True,
+        }
+
+    legacy = normalize_name_part(full_name)
+    if len(legacy) < 3:
+        raise ValueError("First name and last name are required for Individual (Persona Física) leads.")
+    return {"first_name": None, "middle_name": None, "last_name": None, "full_name": legacy, "used_split": False}
+
+
+def resolve_lead_name_for_update(
+    final_entity_type,
+    type_changed,
+    current_first,
+    current_middle,
+    current_last,
+    first_name,
+    middle_name,
+    last_name,
+    full_name,
+) -> Optional[dict]:
+    if final_entity_type == "BUSINESS":
+        out = {}
+        if full_name is not None:
+            legal_name = normalize_name_part(full_name)
+            if len(legal_name) < 3:
+                raise ValueError("Legal entity name must have at least 3 characters.")
+            out["full_name"] = legal_name
+        elif type_changed:
+            raise ValueError("Legal entity name is required for Business (Persona Moral) leads.")
+        if type_changed or current_first or current_middle or current_last:
+            out.update({"first_name": None, "middle_name": None, "last_name": None})
+        return out or None
+
+    parts_sent = any(p is not None for p in (first_name, middle_name, last_name))
+    if parts_sent or (type_changed and not full_name):
+        first = normalize_name_part(first_name) if first_name is not None else normalize_name_part(current_first)
+        middle = normalize_name_part(middle_name) if middle_name is not None else normalize_name_part(current_middle)
+        last = normalize_name_part(last_name) if last_name is not None else normalize_name_part(current_last)
+        if not first or not last:
+            raise ValueError("First name and last name are required for Individual (Persona Física) leads.")
+        return {
+            "first_name": first,
+            "middle_name": middle or None,
+            "last_name": last,
+            "full_name": compose_full_legal_name(first, middle, last),
+        }
+
+    if full_name is not None:
+        legacy = normalize_name_part(full_name)
+        if len(legacy) < 3:
+            raise ValueError("Name must have at least 3 characters.")
+        return {"full_name": legacy}
+    return None
+
+
 def serialize_customer(c: CustomerModel) -> dict:
     return {
         "id": c.id,
@@ -106,6 +195,7 @@ def serialize_customer(c: CustomerModel) -> dict:
         "trade_name": c.trade_name,
         "legal_representative_name": c.legal_representative_name,
         "tax_id_rfc": c.tax_id_rfc,
+        "curp": c.curp,
         "date_of_birth": c.date_of_birth.isoformat() if c.date_of_birth else None,
         "phone_primary": c.phone_primary,
         "phone_secondary": c.phone_secondary,
@@ -135,6 +225,7 @@ def serialize_interaction(i: InteractionModel, user_map: dict) -> dict:
         "outcome": i.outcome,
         "content": i.content,
         "next_follow_up_at": i.next_follow_up_at.isoformat() if i.next_follow_up_at else None,
+        "next_follow_up_type": i.next_follow_up_type,
         "created_by_user_id": i.created_by_user_id,
         "created_by_name": (author.full_name or author.email) if author else f"User #{i.created_by_user_id}",
         "created_by_role": author.role if author else "TEAM",
@@ -164,10 +255,14 @@ def serialize_lead(l: LeadModel, today_start_utc: datetime, today_end_utc: datet
         "id": l.id,
         "lead_number": l.lead_number,
         "full_name": l.full_name,
+        "first_name": l.first_name,
+        "middle_name": l.middle_name,
+        "last_name": l.last_name,
         "entity_type": l.entity_type,
         "trade_name": l.trade_name,
         "legal_representative_name": l.legal_representative_name,
         "tax_id_rfc": l.tax_id_rfc,
+        "curp": l.curp,
         "phone_primary": l.phone_primary,
         "email": l.email,
         "source": l.source,
@@ -180,6 +275,7 @@ def serialize_lead(l: LeadModel, today_start_utc: datetime, today_end_utc: datet
         "last_contacted_at": l.last_contacted_at.isoformat() if l.last_contacted_at else None,
         "last_interaction_outcome": l.last_interaction_outcome,
         "next_follow_up_at": l.next_follow_up_at.isoformat() if l.next_follow_up_at else None,
+        "next_follow_up_type": l.next_follow_up_type,
         "call_bucket": compute_call_bucket(l, today_start_utc, today_end_utc),
         "summary_notes": l.summary_notes,
         "owner_user_id": l.owner_user_id,

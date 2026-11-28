@@ -519,12 +519,15 @@
                                     <p class="text-xs text-slate-500 mt-0.5">Prospect qualification, stage transitions, daily Call List queue, and atomic conversion to Customer</p>
                                 </div>
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-2 gap-1" role="tablist">
+                                    <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-3 gap-1" role="tablist">
                                         <button type="button" id="seg-pipeline-btn" onclick="switchLeadsSubView('pipeline')" class="py-2 px-4 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm">
                                             Pipeline Stages
                                         </button>
                                         <button type="button" id="seg-calllist-btn" onclick="switchLeadsSubView('call-list')" class="py-2 px-4 rounded-xl text-xs font-semibold transition-all text-slate-500 hover:text-slate-800">
                                             Call List & Follow-ups
+                                        </button>
+                                        <button type="button" id="seg-leads-calendar-btn" onclick="switchLeadsSubView('calendar')" class="py-2 px-4 rounded-xl text-xs font-semibold transition-all text-slate-500 hover:text-slate-800">
+                                            Calendar
                                         </button>
                                     </div>
                                     <button type="button" onclick="loadLeads(1)" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">
@@ -631,6 +634,11 @@
 
                                 <div id="calllist-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                             </div>
+
+                            <!-- SUB-VIEW 2C: VISUAL ACTIVITY CALENDAR -->
+                            <div id="leads-calendar-view" class="hidden space-y-4">
+                                <div id="leads-calendar-root"></div>
+                            </div>
                         </div>
 
                         <!-- INDIVIDUAL LEAD DETAIL VIEW (#lead-detail-view) -->
@@ -711,6 +719,10 @@
                                         <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                             <p class="text-[10px] font-bold text-slate-400 uppercase">Next Scheduled Call</p>
                                             <p id="ldet-followup" class="font-bold text-amber-700 mt-0.5">—</p>
+                                        </div>
+                                        <div class="col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">CURP</p>
+                                            <p id="ldet-curp" class="font-mono font-bold text-slate-800 mt-0.5">—</p>
                                         </div>
                                         <div class="col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                                             <p class="text-[10px] font-bold text-slate-400 uppercase">Summary / Qualification Notes</p>
@@ -1942,10 +1954,11 @@
                                 <p class="text-xs text-slate-500 mt-0.5">Manage brokerage cases, submit to multiple partner lenders, select winning offers, and track commissions</p>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
-                                <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-3 gap-1" role="tablist">
+                                <div class="bg-slate-200/70 p-1 rounded-2xl grid grid-cols-2 sm:grid-cols-4 gap-1" role="tablist">
                                     <button type="button" id="seg-broker-cases-btn" onclick="switchBrokerSubView('cases')" class="py-2 px-3.5 rounded-xl text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm">Cases</button>
                                     <button type="button" id="seg-broker-lenders-btn" onclick="switchBrokerSubView('lenders')" class="py-2 px-3.5 rounded-xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900">Lenders</button>
                                     <button type="button" id="seg-broker-commissions-btn" onclick="switchBrokerSubView('commissions')" class="py-2 px-3.5 rounded-xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900">Commissions</button>
+                                    <button type="button" id="seg-broker-calendar-btn" onclick="switchBrokerSubView('calendar')" class="py-2 px-3.5 rounded-xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900">Calendar</button>
                                 </div>
                                 <button type="button" onclick="loadBrokerWorkspace()" class="py-2.5 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition">Refresh</button>
                                 <button type="button" id="btn-new-broker-lender" onclick="openBrokerLenderModal('create')" class="py-2.5 px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs transition">+ New Lender</button>
@@ -2137,6 +2150,11 @@
                                     </table>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- SUB-VIEW 4: BROKER VISUAL CALENDAR (CALLS vs IN-PERSON APPOINTMENTS) -->
+                        <div id="broker-calendar-view" class="hidden space-y-4">
+                            <div id="broker-calendar-root"></div>
                         </div>
                     </section>
 
@@ -2468,9 +2486,25 @@
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div class="sm:col-span-2">
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Prospect Full Name / Razón Social *</label>
-                            <input type="text" id="lf-full-name" required minlength="3" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Full name or legal entity">
+                        <div id="lf-individual-name-group" class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">First Name *</label>
+                                <input type="text" id="lf-first-name" required maxlength="50" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="First name">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Middle Name</label>
+                                <input type="text" id="lf-middle-name" maxlength="50" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Optional">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Last Name *</label>
+                                <input type="text" id="lf-last-name" required maxlength="75" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Last name(s)">
+                            </div>
+                            <p id="lf-legacy-name-hint" class="hidden sm:col-span-3 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2"></p>
+                        </div>
+
+                        <div id="lf-business-name-group" class="hidden sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Legal Entity Name (Razón Social) *</label>
+                            <input type="text" id="lf-full-name" minlength="3" class="w-full fintech-input rounded-xl p-2.5 text-xs" placeholder="Legal entity name">
                         </div>
 
                         <div id="lf-business-group" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-blue-50/50 border border-blue-200/70">
@@ -2482,6 +2516,15 @@
                                 <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Trade Name (Nombre Comercial)</label>
                                 <input type="text" id="lf-trade-name" class="w-full fintech-input bg-white rounded-xl p-2.5 text-xs" placeholder="Commercial name">
                             </div>
+                        </div>
+
+                        <div id="lf-curp-group">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">CURP *</label>
+                            <input type="text" id="lf-curp" required minlength="18" maxlength="18" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono uppercase" placeholder="18-char CURP">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tax ID (RFC) (Optional)</label>
+                            <input type="text" id="lf-rfc" maxlength="20" class="w-full fintech-input rounded-xl p-2.5 text-xs font-mono uppercase" placeholder="Optional RFC">
                         </div>
 
                         <div>
@@ -2504,12 +2547,15 @@
                             <input type="number" id="lf-amount-pesos" min="0" step="100" value="50000" class="w-full fintech-input rounded-xl p-2.5 text-xs font-bold">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Next Follow-up Call Date/Time</label>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Next Follow-up Date/Time</label>
                             <input type="datetime-local" id="lf-followup" class="w-full fintech-input rounded-xl p-2.5 text-xs">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tax ID (RFC)</label>
-                            <input type="text" id="lf-rfc" class="w-full fintech-input rounded-xl p-2.5 text-xs uppercase" placeholder="Optional RFC">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Next Follow-up Activity</label>
+                            <select id="lf-followup-type" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="CALL">Phone Call</option>
+                                <option value="MEETING">In-Person Appointment</option>
+                            </select>
                         </div>
                         <div class="sm:col-span-2">
                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Initial Qualification Notes</label>
@@ -2884,9 +2930,18 @@
                             </select>
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Schedule Next Follow-up Call</label>
-                        <input type="datetime-local" id="li-followup" class="w-full fintech-input rounded-xl p-2.5 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Next Follow-up Date/Time</label>
+                            <input type="datetime-local" id="li-followup" class="w-full fintech-input rounded-xl p-2.5 text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Next Follow-up Activity</label>
+                            <select id="li-followup-type" class="w-full fintech-input rounded-xl p-2.5 text-xs font-semibold">
+                                <option value="CALL">Phone Call</option>
+                                <option value="MEETING">In-Person Appointment</option>
+                            </select>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Call / Interaction Notes *</label>
@@ -4154,6 +4209,44 @@
             </div>
         </div>
 
+        <!-- VISUAL CALENDAR QUICK SCHEDULE MODAL (CALL vs IN-PERSON APPOINTMENT) -->
+        <div id="calendar-schedule-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 no-print">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[460px] shadow-2xl space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-900 text-base">Schedule Call / In-Person Appointment</h3>
+                    <button type="button" onclick="closeCalendarScheduleModal()" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">✕</button>
+                </div>
+                <form id="cal-sched-form" onsubmit="handleCalendarScheduleSubmit(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Prospect *</label>
+                        <select id="csf-lead-id" required class="w-full fintech-input rounded-xl px-3 py-2 text-xs"></select>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Activity Type *</label>
+                            <select id="csf-activity-type" required class="w-full fintech-input rounded-xl px-3 py-2 text-xs font-semibold">
+                                <option value="CALL">Phone Call</option>
+                                <option value="MEETING">In-Person Appointment</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Date &amp; Time *</label>
+                            <input type="datetime-local" id="csf-datetime" required class="w-full fintech-input rounded-xl px-3 py-2 text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Notes</label>
+                        <textarea id="csf-notes" rows="2" class="w-full fintech-input rounded-xl px-3 py-2 text-xs"></textarea>
+                    </div>
+                    <div id="cal-sched-error" class="hidden p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs"></div>
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeCalendarScheduleModal()" class="py-2 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold">Cancel</button>
+                        <button type="submit" id="csf-submit-btn" class="btn-primary py-2 px-4 rounded-xl">Schedule Activity</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- MOBILE & TABLET 6-MODULE BOTTOM NAVIGATION BAR (lg:hidden) -->
         <nav id="mobile-commercial-nav" class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-1.5 grid grid-cols-6 gap-0.5 items-center z-50 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] pb-[calc(8px+env(safe-area-inset-bottom))] no-print">
             <button type="button" onclick="switchTab('home')" id="btn-home" class="nav-item active flex flex-col items-center gap-1 py-1">
@@ -4194,15 +4287,16 @@
     </div>
 
     <script src="/static/js/01-financial-engine.js?v=20261126-e4b3"></script>
-    <script src="/static/js/02-http-i18n.js?v=20261126-e4b3"></script>
-    <script src="/static/js/03-core-auth.js?v=20261127-e5b4"></script>
-    <script src="/static/js/04-platform.js?v=20261127-e5b4"></script>
-    <script src="/static/js/05-dashboard-customers.js?v=20261127-e5b4"></script>
-    <script src="/static/js/06-leads.js?v=20261126-e4b4"></script>
+    <script src="/static/js/02-http-i18n.js?v=20261127-e5c"></script>
+    <script src="/static/js/03-core-auth.js?v=20261127-e5c"></script>
+    <script src="/static/js/04-platform.js?v=20261127-e5c"></script>
+    <script src="/static/js/05-dashboard-customers.js?v=20261127-e5c"></script>
+    <script src="/static/js/06-leads.js?v=20261127-e5c"></script>
     <script src="/static/js/07-loans-payments.js?v=20261126-e4b4"></script>
     <script src="/static/js/08-team-assistant.js?v=20261126-e4b4"></script>
-    <script src="/static/js/09-extensions.js?v=20261126-e5a"></script>
+    <script src="/static/js/09-extensions.js?v=20261127-e5c"></script>
     <script src="/static/js/09b-lending-extensions.js?v=20261126-e5a"></script>
-    <script src="/static/js/10-broker.js?v=20261127-e5b4"></script>
+    <script src="/static/js/10-broker.js?v=20261127-e5c"></script>
+    <script src="/static/js/11-calendar.js?v=20261127-e5c"></script>
 </body>
 </html>
