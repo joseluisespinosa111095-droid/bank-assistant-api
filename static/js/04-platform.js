@@ -171,8 +171,14 @@
             } else {
                 const orgName = (user && user.tenant_name) ? user.tenant_name : '';
                 const hasLending = (typeof hasModule === 'function') ? hasModule('LENDING', user) : false;
+                const hasBroker = (typeof hasModule === 'function') ? hasModule('BROKER', user) : false;
 
-                if (sideSubtitle) sideSubtitle.innerText = orgName || (hasLending ? 'Credit Operations' : 'CRM Workspace');
+                if (sideSubtitle) {
+                    const defaultSub = (hasLending && hasBroker)
+                        ? 'Credit & Broker Ops'
+                        : (hasLending ? 'Credit Operations' : (hasBroker ? 'Credit Broker' : 'CRM Workspace'));
+                    sideSubtitle.innerText = orgName || defaultSub;
+                }
                 if (topbarContext) topbarContext.innerText = orgName ? `${orgName} /` : 'NURA CRM /';
                 if (headerRoleBadge) {
                     headerRoleBadge.innerText = user ? user.role : 'TEAM';
@@ -197,9 +203,17 @@
                         el.classList.toggle('hidden', !hasLending);
                     }
                 });
+                // Toggle Broker-only UI across sidebar, topbar, mobile nav, dashboard, customer profile, and broker workspace
+                document.querySelectorAll('.broker-only-ui').forEach(el => {
+                    el.classList.toggle('module-hidden', !hasBroker);
+                    if (!el.hasAttribute('data-responsive-display')) {
+                        el.classList.toggle('hidden', !hasBroker);
+                    }
+                });
                 if (mobileCommercial) {
-                    mobileCommercial.classList.toggle('grid-cols-6', hasLending);
-                    mobileCommercial.classList.toggle('grid-cols-4', !hasLending);
+                    mobileCommercial.classList.remove('grid-cols-4', 'grid-cols-5', 'grid-cols-6', 'grid-cols-7');
+                    const visibleMobileCols = 4 + (hasLending ? 2 : 0) + (hasBroker ? 1 : 0);
+                    mobileCommercial.classList.add(`grid-cols-${visibleMobileCols}`);
                 }
                 const coreFunnelCard = document.getElementById('dash-core-funnel-card');
                 if (coreFunnelCard) {
@@ -210,14 +224,34 @@
                 const dashSubtitle = document.getElementById('dash-main-subtitle');
                 const isEs = (typeof NuraI18n !== 'undefined' && NuraI18n.currentLang === 'es');
                 if (dashTitle) {
-                    dashTitle.innerText = hasLending
-                        ? (isEs ? 'Panel Ejecutivo de Crédito' : 'Executive Credit Dashboard')
-                        : (isEs ? 'Panel Ejecutivo CRM' : 'Executive CRM Dashboard');
+                    if (hasLending && hasBroker) {
+                        dashTitle.innerText = isEs ? 'Panel Ejecutivo de Crédito y Broker' : 'Executive Credit & Broker Dashboard';
+                    } else if (hasLending) {
+                        dashTitle.innerText = isEs ? 'Panel Ejecutivo de Crédito' : 'Executive Credit Dashboard';
+                    } else if (hasBroker) {
+                        dashTitle.innerText = isEs ? 'Panel Ejecutivo de Broker' : 'Executive Broker Dashboard';
+                    } else {
+                        dashTitle.innerText = isEs ? 'Panel Ejecutivo CRM' : 'Executive CRM Dashboard';
+                    }
                 }
                 if (dashSubtitle) {
-                    dashSubtitle.innerText = hasLending
-                        ? (isEs ? 'Indicadores contables de cartera en tiempo real, cobranza y embudo de originación' : 'Real-time portfolio accounting indicators, collections tracking, and origination pipeline')
-                        : (isEs ? 'Resumen en tiempo real de prospectos, clientes, lista de llamadas y actividad reciente' : 'Real-time leads pipeline, customers directory, call list queue, and recent CRM activity');
+                    if (hasLending && hasBroker) {
+                        dashSubtitle.innerText = isEs
+                            ? 'Cartera propia, intermediación multi-financiera, comisiones y embudo comercial en tiempo real'
+                            : 'Portfolio accounting, multi-lender brokerage pipeline, commissions, and CRM origination in real time';
+                    } else if (hasLending) {
+                        dashSubtitle.innerText = isEs
+                            ? 'Indicadores contables de cartera en tiempo real, cobranza y embudo de originación'
+                            : 'Real-time portfolio accounting indicators, collections tracking, and origination pipeline';
+                    } else if (hasBroker) {
+                        dashSubtitle.innerText = isEs
+                            ? 'Expedientes de intermediación, ofertas de financieras, volumen fondeado y comisiones en tiempo real'
+                            : 'Credit brokerage cases, multi-lender offers, funded volume, and commissions in real time';
+                    } else {
+                        dashSubtitle.innerText = isEs
+                            ? 'Resumen en tiempo real de prospectos, clientes, lista de llamadas y actividad reciente'
+                            : 'Real-time leads pipeline, customers directory, call list queue, and recent CRM activity';
+                    }
                 }
             }
         }
@@ -284,6 +318,15 @@
                     el.classList.remove('hidden');
                 }
             });
+            document.querySelectorAll('.broker-only-ui').forEach(el => {
+                el.classList.remove('module-hidden');
+                if (!el.hasAttribute('data-responsive-display')) {
+                    el.classList.remove('hidden');
+                }
+            });
+            if (typeof resetBrokerWorkspaceState === 'function') {
+                resetBrokerWorkspaceState();
+            }
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.side-nav-item').forEach(el => el.classList.remove('active'));
@@ -386,7 +429,9 @@
                     ? `<div class="flex items-center gap-1 flex-wrap mt-1">${enabledMods.map(code => {
                         const cls = code === 'LENDING'
                             ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-slate-100 text-slate-600 border-slate-200';
+                            : (code === 'BROKER'
+                                ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                : 'bg-slate-100 text-slate-600 border-slate-200');
                         return `<span class="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}">${escapeHtml(code)}</span>`;
                     }).join('')}</div>`
                     : '';

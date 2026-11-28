@@ -36,6 +36,7 @@ def verify_database_schema_compatibility(db_engine):
         base_required_tables = {
             "tenants", "tenant_sequences",
             "platform_modules", "platform_module_dependencies", "tenant_modules",
+            "broker_lenders", "broker_cases", "broker_submissions", "broker_commissions",
             "users", "sessions", "conversations", "chat_messages", "audit_logs",
             "customers", "customer_documents", "leads", "lead_stage_history",
             "interactions", "loans", "loan_installments",

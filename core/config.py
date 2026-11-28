@@ -13,7 +13,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 DUMMY_BCRYPT_HASH = pwd_context.hash("nura-constant-time-mitigation-baseline-secret")
 
 IS_PRODUCTION = is_production()
-EXPECTED_ALEMBIC_REVISION = "013"  # al crear una nueva migracion, actualizar solo esta constante
+EXPECTED_ALEMBIC_REVISION = "014"  # al crear una nueva migracion, actualizar solo esta constante
 PLATFORM_TENANT_SLUG = "platform"
 
 # --- DOCUMENT UPLOAD LIMITS ---

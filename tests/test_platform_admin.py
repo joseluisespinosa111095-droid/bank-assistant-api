@@ -409,6 +409,22 @@ def test_a1_superadmin_receives_403_on_all_commercial_routes_without_mutations(p
             ("GET", f"/api/loans/{loan_id}/payments", {}),
             ("POST", f"/api/loans/{loan_id}/payments", {"json": {"idempotency_key": "super-pay-1", "amount_pesos": 500.0, "payment_method": "CASH_RECEIPT"}}),
             ("POST", f"/api/loans/{loan_id}/payments/{pay_id}/reverse", {"json": {"reversal_reason": "Unauthorized"}}),
+            # Broker (15)
+            ("GET", "/api/broker/dashboard-summary", {}),
+            ("GET", f"/api/broker/customers/{cust_id}/summary", {}),
+            ("GET", "/api/broker/lenders", {}),
+            ("POST", "/api/broker/lenders", {"json": {"code": "SUP-BNK", "name": "Super Bank"}}),
+            ("PATCH", "/api/broker/lenders/1", {"json": {"is_active": False}}),
+            ("GET", "/api/broker/cases", {}),
+            ("POST", "/api/broker/cases", {"json": {"idempotency_key": "super-brk-001", "customer_id": cust_id, "product_type": "PyME", "requested_amount_pesos": 100000.0}}),
+            ("GET", "/api/broker/cases/1", {}),
+            ("PATCH", "/api/broker/cases/1", {"json": {"notes": "Unauthorized"}}),
+            ("POST", "/api/broker/cases/1/submissions", {"json": {"lender_id": 1}}),
+            ("PATCH", "/api/broker/cases/1/submissions/1", {"json": {"status": "IN_UNDERWRITING"}}),
+            ("POST", "/api/broker/cases/1/submissions/1/select", {"json": {}}),
+            ("POST", "/api/broker/cases/1/fund", {"json": {"funded_amount_pesos": 50000.0}}),
+            ("GET", "/api/broker/commissions", {}),
+            ("PATCH", "/api/broker/commissions/1", {"json": {"status": "PAID"}}),
             # Dashboard & conversations / assistant (6)
             ("GET", "/api/dashboard/summary", {}),
             ("GET", "/api/conversations", {}),
@@ -417,7 +433,7 @@ def test_a1_superadmin_receives_403_on_all_commercial_routes_without_mutations(p
             ("DELETE", f"/api/conversations/{conv_id}", {}),
             ("POST", "/chat-ejecutivo", {"json": {"mensaje": "Hola"}}),
         ]
-        assert len(commercial_calls) == 40
+        assert len(commercial_calls) == 55
 
         for method, path, kwargs in commercial_calls:
             req_kwargs = dict(kwargs)
@@ -605,6 +621,21 @@ def test_c_fastapi_route_inventory_and_effective_dependency_coverage(p3_env):
         ("GET", "/api/loans/{loan_id}/payments"),
         ("POST", "/api/loans/{loan_id}/payments"),
         ("POST", "/api/loans/{loan_id}/payments/{payment_id}/reverse"),
+        ("GET", "/api/broker/dashboard-summary"),
+        ("GET", "/api/broker/customers/{customer_id}/summary"),
+        ("GET", "/api/broker/lenders"),
+        ("POST", "/api/broker/lenders"),
+        ("PATCH", "/api/broker/lenders/{lender_id}"),
+        ("GET", "/api/broker/cases"),
+        ("POST", "/api/broker/cases"),
+        ("GET", "/api/broker/cases/{case_id}"),
+        ("PATCH", "/api/broker/cases/{case_id}"),
+        ("POST", "/api/broker/cases/{case_id}/submissions"),
+        ("PATCH", "/api/broker/cases/{case_id}/submissions/{submission_id}"),
+        ("POST", "/api/broker/cases/{case_id}/submissions/{submission_id}/select"),
+        ("POST", "/api/broker/cases/{case_id}/fund"),
+        ("GET", "/api/broker/commissions"),
+        ("PATCH", "/api/broker/commissions/{commission_id}"),
         ("GET", "/api/dashboard/summary"),
         ("GET", "/api/conversations"),
         ("POST", "/api/conversations"),

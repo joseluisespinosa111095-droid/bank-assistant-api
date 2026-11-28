@@ -911,3 +911,393 @@ class TenantModuleModel(Base):
     tenant = relationship("TenantModel")
     module = relationship("PlatformModuleModel")
     updated_by = relationship("UserModel")
+
+
+# --- CREDIT BROKER VERTICAL MODELS (ENTREGABLE 5B - BLOQUE 1) ---
+class BrokerLenderModel(Base):
+    __tablename__ = "broker_lenders"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    code = Column(String(40), nullable=False)
+    name = Column(String(160), nullable=False)
+    lender_type = Column(String(40), default="BANK", server_default="BANK", nullable=False)
+    default_commission_bps = Column(Integer, default=0, server_default="0", nullable=False)
+    contact_name = Column(String(120), nullable=True)
+    contact_email = Column(String(255), nullable=True)
+    contact_phone = Column(String(25), nullable=True)
+    notes = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True, server_default=true(), nullable=False, index=True)
+    created_by_user_id = Column(Integer, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id", name="uq_broker_lenders_tenant_id_id"),
+        UniqueConstraint("tenant_id", "code", name="uq_broker_lenders_tenant_code"),
+        ForeignKeyConstraint(
+            ["tenant_id", "created_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_lenders_tenant_created_by",
+        ),
+        CheckConstraint("length(trim(code)) >= 2", name="ck_broker_lenders_code_non_empty"),
+        CheckConstraint("length(trim(name)) >= 2", name="ck_broker_lenders_name_non_empty"),
+        CheckConstraint(
+            "lender_type IN ('BANK', 'SOFOM', 'FINTECH', 'CREDIT_UNION', 'PRIVATE_LENDER', 'OTHER')",
+            name="ck_broker_lenders_type_valid",
+        ),
+        CheckConstraint(
+            "default_commission_bps >= 0 AND default_commission_bps <= 5000",
+            name="ck_broker_lenders_commission_bps_range",
+        ),
+    )
+
+    tenant = relationship("TenantModel")
+    created_by = relationship("UserModel", foreign_keys=[created_by_user_id], primaryjoin="and_(BrokerLenderModel.tenant_id==UserModel.tenant_id, BrokerLenderModel.created_by_user_id==UserModel.id)")
+
+
+class BrokerCaseModel(Base):
+    __tablename__ = "broker_cases"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    case_number = Column(String(24), index=True, nullable=False)
+    idempotency_key = Column(String(64), nullable=False)
+    request_payload_hash = Column(String(64), nullable=False)
+    customer_id = Column(Integer, index=True, nullable=False)
+    source_lead_id = Column(Integer, index=True, nullable=True)
+    status = Column(String(30), default="DRAFT", server_default="DRAFT", index=True, nullable=False)
+    product_type = Column(String(60), nullable=False)
+    currency = Column(String(3), default="MXN", server_default="MXN", nullable=False)
+    requested_amount_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    requested_term_months = Column(Integer, nullable=True)
+    purpose = Column(String(255), nullable=True)
+    funded_amount_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=True)
+    funded_at = Column(DateTime(timezone=True), nullable=True)
+    external_loan_reference = Column(String(120), nullable=True)
+    owner_user_id = Column(Integer, index=True, nullable=False)
+    created_by_user_id = Column(Integer, nullable=False)
+    closed_by_user_id = Column(Integer, nullable=True)
+    closed_at = Column(DateTime(timezone=True), nullable=True)
+    closed_reason = Column(String(255), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id", name="uq_broker_cases_tenant_id_id"),
+        UniqueConstraint("tenant_id", "case_number", name="uq_broker_cases_tenant_case_number"),
+        UniqueConstraint("tenant_id", "idempotency_key", name="uq_broker_cases_tenant_idempotency_key"),
+        ForeignKeyConstraint(
+            ["tenant_id", "customer_id"],
+            ["customers.tenant_id", "customers.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_cases_tenant_customer",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "customer_id", "source_lead_id"],
+            ["leads.tenant_id", "leads.converted_customer_id", "leads.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_cases_tenant_customer_source_lead",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "owner_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_cases_tenant_owner_user",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "created_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_cases_tenant_created_by",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "closed_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_cases_tenant_closed_by",
+        ),
+        CheckConstraint(
+            "status IN ('DRAFT', 'SUBMITTED', 'OFFERS_RECEIVED', 'FUNDED', 'CLOSED_LOST', 'CANCELLED')",
+            name="ck_broker_cases_status_valid",
+        ),
+        CheckConstraint("length(trim(product_type)) >= 2", name="ck_broker_cases_product_type_non_empty"),
+        CheckConstraint("requested_amount_cents > 0", name="ck_broker_cases_requested_amount_positive"),
+        CheckConstraint(
+            "requested_term_months IS NULL OR (requested_term_months >= 1 AND requested_term_months <= 360)",
+            name="ck_broker_cases_term_months_range",
+        ),
+        CheckConstraint(
+            "funded_amount_cents IS NULL OR funded_amount_cents > 0",
+            name="ck_broker_cases_funded_amount_positive",
+        ),
+    )
+
+    customer = relationship(
+        "CustomerModel",
+        foreign_keys=[tenant_id, customer_id],
+        primaryjoin="and_(BrokerCaseModel.tenant_id==CustomerModel.tenant_id, BrokerCaseModel.customer_id==CustomerModel.id)",
+        overlaps="tenant",
+    )
+    submissions = relationship(
+        "BrokerSubmissionModel",
+        back_populates="broker_case",
+        foreign_keys="[BrokerSubmissionModel.tenant_id, BrokerSubmissionModel.broker_case_id]",
+        primaryjoin="and_(BrokerCaseModel.tenant_id==BrokerSubmissionModel.tenant_id, BrokerCaseModel.id==BrokerSubmissionModel.broker_case_id)",
+        order_by="BrokerSubmissionModel.id.asc()",
+        overlaps="customer,tenant",
+    )
+
+
+class BrokerSubmissionModel(Base):
+    __tablename__ = "broker_submissions"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    broker_case_id = Column(Integer, index=True, nullable=False)
+    lender_id = Column(Integer, index=True, nullable=False)
+    status = Column(String(30), default="DRAFT", server_default="DRAFT", index=True, nullable=False)
+    external_reference = Column(String(120), nullable=True)
+    submitted_at = Column(DateTime(timezone=True), nullable=True)
+    decided_at = Column(DateTime(timezone=True), nullable=True)
+    offered_amount_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=True)
+    offered_rate_bps = Column(Integer, nullable=True)
+    offered_term_months = Column(Integer, nullable=True)
+    offered_monthly_payment_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=True)
+    offered_commission_bps = Column(Integer, nullable=True)
+    decision_notes = Column(Text, nullable=True)
+    created_by_user_id = Column(Integer, nullable=False)
+    updated_by_user_id = Column(Integer, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id", name="uq_broker_submissions_tenant_id_id"),
+        UniqueConstraint(
+            "tenant_id",
+            "broker_case_id",
+            "lender_id",
+            name="uq_broker_submissions_tenant_case_lender",
+        ),
+        UniqueConstraint(
+            "tenant_id",
+            "broker_case_id",
+            "lender_id",
+            "id",
+            name="uq_broker_submissions_tenant_case_lender_id",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "broker_case_id"],
+            ["broker_cases.tenant_id", "broker_cases.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_submissions_tenant_case",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "lender_id"],
+            ["broker_lenders.tenant_id", "broker_lenders.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_submissions_tenant_lender",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "created_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_submissions_tenant_created_by",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "updated_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_submissions_tenant_updated_by",
+        ),
+        CheckConstraint(
+            "status IN ('DRAFT', 'SUBMITTED', 'IN_UNDERWRITING', 'APPROVED', 'DECLINED', 'WITHDRAWN', 'SELECTED')",
+            name="ck_broker_submissions_status_valid",
+        ),
+        CheckConstraint(
+            "offered_amount_cents IS NULL OR offered_amount_cents > 0",
+            name="ck_broker_submissions_offered_amount_positive",
+        ),
+        CheckConstraint(
+            "offered_rate_bps IS NULL OR offered_rate_bps >= 0",
+            name="ck_broker_submissions_offered_rate_non_negative",
+        ),
+        CheckConstraint(
+            "offered_term_months IS NULL OR (offered_term_months >= 1 AND offered_term_months <= 360)",
+            name="ck_broker_submissions_offered_term_range",
+        ),
+        CheckConstraint(
+            "offered_monthly_payment_cents IS NULL OR offered_monthly_payment_cents >= 0",
+            name="ck_broker_submissions_monthly_pay_non_negative",
+        ),
+        CheckConstraint(
+            "offered_commission_bps IS NULL OR (offered_commission_bps >= 0 AND offered_commission_bps <= 5000)",
+            name="ck_broker_submissions_commission_bps_range",
+        ),
+        Index(
+            "uq_broker_submissions_selected_per_case",
+            "tenant_id",
+            "broker_case_id",
+            unique=True,
+            postgresql_where=text("status = 'SELECTED'"),
+            sqlite_where=text("status = 'SELECTED'"),
+        ),
+    )
+
+    broker_case = relationship(
+        "BrokerCaseModel",
+        back_populates="submissions",
+        foreign_keys=[tenant_id, broker_case_id],
+        primaryjoin="and_(BrokerSubmissionModel.tenant_id==BrokerCaseModel.tenant_id, BrokerSubmissionModel.broker_case_id==BrokerCaseModel.id)",
+        overlaps="lender",
+    )
+    lender = relationship(
+        "BrokerLenderModel",
+        foreign_keys=[tenant_id, lender_id],
+        primaryjoin="and_(BrokerSubmissionModel.tenant_id==BrokerLenderModel.tenant_id, BrokerSubmissionModel.lender_id==BrokerLenderModel.id)",
+        overlaps="broker_case,submissions",
+    )
+
+
+class BrokerCommissionModel(Base):
+    __tablename__ = "broker_commissions"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False, index=True)
+    commission_number = Column(String(24), nullable=False)
+    broker_case_id = Column(Integer, nullable=False)
+    submission_id = Column(Integer, nullable=False)
+    lender_id = Column(Integer, index=True, nullable=False)
+    currency = Column(String(3), default="MXN", server_default="MXN", nullable=False)
+    funded_amount_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    commission_rate_bps = Column(Integer, nullable=False)
+    expected_commission_cents = Column(BigInteger().with_variant(Integer, "sqlite"), nullable=False)
+    paid_commission_cents = Column(BigInteger().with_variant(Integer, "sqlite"), default=0, server_default="0", nullable=False)
+    status = Column(String(25), default="PENDING", server_default="PENDING", index=True, nullable=False)
+    expected_pay_date = Column(Date, nullable=True)
+    invoiced_at = Column(DateTime(timezone=True), nullable=True)
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+    payment_reference = Column(String(120), nullable=True)
+    notes = Column(Text, nullable=True)
+    recorded_by_user_id = Column(Integer, nullable=False)
+    updated_by_user_id = Column(Integer, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "commission_number", name="uq_broker_commissions_tenant_number"),
+        UniqueConstraint("tenant_id", "broker_case_id", name="uq_broker_commissions_tenant_case"),
+        ForeignKeyConstraint(
+            ["tenant_id", "broker_case_id"],
+            ["broker_cases.tenant_id", "broker_cases.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_commissions_tenant_case",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "lender_id"],
+            ["broker_lenders.tenant_id", "broker_lenders.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_commissions_tenant_lender",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "broker_case_id", "lender_id", "submission_id"],
+            [
+                "broker_submissions.tenant_id",
+                "broker_submissions.broker_case_id",
+                "broker_submissions.lender_id",
+                "broker_submissions.id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_broker_commissions_tenant_submission_match",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "recorded_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_commissions_tenant_recorded_by",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "updated_by_user_id"],
+            ["users.tenant_id", "users.id"],
+            ondelete="RESTRICT",
+            name="fk_broker_commissions_tenant_updated_by",
+        ),
+        CheckConstraint(
+            "status IN ('PENDING', 'INVOICED', 'PAID', 'CANCELLED')",
+            name="ck_broker_commissions_status_valid",
+        ),
+        CheckConstraint("funded_amount_cents > 0", name="ck_broker_commissions_funded_amount_positive"),
+        CheckConstraint(
+            "commission_rate_bps >= 0 AND commission_rate_bps <= 5000",
+            name="ck_broker_commissions_rate_bps_range",
+        ),
+        CheckConstraint(
+            "expected_commission_cents >= 0",
+            name="ck_broker_commissions_expected_non_negative",
+        ),
+        CheckConstraint(
+            "paid_commission_cents >= 0",
+            name="ck_broker_commissions_paid_non_negative",
+        ),
+    )
+
+    broker_case = relationship(
+        "BrokerCaseModel",
+        foreign_keys=[tenant_id, broker_case_id],
+        primaryjoin="and_(BrokerCommissionModel.tenant_id==BrokerCaseModel.tenant_id, BrokerCommissionModel.broker_case_id==BrokerCaseModel.id)",
+        overlaps="lender,submission",
+    )
+    lender = relationship(
+        "BrokerLenderModel",
+        foreign_keys=[tenant_id, lender_id],
+        primaryjoin="and_(BrokerCommissionModel.tenant_id==BrokerLenderModel.tenant_id, BrokerCommissionModel.lender_id==BrokerLenderModel.id)",
+        overlaps="broker_case,submission",
+    )
+    submission = relationship(
+        "BrokerSubmissionModel",
+        foreign_keys=[tenant_id, broker_case_id, lender_id, submission_id],
+        primaryjoin="and_(BrokerCommissionModel.tenant_id==BrokerSubmissionModel.tenant_id, BrokerCommissionModel.broker_case_id==BrokerSubmissionModel.broker_case_id, BrokerCommissionModel.lender_id==BrokerSubmissionModel.lender_id, BrokerCommissionModel.submission_id==BrokerSubmissionModel.id)",
+        overlaps="broker_case,lender",
+    )
